@@ -284,6 +284,17 @@ button{ cursor:pointer; }
   border:1px solid var(--line); border-radius:3px; background:var(--panel);
   padding:14px;
 }
+/* A tab's panel swings in: a quick turn from about 8 degrees, hinged on its
+   left edge, and a fade. Only drawn differently, never moved in the layout,
+   and it can be tapped from the start. */
+.tab-content.tab-enter{
+  transform-origin:0 50%;
+  animation:panelIn 0.18s ease-out;
+}
+@keyframes panelIn{
+  from{ opacity:0; transform:perspective(900px) rotateY(8deg); }
+  to{ opacity:1; transform:perspective(900px) rotateY(0deg); }
+}
 .panel-title{
   font-size:0.72rem; letter-spacing:0.12em; text-transform:uppercase;
   color:var(--text-dim); margin:14px 0 8px;

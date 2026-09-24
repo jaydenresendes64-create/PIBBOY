@@ -446,9 +446,17 @@
   }
 
   // ---------- tabs ----------
+  // A panel opened by a tab swings in (tab-enter, css/terminal.css); not the
+  // first one at startup, nor the open one tapped again. The animation
+  // starts each time a panel goes from hidden to shown.
+  var shownTab = null;
   function switchTab(name){
+    var swing = shownTab!==null && name!==shownTab;
+    shownTab = name;
     ['status','quests','items','log'].forEach(function(t){
-      el('tab-'+t).style.display = (t===name)?'block':'none';
+      var panel = el('tab-'+t);
+      panel.style.display = (t===name)?'block':'none';
+      panel.classList.toggle('tab-enter', swing && t===name);
     });
     document.querySelectorAll('[data-tab]').forEach(function(b){
       b.classList.toggle('active', b.getAttribute('data-tab')===name);
