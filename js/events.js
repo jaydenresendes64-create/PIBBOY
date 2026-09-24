@@ -18,8 +18,10 @@
   var checkPlaying = false;     // a check button's animation is running
 
   function addXp(amount){
-    var leveled = ST.gainXp(amount);
-    R.showXpToast(amount);
+    showXp(amount, ST.gainXp(amount));
+  }
+  function showXp(amount, leveled){
+    R.showXpToast(Number(amount)||0);
     if (leveled) R.showLevelUp();
     renderHeader();
   }
@@ -60,6 +62,7 @@
     if (!q) return;
     var xp = clamp(parseInt(el('new-quest-xp').value,10)||100,5,500);
     app.state.quests.side.push({id:genId(),questName:q.questName,name:q.objective,xp:xp,done:false});
+    R.clearTyped('new-quest-');
     renderQuests(); scheduleSave();
   }
   function addDailyQuest(){
@@ -67,6 +70,7 @@
     if (!q) return;
     var xp = clamp(parseInt(el('new-daily-xp').value,10)||15,5,100);
     app.state.quests.daily.push({id:genId(),questName:q.questName,name:q.objective,xp:xp,lastDate:null});
+    R.clearTyped('new-daily-');
     renderQuests(); scheduleSave();
   }
   function addMainQuest(){
@@ -82,33 +86,32 @@
       quest.lastCheckIn = null;
     }
     app.state.quests.mains.push(quest);
+    R.clearTyped('new-main-');
     renderQuests(); scheduleSave();
   }
   function findMain(id){
     return app.state.quests.mains.filter(function(x){ return x.id===id; })[0] || null;
   }
-  // Grants a main quest's XP and skill gains, once.
+  // Grants a main quest's XP and skill gains, once (ST.completeMain).
   function completeMainQuest(m){
-    m.completed = true;
+    var reward = ST.completeMain(m);
+    if (!reward) return;
     R.showQuestCompleted(m.questName || m.title);
-    addXp(m.xp||0);
-    (m.skillGains||[]).forEach(function(g){ grantSkill(g.skill, g.amount); });
+    showXp(reward.xp, reward.leveled);
     renderStatus();
   }
-  // A streak quest's check-in, once a day. Days in a row add up; after a
-  // missed day the streak starts again at 1. Reaching the target completes it.
+  // A streak quest's check-in, once a day; reaching the target completes it.
   function checkIn(m){
-    if (m.completed || ST.checkedInToday(m)) return false;
-    m.streakDays = ST.currentStreak(m) + 1;
-    m.lastCheckIn = todayStr();
-    if (m.streakDays>=m.streakTarget) completeMainQuest(m);
-    return true;
+    var result = ST.streakCheckIn(m);
+    if (result==='target') completeMainQuest(m);
+    return !!result;
   }
   function addInventoryItem(){
     var name = el('new-item-name').value.trim();
     if (!name) return;
     var cat = el('new-item-cat').value;
     app.state.inventory.push({id:genId(),name:name,category:cat});
+    R.clearTyped('new-item-');
     renderInventory(); scheduleSave();
   }
   function addHolding(){
@@ -124,6 +127,7 @@
     if (!amountText || !isFinite(amount)){ amountInput.focus(); return; }
     if (!isFinite(rate) || rate<=0) rate = 1;
     app.state.finances.holdings.push({id:genId(), label:label, amount:amount, rateToCAD:rate});
+    R.clearTyped('new-wallet-');
     renderInventory(); scheduleSave();
   }
 
@@ -156,7 +160,9 @@
       open = false;
       app.finishRename = null;
       document.removeEventListener('pointerdown', onPointerDown, true);
-      if (save){
+      // Not when the quest is no longer in the state (another window's
+      // newer save replaced it): that would save nothing.
+      if (save && findQuest(kind, quest.id)===quest){
         var name = input.value.trim().slice(0, ST.QUEST_NAME_MAX);
         if (name!==(quest.questName||'')){ quest.questName = name; scheduleSave(); }
       }
@@ -186,9 +192,7 @@
     var p = app.pendingProposal;
     addXp(p.xp);
     p.skillGains.forEach(function(g){ grantSkill(g.skill, g.amount); });
-    app.state.lifetimeLogEntries = ST.logEntryCount() + 1;
-    app.state.log.push({date:todayDisplay(), text:p.text, xp:p.xp, reason:p.reason});
-    if (app.state.log.length>200) app.state.log = app.state.log.slice(-200);
+    ST.addLogEntry({date:todayDisplay(), text:p.text, xp:p.xp, reason:p.reason});
     app.pendingProposal = null;
     renderStatus(); renderLog();
     scheduleSave();
@@ -267,11 +271,29 @@
   }
   function doReset(){
     app.state = ST.defaultState();
+    app.pendingProposal = null;
     app.confirmRemoveMain = null;
     app.confirmSpecial = null;
     el('reset-confirm-area').innerHTML = '';
     renderAll();
-    scheduleSave();
+    ST.storage.saveNow();
+  }
+
+  // ---------- other windows / leaving ----------
+  // Another window saved newer data (storage.js): show it instead. `lost`:
+  // a change made here wasn't saved, since it would have overwritten it.
+  function adoptState(state, lost){
+    app.state = state;
+    app.confirmRemoveMain = null;
+    app.confirmSpecial = null;
+    renderAll();
+    if (lost) R.showConflictWarning();
+  }
+  // Before the page is hidden or closed: a quest name still being typed is
+  // saved like a tap elsewhere would. (Objectives and rates are in the state
+  // as they're typed.)
+  function commitEdits(){
+    if (app.finishRename) app.finishRename();
   }
 
   // ---------- events ----------
@@ -315,16 +337,16 @@
           renderStatus();
           focusStatus('[data-action="special-assign"][data-key="'+askedKey+'"]');
         } else if (action==='skill'){
-          state.skills[key] = clamp(state.skills[key]+dir,0,100);
+          grantSkill(key, dir);
           renderStatus(); scheduleSave();
         } else if (action==='quest-complete'){
-          var q = state.quests.side.filter(function(x){return x.id===id;})[0];
+          var q = findQuest('side', id);
           if (q && !q.done){ q.done=true; addXp(q.xp); afterCheck(actionBtn); }
         } else if (action==='quest-remove'){
           state.quests.side = state.quests.side.filter(function(x){return x.id!==id;});
           renderQuests(); scheduleSave();
         } else if (action==='daily-toggle'){
-          var d = state.quests.daily.filter(function(x){return x.id===id;})[0];
+          var d = findQuest('daily', id);
           if (d && d.lastDate!==todayStr()){ d.lastDate=todayStr(); addXp(d.xp); afterCheck(actionBtn); }
         } else if (action==='daily-remove'){
           state.quests.daily = state.quests.daily.filter(function(x){return x.id!==id;});
@@ -379,23 +401,17 @@
       else if (e.target.id==='reset-cancel-btn') el('reset-confirm-area').innerHTML='';
     });
 
+    // A main quest's objective and a holding's rate go into the state as
+    // they're typed, so closing the app mid-edit keeps them; leaving the box
+    // puts back what is stored when what was typed isn't valid.
     document.body.addEventListener('change', function(e){
-      var state = app.state;
       if (e.target.classList.contains('main-title-input')){
         var mq = findMain(e.target.getAttribute('data-id'));
-        var title = e.target.value.trim().slice(0,60);
-        if (mq && title){ mq.title = title; scheduleSave(); }
-        else if (mq) e.target.value = mq.title;       // emptied: the objective stays as it was
+        if (mq) e.target.value = mq.title;       // emptied: the objective stays as it was
       } else if (e.target.id==='new-main-type'){
         el('new-main-days-field').hidden = e.target.value!=='streak';
       } else if (e.target.classList.contains('rate-input')){
-        var hid = e.target.getAttribute('data-id');
-        var h = state.finances.holdings.filter(function(x){return x.id===hid;})[0];
-        var newRate = Number(e.target.value);
-        if (h && isFinite(newRate) && newRate>0){
-          h.rateToCAD = newRate;
-          renderInventory(); scheduleSave();
-        }
+        renderInventory();          // the CAD values and total, with the rate kept
       } else if (e.target.id==='import-file'){
         var file = e.target.files && e.target.files[0];
         e.target.value = '';
@@ -403,7 +419,20 @@
       }
     });
     document.body.addEventListener('input', function(e){
-      if (e.target.classList.contains('main-progress-input')){
+      var state = app.state;
+      if (e.target.classList.contains('main-title-input')){
+        var mq = findMain(e.target.getAttribute('data-id'));
+        var title = e.target.value.trim().slice(0,60);
+        if (mq && title && title!==mq.title){ mq.title = title; scheduleSave(); }
+      } else if (e.target.classList.contains('rate-input')){
+        var hid = e.target.getAttribute('data-id');
+        var h = state.finances.holdings.filter(function(x){return x.id===hid;})[0];
+        var newRate = Number(e.target.value);
+        if (h && e.target.value.trim() && isFinite(newRate) && newRate>0 && newRate!==h.rateToCAD){
+          h.rateToCAD = newRate;
+          scheduleSave();
+        }
+      } else if (e.target.classList.contains('main-progress-input')){
         var m = findMain(e.target.getAttribute('data-id'));
         if (!m) return;
         m.progress = parseInt(e.target.value,10);
@@ -428,5 +457,5 @@
     });
   }
 
-  ST.events = { setup: setupEvents };
+  ST.events = { setup: setupEvents, adoptState: adoptState, commitEdits: commitEdits };
 })(window.StatusTerminal);

@@ -1,10 +1,11 @@
 /**
- * Journal analysis — replaces the Claude-only `sample` capability.
+ * Journal analysis: turns a diary entry into a proposal (XP + skill gains)
+ * that the player accepts or rejects.
  *
- * The browser never holds an API key: it posts the diary entry to the
- * serverless function in api/analyze.js, which calls the model with the key
- * from its environment. Where that function doesn't exist (file://, GitHub
- * Pages) the app uses the offline keyword rules, as it did outside Claude.
+ * On GitHub Pages and from disk (file://) the offline keyword rules below do
+ * it, in the browser. On a host that runs api/analyze.js the entry is posted
+ * there instead; that function calls the AI model with the key from its own
+ * environment, so the browser never holds an API key.
  */
 (function(ST){
   'use strict';
@@ -168,7 +169,7 @@
   // "J'ai étudié l'œuvre" → ['j','ai','etudie','l','oeuvre']
   function toWords(text){
     return String(text).toLowerCase()
-      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')    // accents, split off by NFD
       .replace(/œ/g, 'oe').replace(/æ/g, 'ae')
       .split(/[^a-z0-9]+/)
       .filter(Boolean);

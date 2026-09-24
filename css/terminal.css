@@ -8,6 +8,7 @@
   --line:#4a2e0f;
   --phosphor:#e8a33d;
   --phosphor-dim:#9c6a24;
+  --text-dim:#b27929;           /* dimmed text: --phosphor-dim made just light enough to read (4.5:1 on every panel) */
   --amber:#ff9a2e;
   --amber-dim:#b8631a;
   --danger:#ff4433;
@@ -24,7 +25,7 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 @media (prefers-reduced-motion:reduce){
-  *{ animation:none !important; transition:none !important; }
+  *, *::before, *::after{ animation:none !important; transition:none !important; }
 }
 button, input, select, textarea{
   font-family:inherit; color:inherit; background:none; border:none;
@@ -158,6 +159,7 @@ button{ cursor:pointer; }
 .xp-toast{
   background:var(--panel-alt); border:1px solid var(--amber-dim); color:var(--amber);
   padding:6px 14px; border-radius:3px; font-size:0.85rem; letter-spacing:0.03em;
+  max-width:calc(100vw - 32px); text-align:center;
   animation:toastUp 1.4s ease-out forwards;
 }
 .xp-toast.save-warning{ border-color:var(--danger); color:var(--danger); animation-duration:2.6s; }
@@ -183,7 +185,7 @@ button{ cursor:pointer; }
 
 .topbar{
   display:flex; align-items:center; justify-content:space-between;
-  font-size:0.75rem; letter-spacing:0.12em; color:var(--phosphor-dim);
+  font-size:0.75rem; letter-spacing:0.12em; color:var(--text-dim);
   position:relative; z-index:3; padding-top:2px;
 }
 .status-dot{
@@ -195,19 +197,20 @@ button{ cursor:pointer; }
 
 .hero{ margin-top:18px; position:relative; z-index:3; }
 .hero-name{
+  margin:0; font-weight:normal;
   font-family:'VT323',ui-monospace,monospace;
   font-size:clamp(2.1rem,10vw,2.8rem);
   line-height:1; color:var(--phosphor);
   text-shadow:0 0 8px rgba(232,163,61,0.4);
 }
 .hero-sub{
-  font-size:0.7rem; letter-spacing:0.14em; color:var(--phosphor-dim);
+  font-size:0.7rem; letter-spacing:0.14em; color:var(--text-dim);
   text-transform:uppercase; margin-top:2px;
 }
 
 .level-block{ margin-top:18px; position:relative; z-index:3; }
 .level-row{ display:flex; align-items:baseline; gap:10px; }
-.level-tag{ font-size:0.75rem; letter-spacing:0.14em; color:var(--phosphor-dim); }
+.level-tag{ font-size:0.75rem; letter-spacing:0.14em; color:var(--text-dim); }
 .level-num{
   font-family:'VT323',ui-monospace,monospace; font-size:clamp(2.4rem,12vw,3.2rem);
   color:var(--amber); line-height:1; text-shadow:0 0 10px rgba(255,154,46,0.4);
@@ -220,7 +223,7 @@ button{ cursor:pointer; }
   height:100%; background:linear-gradient(90deg,var(--phosphor-dim),var(--phosphor));
   width:0%; transition:width 0.5s ease-out;
 }
-.xp-text{ margin-top:5px; font-size:0.78rem; color:var(--phosphor-dim); letter-spacing:0.04em; }
+.xp-text{ margin-top:5px; font-size:0.78rem; color:var(--text-dim); letter-spacing:0.04em; }
 
 .tabs{
   display:grid; grid-template-columns:repeat(4,1fr); gap:6px;
@@ -229,7 +232,7 @@ button{ cursor:pointer; }
 .tab-btn{
   padding:9px 4px; font-size:0.72rem; letter-spacing:0.08em;
   border:1px solid var(--line); border-radius:3px; background:var(--panel);
-  color:var(--phosphor-dim); min-height:38px;
+  color:var(--text-dim); min-height:38px;
 }
 .tab-btn.active{ color:var(--bg); background:var(--phosphor); border-color:var(--phosphor); }
 .tab-btn:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{
@@ -243,22 +246,22 @@ button{ cursor:pointer; }
 }
 .panel-title{
   font-size:0.72rem; letter-spacing:0.12em; text-transform:uppercase;
-  color:var(--phosphor-dim); margin:14px 0 8px;
+  color:var(--text-dim); margin:14px 0 8px;
 }
 .panel-title:first-child{ margin-top:0; }
-.empty-note{ font-size:0.85rem; color:var(--phosphor-dim); padding:6px 0; }
+.empty-note{ font-size:0.85rem; color:var(--text-dim); padding:6px 0; }
 
 .assign-banner{ border:1px solid var(--amber); border-radius:3px; background:var(--panel-alt); padding:10px 12px; margin-bottom:14px; }
 .assign-label{ font-size:0.82rem; color:var(--amber); margin-bottom:8px; }
 .assign-buttons{ display:flex; flex-wrap:wrap; gap:6px; }
 .assign-btn{ border:1px solid var(--amber-dim); border-radius:3px; background:var(--bg); color:var(--amber); padding:7px 10px; font-size:0.76rem; min-height:34px; }
 .assign-btn:disabled{ opacity:0.4; cursor:default; }
-.assign-btn.assign-cancel{ border-color:var(--line); color:var(--phosphor-dim); }
+.assign-btn.assign-cancel{ border-color:var(--line); color:var(--text-dim); }
 .assign-question{ flex:1 1 100%; font-size:0.82rem; color:var(--phosphor); }
 .stats-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
 .stats-cell{ border:1px solid var(--line); border-radius:3px; padding:10px 6px; text-align:center; }
 .stats-num{ font-family:'VT323',ui-monospace,monospace; font-size:1.4rem; color:var(--amber); }
-.stats-label{ font-size:0.62rem; color:var(--phosphor-dim); margin-top:2px; line-height:1.2; }
+.stats-label{ font-size:0.62rem; color:var(--text-dim); margin-top:2px; line-height:1.2; }
 
 .stat-row{
   display:grid; grid-template-columns:1fr auto 1.6em; align-items:center;
@@ -282,7 +285,7 @@ button{ cursor:pointer; }
 }
 .skill-row:last-child{ border-bottom:none; }
 /* The label column fits the longest skill, CONCENTRATION (13 letters). */
-.skill-label{ font-size:0.72rem; letter-spacing:0.04em; color:var(--phosphor-dim); white-space:nowrap; }
+.skill-label{ font-size:0.72rem; letter-spacing:0.04em; color:var(--text-dim); white-space:nowrap; }
 .skill-bar{ height:8px; background:var(--panel-alt); border:1px solid var(--line); border-radius:2px; overflow:hidden; }
 .skill-fill{ height:100%; background:var(--phosphor-dim); transition:width 0.4s ease-out; }
 .skill-value{ text-align:right; font-size:0.78rem; color:var(--amber); }
@@ -298,7 +301,7 @@ button{ cursor:pointer; }
   display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px;
   margin-top:10px; padding-top:8px; border-top:1px solid var(--line); font-size:0.68rem;
 }
-.card-confirm button{ padding:4px 0; font-size:0.68rem; text-decoration:underline; color:var(--phosphor-dim); }
+.card-confirm button{ padding:4px 0; font-size:0.68rem; text-decoration:underline; color:var(--text-dim); }
 .card-confirm .confirm-yes{ color:var(--danger); }
 .main-title-input{
   width:100%; border:1px solid var(--line); border-radius:3px; background:var(--bg);
@@ -306,7 +309,7 @@ button{ cursor:pointer; }
 }
 .progress-row{ display:flex; align-items:center; gap:10px; margin-top:10px; }
 .progress-row input[type="range"]{ flex:1; accent-color:var(--phosphor); }
-.progress-pct{ font-size:0.85rem; color:var(--phosphor-dim); width:3em; text-align:right; }
+.progress-pct{ font-size:0.85rem; color:var(--text-dim); width:3em; text-align:right; }
 .streak-row{ display:flex; align-items:center; gap:10px; margin-top:10px; }
 .streak-days{
   font-family:'VT323',ui-monospace,monospace; font-size:1.35rem; line-height:1;
@@ -314,13 +317,13 @@ button{ cursor:pointer; }
 }
 .streak-bar{ flex:1; height:8px; background:var(--bg); border:1px solid var(--line); border-radius:2px; overflow:hidden; }
 .streak-fill{ height:100%; background:linear-gradient(90deg,var(--phosphor-dim),var(--phosphor)); }
-.bonus-label{ font-size:0.68rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--phosphor-dim); margin:12px 0 4px; }
+.bonus-label{ font-size:0.68rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); margin:12px 0 4px; }
 .bonus-list{ display:flex; flex-direction:column; }
 .bonus-item{ display:flex; align-items:center; gap:8px; padding:5px 0; font-size:0.82rem; }
 .bonus-item .quest-name{ flex:1; }
-.bonus-item.done .quest-name{ color:var(--phosphor-dim); text-decoration:line-through; }
+.bonus-item.done .quest-name{ color:var(--text-dim); text-decoration:line-through; }
 .bonus-item .complete-btn{ width:24px; height:24px; }
-.main-xp-note{ font-size:0.7rem; color:var(--phosphor-dim); margin-top:8px; }
+.main-xp-note{ font-size:0.7rem; color:var(--text-dim); margin-top:8px; }
 .main-xp-note span{ white-space:nowrap; }
 
 /* Quest names: the name on top, the objective under it, smaller and dimmed.
@@ -338,12 +341,12 @@ button{ cursor:pointer; }
 }
 .add-name{
   display:block; padding:2px 0; text-align:left; font-size:0.66rem; letter-spacing:0.04em;
-  color:var(--phosphor-dim); text-decoration:underline;
+  color:var(--text-dim); text-decoration:underline;
 }
-.quest-text.has-name .quest-name{ font-size:0.74rem; color:var(--phosphor-dim); margin-top:1px; }
+.quest-text.has-name .quest-name{ font-size:0.74rem; color:var(--text-dim); margin-top:1px; }
 .main-quest-card .quest-title, .main-quest-card .quest-title-input{ font-size:1.6rem; }
 .main-quest-card .quest-title{ text-shadow:0 0 8px rgba(255,154,46,0.35); }
-.main-quest-card.has-name .main-title-input{ padding:6px 8px; font-size:0.8rem; color:var(--phosphor-dim); }
+.main-quest-card.has-name .main-title-input{ padding:6px 8px; font-size:0.8rem; color:var(--text-dim); }
 
 .quest-list{ display:flex; flex-direction:column; }
 .quest-item{
@@ -352,7 +355,10 @@ button{ cursor:pointer; }
 }
 .quest-item:last-child{ border-bottom:none; }
 .quest-name{ font-size:0.85rem; }
-.quest-xp{ font-size:0.72rem; color:var(--phosphor-dim); white-space:nowrap; }
+/* A very long word (a pasted link, a name without spaces) wraps instead of
+   pushing the XP, the amount or the remove button out of its row. */
+.quest-name, .inv-item > span, .wallet-label, .log-text, .log-xp{ min-width:0; overflow-wrap:anywhere; }
+.quest-xp{ font-size:0.72rem; color:var(--text-dim); white-space:nowrap; }
 .complete-btn{
   width:30px; height:30px; border:1px solid var(--phosphor-dim); border-radius:50%;
   color:var(--phosphor);
@@ -386,6 +392,28 @@ button{ cursor:pointer; }
 }
 .remove-btn{ width:26px; height:26px; color:var(--danger); font-size:1rem; }
 
+/* Bigger tap areas, same look: an invisible ::before around each small
+   control counts as part of it. Each is sized to stay clear of its
+   neighbours' (checked at 375px wide): 40px or more where the spacing
+   allows. Inputs can't have one. */
+.step-btn, .remove-btn, .complete-btn, .tab-btn, .assign-btn, .add-row button, .add-name,
+.footer-actions button, #reset-confirm-area button, .card-confirm button{ position:relative; }
+.step-btn::before, .remove-btn::before, .complete-btn::before, .tab-btn::before, .assign-btn::before,
+.add-row button::before, .add-name::before, .footer-actions button::before,
+#reset-confirm-area button::before, .card-confirm button::before{ content:''; position:absolute; }
+.remove-btn::before{ inset:-7px; }                             /* 26 -> 40 */
+.complete-btn::before{ inset:-5px; }                           /* 30 -> 40 */
+.bonus-item .complete-btn::before{ inset:-5px -8px; }          /* 24 -> 40 x 34: bonus rows are 34px apart */
+.step-btn::before{ inset:-6px -2px -7px; }                     /* 4px apart side by side, 39px row to row: 35 x 39 */
+.step-btn:first-child::before{ left:-7px; }
+.step-btn:last-child::before{ right:-7px; }
+.tab-btn::before, .assign-btn::before{ inset:-3px; }           /* 6px apart: 38 -> 44, 34 -> 40 */
+.add-row button::before{ inset:-1px; }                         /* 38 -> 40 */
+.add-name::before{ inset:-8px -3px; }
+.footer-actions button::before{ inset:-12px -5px -8px; }       /* 16 -> 36: the confirm row is 16px below */
+#reset-confirm-area button::before{ inset:-8px -3px -12px; }
+.card-confirm button::before{ inset:-8px -6px; }               /* 22 -> 38 */
+
 .add-row{ display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
 .add-row input[type="text"], .add-row input[type="number"], .add-row select{
   border:1px solid var(--line); border-radius:3px; background:var(--panel-alt);
@@ -400,7 +428,7 @@ button{ cursor:pointer; }
 .add-row input#new-main-xp, .add-row input#new-main-days{ width:72px; }
 .days-field{ display:flex; align-items:center; gap:6px; }
 .days-field[hidden]{ display:none; }
-.days-field span{ font-size:0.75rem; color:var(--phosphor-dim); }
+.days-field span{ font-size:0.75rem; color:var(--text-dim); }
 .add-row button{
   border:1px solid var(--phosphor-dim); border-radius:3px; background:var(--panel-alt);
   color:var(--phosphor); padding:8px 14px; min-height:38px;
@@ -415,16 +443,18 @@ button{ cursor:pointer; }
 
 .wallet-card{ border:1px solid var(--amber-dim); border-radius:3px; background:var(--panel-alt); margin-bottom:16px; overflow:hidden; }
 .wallet-toggle{ width:100%; display:flex; justify-content:space-between; align-items:center; padding:12px 14px; min-height:44px; }
+/* The card clips anything outside it, so the focus ring goes inside. */
+.wallet-toggle:focus-visible{ outline-offset:-3px; }
 .wallet-caps{ font-family:'VT323',ui-monospace,monospace; font-size:1.5rem; color:var(--amber); letter-spacing:0.04em; }
-.wallet-chevron{ color:var(--phosphor-dim); font-size:0.8rem; }
+.wallet-chevron{ color:var(--text-dim); font-size:0.8rem; }
 .wallet-detail{ padding:0 14px 12px; border-top:1px solid var(--line); }
 .wallet-row{ padding:8px 0; border-bottom:1px solid var(--line); font-size:0.85rem; }
 .wallet-row-main{ display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:8px; }
-.wallet-row-sub{ font-size:0.72rem; color:var(--phosphor-dim); margin-top:3px; display:flex; align-items:center; gap:5px; }
+.wallet-row-sub{ font-size:0.72rem; color:var(--text-dim); margin-top:3px; display:flex; align-items:center; gap:5px; }
 .rate-input{ width:64px; border:1px solid var(--line); border-radius:3px; background:var(--bg); color:var(--phosphor); padding:3px 5px; font-size:0.72rem; }
-.wallet-label{ color:var(--phosphor-dim); }
+.wallet-label{ color:var(--text-dim); }
 .wallet-total-row{ display:flex; justify-content:space-between; padding:8px 0 2px; font-size:0.85rem; color:var(--amber); margin-top:2px; }
-.wallet-rate{ font-size:0.66rem; color:var(--phosphor-dim); margin-top:8px; text-align:right; }
+.wallet-rate{ font-size:0.66rem; color:var(--text-dim); margin-top:8px; text-align:right; }
 
 #log-input{
   width:100%; border:1px solid var(--line); border-radius:3px; background:var(--panel-alt);
@@ -435,17 +465,17 @@ button{ cursor:pointer; }
   background:var(--panel-alt); color:var(--amber); padding:9px 16px; min-height:40px;
   font-size:0.85rem; letter-spacing:0.03em;
 }
-.thinking{ font-size:0.82rem; color:var(--phosphor-dim); padding:10px 0; }
+.thinking{ font-size:0.82rem; color:var(--text-dim); padding:10px 0; }
 .proposal-card{
   margin-top:10px; border:1px solid var(--amber-dim); border-radius:3px;
   background:var(--panel-alt); padding:12px;
 }
-.proposal-head{ font-size:0.75rem; letter-spacing:0.08em; color:var(--phosphor-dim); margin-bottom:6px; }
+.proposal-head{ font-size:0.75rem; letter-spacing:0.08em; color:var(--text-dim); margin-bottom:6px; }
 .badge{ border:1px solid var(--amber-dim); color:var(--amber); border-radius:3px; padding:1px 6px; font-size:0.65rem; margin-left:6px; }
-.badge.dim{ border-color:var(--line); color:var(--phosphor-dim); }
+.badge.dim{ border-color:var(--line); color:var(--text-dim); }
 .proposal-line{ font-family:'VT323',ui-monospace,monospace; font-size:1.5rem; color:var(--amber); }
 .proposal-reason{ font-size:0.85rem; margin-top:2px; }
-.proposal-sub{ font-size:0.78rem; color:var(--phosphor-dim); margin-top:2px; }
+.proposal-sub{ font-size:0.78rem; color:var(--text-dim); margin-top:2px; }
 .proposal-actions{ display:flex; gap:8px; margin-top:10px; }
 .proposal-actions button{
   flex:1; border:1px solid var(--line); border-radius:3px; padding:9px; min-height:40px; font-size:0.85rem;
@@ -456,17 +486,17 @@ button{ cursor:pointer; }
 .log-history{ display:flex; flex-direction:column; }
 .log-entry{ padding:9px 0; border-bottom:1px solid var(--line); }
 .log-entry:last-child{ border-bottom:none; }
-.log-date{ font-size:0.68rem; letter-spacing:0.08em; color:var(--phosphor-dim); }
+.log-date{ font-size:0.68rem; letter-spacing:0.08em; color:var(--text-dim); }
 .log-text{ font-size:0.85rem; margin-top:2px; }
 .log-xp{ font-size:0.75rem; color:var(--amber); margin-top:2px; }
 
 .footer-row{
   margin-top:16px; display:flex; justify-content:space-between; align-items:center;
-  font-size:0.68rem; color:var(--phosphor-dim); letter-spacing:0.04em; position:relative; z-index:3;
+  font-size:0.68rem; color:var(--text-dim); letter-spacing:0.04em; position:relative; z-index:3;
   flex-wrap:wrap; gap:8px;
 }
 .footer-actions{ display:flex; gap:10px; }
-.footer-actions button{ color:var(--phosphor-dim); text-decoration:underline; font-size:0.68rem; }
+.footer-actions button{ color:var(--text-dim); text-decoration:underline; font-size:0.68rem; }
 .reset-warning{ color:var(--danger); }
 #reset-confirm-area button{ text-decoration:underline; font-size:0.68rem; margin-left:6px; }
 #reset-confirm-btn, #import-confirm-btn{ color:var(--danger); }

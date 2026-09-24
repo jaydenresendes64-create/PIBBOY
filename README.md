@@ -13,17 +13,18 @@ Plain HTML, CSS and JavaScript: no framework, no build step.
 ```
 index.html          markup
 css/terminal.css    styles
-js/state.js         data model, defaults, reward rules, backup validation
-js/storage.js       saving: IndexedDB with a localStorage fallback, backup files
+js/state.js         data model, defaults, reward rules, migrating and checking saves and backups
+js/storage.js       saving: two copies (IndexedDB and localStorage), backup files
 js/ai.js            journal analysis client + offline keyword rules
 js/render.js        builds each tab
 js/mascot.js        when the mascot walks or gestures (his moves are in css/terminal.css)
 js/events.js        user actions
 js/main.js          startup
-sw.js               service worker: offline use (network first, so updates show right away)
+sw.js               service worker: offline use (network first for the app, so updates show right away)
 manifest.webmanifest name, colours and icons (icons/) for installing on a phone
 images/mascot.png   the amber mascot in the top-right corner
 api/analyze.js      optional serverless AI function (not used on GitHub Pages, see below)
+tests/              automated tests (see "Run the tests")
 .nojekyll           tells GitHub Pages to serve the files as they are, without Jekyll
 ```
 
@@ -44,9 +45,11 @@ Open the site once while online, then:
 - **Android (Chrome):** menu ⋮ → **Install app** (or **Add to Home screen**).
 
 It opens full screen like an app and keeps working without a connection. Updates still arrive
-normally: while online the app loads from GitHub Pages like any website, and the copy saved on the
-phone is only used when there's no connection. Nothing needs to change in `sw.js` when you update
-the app.
+normally: while online the app loads from GitHub Pages like any website (checked against the server
+on every open, so a new version shows up the next time you open it), and the copy saved on the phone
+is only used when there's no connection. Nothing needs to change in `sw.js` when you update the app.
+The terminal fonts are kept on the phone after the first visit, so the app never waits for Google
+Fonts again, even on a bad connection.
 
 Where your data lives: on Android the installed app shares it with Chrome. On iPhone the Home Screen
 app keeps its own data, separate from Safari, so use **Export backup** in Safari and **Import backup**
@@ -56,12 +59,34 @@ in the app to bring it over.
 
 Double-click `index.html`. Everything works the same as on GitHub Pages, except installing and
 offline use, which need the site to be served over http(s) (for example `npx http-server` in this
-folder, then http://localhost:8080).
+folder, then http://localhost:8080). Served that way, the browser console shows one harmless 404: the
+app checking whether the optional AI function exists (it never checks on GitHub Pages).
+
+## Run the tests
+
+With [Node.js](https://nodejs.org) 20 or newer installed, run this in the project folder:
+
+```
+node --test
+```
+
+No install step and no dependencies: the tests use Node's built-in test runner and load the app's own
+scripts from `js/` with a small fake browser (`tests/helpers.js`). They cover migrating every earlier
+save format, checking backup files (including hostile ones), XP and level-ups, skill and
+S.P.E.C.I.A.L. limits, streaks across days, the offline journal rules in English and French, safe
+HTML output, and saving (both copies, damaged copies, two tabs).
 
 ## Your data
 
-- Saved in the browser you use (IndexedDB, falling back to localStorage). Another browser or device
-  starts empty. Use **Export backup / Import backup** in the footer to move it.
+- Saved in the browser you use, twice (IndexedDB and localStorage): if one copy is damaged, the
+  other is used. If neither can be read, the app says so and changes nothing rather than starting
+  empty. Another browser or device starts empty. Use **Export backup / Import backup** in the footer
+  to move it. An imported file is checked (and brought up to date if it comes from an older
+  version) before you confirm; a file that isn't a backup is refused and nothing changes.
+- The app asks the browser to keep its storage even when space runs low (on a phone this is silent).
+- With the app open in two tabs, each follows the other's changes. A change can never overwrite a
+  newer one made in the other tab: if both change at the same moment, the second one gives way and
+  says so.
 - **Coming from the Claude version:** open it in Claude, click **Export backup**, then **Import backup**
   in this app.
 - With the offline rules, diary entries never leave your browser.

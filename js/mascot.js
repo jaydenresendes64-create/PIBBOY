@@ -3,7 +3,8 @@
  * How he moves lives in css/terminal.css: few poses, steps() timing, like
  * Vault Boy in a Pip-Boy. This file only picks when: a short walk every
  * 10-20 s, and one gesture when the tab changes. He never takes a tap
- * (pointer-events:none), and with prefers-reduced-motion he stays still.
+ * (pointer-events:none), with prefers-reduced-motion he stays still, and
+ * while the app is in the background nothing is planned or played.
  */
 (function(ST){
   'use strict';
@@ -13,23 +14,36 @@
 
   var mover = null;             // .mascot-move: its data-move attribute plays a move
   var walkTimer = null;
+  var frame = null;             // the animation frame that starts the next move
   var currentTab = null;
   var motion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
 
   function stayStill(){ return !!(motion && motion.matches); }
+  function hidden(){ return document.visibilityState==='hidden'; }
 
-  // Plays one move from css/terminal.css (data-move="..."), cutting short
-  // whatever he was doing. The next walk is planned once it's over.
-  function play(move){
+  function stop(){
     clearTimeout(walkTimer);
-    if (!mover || stayStill()) return;
-    mover.removeAttribute('data-move');
-    void mover.offsetWidth;     // restarts the animation, even for the same move twice
-    mover.setAttribute('data-move', move);
+    if (frame!==null) cancelAnimationFrame(frame);
+    frame = null;
+    if (mover) mover.removeAttribute('data-move');
+  }
+  // Plays one move from css/terminal.css (data-move="..."), cutting short
+  // whatever he was doing. The next walk is planned once it's over. The
+  // move is set two frames after it's cleared, so the same move can play
+  // twice in a row without forcing the page to lay out again right away.
+  function play(move){
+    stop();
+    if (!mover || stayStill() || hidden()) return;
+    frame = requestAnimationFrame(function(){
+      frame = requestAnimationFrame(function(){
+        frame = null;
+        mover.setAttribute('data-move', move);
+      });
+    });
   }
   function planWalk(){
     clearTimeout(walkTimer);
-    if (!mover || stayStill()) return;
+    if (!mover || stayStill() || hidden()) return;
     walkTimer = setTimeout(function(){
       play(Math.random()<0.5 ? 'walk-left' : 'walk-right');
     }, WALK_MIN_MS + Math.random()*(WALK_MAX_MS-WALK_MIN_MS));
@@ -39,13 +53,11 @@
     mover.removeAttribute('data-move');
     planWalk();
   }
-  function onMotionChange(){
-    if (stayStill()){
-      clearTimeout(walkTimer);
-      if (mover) mover.removeAttribute('data-move');
-    } else {
-      planWalk();
-    }
+  // Reduced motion switched on, or the app sent to the background: stop.
+  // Back again: plan a walk from scratch.
+  function onChange(){
+    if (stayStill() || hidden()) stop();
+    else planWalk();
   }
 
   // One short gesture when the tab really changes (not when the open tab is tapped again).
@@ -62,9 +74,10 @@
     currentTab = tab;
     mover.addEventListener('animationend', onMoveEnd);
     if (motion){
-      if (motion.addEventListener) motion.addEventListener('change', onMotionChange);
-      else if (motion.addListener) motion.addListener(onMotionChange);
+      if (motion.addEventListener) motion.addEventListener('change', onChange);
+      else if (motion.addListener) motion.addListener(onChange);
     }
+    document.addEventListener('visibilitychange', onChange);
     planWalk();
   }
 

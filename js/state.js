@@ -2,29 +2,31 @@
  * DATA MODEL — informal reference (no build step here, so this is the
  * closest thing to types/interfaces; keep it in sync when the shape below
  * changes). All of `state` is one JSON document, persisted whole by
- * storage.js (IndexedDB, falling back to localStorage).
+ * storage.js (a copy in IndexedDB and one in localStorage).
  *
  * State {
  *   level: number, xp: number, xpToNext: number, lifetimeXp: number,
- *   lifetimeLogEntries: number,             // every accepted entry, even past the 200 kept in `log`
+ *   lifetimeLogEntries: number,             // every accepted entry, even past the LOG_MAX (200) kept in `log`
  *   unspentSpecialPoints: number,           // level-up points not yet placed
  *   stats:  { STR,END,CHA,INT,AGI: number(0-10) },   // SPECIAL — see "S.P.E.C.I.A.L." below
  *   skills: { CONCENTRATION,KNOWLEDGE,SPEECH,SURVIVAL,COOKING,FINANCE,MUSIC,BUSINESS: number(0-100) },
  *                                           // CONCENTRATION was SCIENCE: see migrate()
  *   quests: {
  *     mains: [ MainQuest ],                  // older saves had one, as `main`: see migrate()
- *     side:  [ { id, questName, name, xp, done } ],
- *     daily: [ { id, questName, name, xp, lastDate:'YYYY-M-D'|null } ]  // done = lastDate===today
+ *     side:  [ { id, questName, name, xp, done } ],  // done ones stay, hidden, for the Lifetime count
+ *     daily: [ { id, questName, name, xp, lastDate:'YYYY-M-D'|null } ]  // done = lastDate===todayStr()
  *   },
  *   inventory: [ { id, name, category: one of CATS } ],
- *   finances: { holdings: [ { id, label, amount, rateToCAD } ] },
- *   log: [ { date, text, xp, reason } ]
+ *   finances: { holdings: [ { id, label, amount, rateToCAD: number>0 } ] },  // Caps = total CAD / CAD_PER_CAP
+ *   log: [ { date, text, xp, reason } ]      // date as shown ('Sep 24, 2026'); the latest LOG_MAX only
  * }
+ * Every `id` is a short string of letters, digits, _ and - (SAFE_ID): genId()
+ * for anything the player adds.
  * MainQuest {
  *   id, questName, title, xp, completed,          // completed ones stay in the list
  *   skillGains: [SkillGain],
  *   bonus: [ { id, name, xp, done } ],             // bonus objectives
- *   progressType: 'percent'|'streak',              // missing = 'percent'
+ *   progressType: 'percent'|'streak',              // saves from before streaks: 'percent'
  *   progress: number(0-100),                       // percent: the slider, 100 completes it
  *   // streak quests only: a check-in a day; reaching streakTarget completes it
  *   streakTarget: number(1-STREAK_MAX_DAYS),
@@ -41,9 +43,16 @@
  *
  * Every reward path (quest completion, bonus objective, journal proposal)
  * should express its reward as XP plus zero or more SkillGains, and apply
- * them through grantSkill()/addXp() rather than touching state.skills /
- * state.xp directly — that's what keeps the bounds checks and lifetime
- * counters in one place instead of duplicated at each call site.
+ * them through grantSkill()/gainXp() (completeMain() does both for a main
+ * quest) rather than touching state.skills / state.xp directly — that's
+ * what keeps the bounds checks and lifetime counters in one place instead
+ * of duplicated at each call site. events.js adds the toasts (addXp()).
+ *
+ * LOADING — every document the app takes in (a saved copy, a backup file,
+ * another window's save) goes through sanitizeImported(), which runs
+ * migrate() first. A change to the shape above goes in migrate(), so it
+ * reaches saves in the browser and old backups alike; tests/migrate.test.js
+ * keeps every earlier format.
  *
  * S.P.E.C.I.A.L.: `stats` only goes up one way. Each level-up adds one
  * unspentSpecialPoint; the player taps a stat in the STATUS tab's level-up
@@ -55,7 +64,8 @@
  * index.html loads them in dependency order: state → storage → ai → render →
  * mascot → events → main. They are plain scripts rather than ES modules so the app
  * still runs when index.html is opened straight from disk (file://), where
- * browsers refuse to load modules.
+ * browsers refuse to load modules. The tests (tests/) load the same files in
+ * Node: `node --test`.
  */
 (function(ST){
   'use strict';
@@ -67,6 +77,7 @@
   var CAD_PER_CAP = 1000;
   var QUEST_NAME_MAX = 60;
   var STREAK_MAX_DAYS = 1000;
+  var LOG_MAX = 200;
 
   var DEFAULT_STATE = {
     level:2, xp:0, xpToNext:1000,
@@ -120,13 +131,21 @@
   function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
   function todayDisplay(){ return new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
   function commas(n){ return Number(n).toLocaleString('en-US'); }
-  function money(n){ return Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  // Rounded to the cent first, so a tiny negative amount shows 0.00, not -0.00.
+  function cents(n){ return Math.round(Number(n)*100)/100 || 0; }
+  function money(n){ return cents(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
   function escapeHtml(str){
     return String(str).replace(/[&<>"']/g,function(c){
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
     });
   }
   function clone(value){ return JSON.parse(JSON.stringify(value)); }
+  // Copies `from`'s own fields onto `to`. A "__proto__" key (JSON.parse
+  // makes it an ordinary key) would replace `to`'s prototype: skipped.
+  function copyFields(to, from){
+    Object.keys(from).forEach(function(k){ if (k!=='__proto__') to[k] = from[k]; });
+    return to;
+  }
 
   // Recursive merge: any field added to DEFAULT_STATE later (a new stat, a new
   // quest property, a new top-level system) is filled in automatically for a
@@ -147,8 +166,9 @@
     return loaded;
   }
   // Brings a document written by an older version up to the current shape,
-  // before the defaults are merged in. Saves and imported backups both pass
-  // through here (via mergeDefaults). Edits `doc` in place and returns it.
+  // before the defaults are merged in. Saved copies, backups and other
+  // windows' saves all pass through here (sanitizeImported → mergeDefaults).
+  // Edits `doc` in place and returns it.
   function migrate(doc){
     if (!doc || typeof doc!=='object') return doc;
     migrateMainQuests(doc.quests);
@@ -162,9 +182,7 @@
     if (!quests || typeof quests!=='object') return;
     var main = quests.main;
     if (!Array.isArray(quests.mains) && main && typeof main==='object' && !Array.isArray(main)){
-      var first = {id:'m1', questName:'', progressType:'percent'};
-      Object.keys(main).forEach(function(k){ first[k] = main[k]; });
-      quests.mains = [first];
+      quests.mains = [copyFields({id:'m1', questName:'', progressType:'percent'}, main)];
     }
     delete quests.main;
   }
@@ -205,32 +223,67 @@
   function capsValue(){
     return totalHoldingsCAD() / CAD_PER_CAP;
   }
-  // `log` only keeps the latest 200 entries. Saves made before
+  function capsText(){ return cents(capsValue()).toFixed(2); }
+  // `log` only keeps the latest LOG_MAX entries. Saves made before
   // lifetimeLogEntries existed start from the entries they still have.
   function logEntryCount(){
     return Math.max(app.state.lifetimeLogEntries||0, app.state.log.length);
   }
+  // An accepted journal entry: counted for good, and kept in `log` among
+  // the latest LOG_MAX.
+  function addLogEntry(entry){
+    var state = app.state;
+    state.lifetimeLogEntries = logEntryCount() + 1;
+    state.log.push(entry);
+    if (state.log.length>LOG_MAX) state.log = state.log.slice(-LOG_MAX);
+  }
 
-  // ---------- streak main quests ----------
-  // Whole days from the date 'YYYY-M-D' to today: 0 today, 1 yesterday,
-  // negative for a later date (the clock was moved back); null when unset.
+  // ---------- dates ----------
+  // Dates are stored as local calendar days, 'YYYY-M-D' (todayStr()).
+  var DATE = /^(\d{4})-(\d{1,2})-(\d{1,2})$/;
+  // The same day written 'YYYY-M-D' ('2026-09-04' becomes '2026-9-4'), or
+  // null when `date` isn't one.
+  function normalizeDate(date){
+    var m = DATE.exec(typeof date==='string' ? date : '');
+    return m ? (+m[1])+'-'+(+m[2])+'-'+(+m[3]) : null;
+  }
+  // Whole days from the date to today: 0 today, 1 yesterday, negative for a
+  // later date; null when unset. Counted on calendar days, so daylight
+  // saving changes don't matter.
   function daysSince(date){
-    var m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(date || '');
+    var m = DATE.exec(date || '');
     if (!m) return null;
     var now = new Date();
     return Math.round((Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) -
       Date.UTC(+m[1], +m[2]-1, +m[3])) / 864e5);
   }
+
+  // ---------- streak main quests ----------
+  // A check-in dated tomorrow still counts as today's: after flying west,
+  // the calendar can be a day behind the check-in. One dated later than
+  // that can only come from a clock that was wrong: it doesn't lock the
+  // quest until that date, the next check-in simply continues the streak.
   function checkedInToday(q){
     var d = daysSince(q.lastCheckIn);
-    return d!==null && d<=0;
+    return d!==null && d<=0 && d>=-1;
   }
-  // The streak as it stands today: a missed day resets it to 0. A completed
-  // quest keeps the streak it finished with.
+  // The streak as it stands today: a missed day resets it to 0 (as soon as
+  // the app is opened, not only at the next check-in). A completed quest
+  // keeps the streak it finished with.
   function currentStreak(q){
     if (q.completed) return q.streakDays||0;
     var d = daysSince(q.lastCheckIn);
     return d!==null && d<=1 ? (q.streakDays||0) : 0;
+  }
+  // Today's check-in: days in a row add up; after a missed day the streak
+  // starts again at 1. Returns false when there's nothing to do (checked in
+  // already, or completed), 'target' when this one reaches the target (the
+  // caller then completes the quest), true otherwise.
+  function streakCheckIn(q){
+    if (q.completed || checkedInToday(q)) return false;
+    q.streakDays = currentStreak(q) + 1;
+    q.lastCheckIn = todayStr();
+    return q.streakDays>=q.streakTarget ? 'target' : true;
   }
 
   // ---------- centralized reward logic ----------
@@ -240,18 +293,24 @@
   // a level-up point, once the player confirmed it (see S.P.E.C.I.A.L. above).
   function grantSkill(key, amount){
     var state = app.state;
-    if (SKILL_KEYS.indexOf(key)===-1 || !amount) return;
-    state.skills[key] = clamp((state.skills[key]||0)+amount, 0, 100);
+    amount = Number(amount);
+    if (SKILL_KEYS.indexOf(key)===-1 || !amount || !isFinite(amount)) return;
+    state.skills[key] = clamp((Number(state.skills[key])||0)+amount, 0, 100);
   }
   function grantStat(key, amount){
     var state = app.state;
-    if (STAT_KEYS.indexOf(key)===-1 || !amount) return;
-    state.stats[key] = clamp((state.stats[key]||0)+amount, 0, 10);
+    amount = Number(amount);
+    if (STAT_KEYS.indexOf(key)===-1 || !amount || !isFinite(amount)) return;
+    state.stats[key] = clamp((Number(state.stats[key])||0)+amount, 0, 10);
   }
   // The state half of addXp() (events.js adds the toasts). Returns true when
-  // the player levelled up.
+  // the player levelled up; several levels at once each give their point.
+  // Anything but a positive amount is ignored, so XP can't become NaN or
+  // go down.
   function gainXp(amount){
     var state = app.state;
+    amount = Number(amount);
+    if (!(amount>0) || !isFinite(amount)) return false;
     state.xp += amount;
     state.lifetimeXp = (state.lifetimeXp||0) + amount;
     var leveled = false;
@@ -264,35 +323,51 @@
     }
     return leveled;
   }
+  // Completes a main quest: its XP and skill gains, once. Returns null when
+  // it was completed already, else {xp, leveled} for the toasts.
+  function completeMain(m){
+    if (m.completed) return null;
+    m.completed = true;
+    (m.skillGains||[]).forEach(function(g){ grantSkill(g.skill, g.amount); });
+    var xp = Number(m.xp)||0;
+    return {xp:xp, leveled:gainXp(xp)};
+  }
 
-  // ---------- backup import ----------
-  // A backup file is untrusted input. render.js writes numbers and ids into
-  // HTML without escaping (the app itself only ever stores numbers and
-  // generated ids there), so every field is coerced back to the type the data
-  // model gives it before an import may replace the current state.
+  // ---------- checking a document ----------
+  // Every document the app takes in goes through sanitizeImported(): a
+  // backup file (untrusted input), each copy storage.js loads, and a copy
+  // saved by another window. Every field is coerced back to the type the
+  // data model gives it, so a broken or hostile document can't break the
+  // page or put markup into it. Text is only shortened where the app itself
+  // never writes more (quest names and main objectives: 60, like their
+  // boxes; journal dates and reasons), so a document the app saved or
+  // exported comes back exactly as it was.
   var SAFE_ID = /^[A-Za-z0-9_-]{1,40}$/;
   function num(v, fallback){ var n = Number(v); return isFinite(n) ? n : fallback; }
-  function text(v, max){ return (v===null || v===undefined ? '' : String(v)).slice(0, max); }
+  function text(v, max){
+    var str = v===null || v===undefined ? '' : String(v);
+    return max ? str.slice(0, max) : str;
+  }
   function safeId(v){ return (typeof v==='string' && SAFE_ID.test(v)) ? v : genId(); }
   function records(list, fix){
     return (Array.isArray(list) ? list : []).filter(function(x){
       return x && typeof x==='object' && !Array.isArray(x);
     }).map(function(x){
-      var out = {};
-      Object.keys(x).forEach(function(k){ out[k] = x[k]; });
+      var out = copyFields({}, x);
       fix(out);
       return out;
     });
   }
   function fixQuest(q){
     q.id = safeId(q.id);
-    q.name = text(q.name, 500);
+    q.name = text(q.name);
     q.xp = Math.max(0, num(q.xp, 0));
   }
   function fixDoneQuest(q){ fixQuest(q); q.done = q.done===true; }
   function fixQuestName(q){ q.questName = text(q.questName, QUEST_NAME_MAX).trim(); }
 
-  // Returns a clean state document, or null when `raw` isn't a backup of this app.
+  // Returns a clean state document, or null when `raw` isn't a state document
+  // of this app (a backup, or a saved copy).
   function sanitizeImported(raw){
     if (!raw || typeof raw!=='object' || Array.isArray(raw)) return null;
     if (!raw.stats || typeof raw.stats!=='object' || !raw.quests || typeof raw.quests!=='object') return null;
@@ -314,7 +389,7 @@
       if (m.progressType==='streak'){
         m.streakTarget = clamp(Math.round(num(m.streakTarget, 7)), 1, STREAK_MAX_DAYS);
         m.streakDays = clamp(Math.round(num(m.streakDays, 0)), 0, m.streakTarget);
-        m.lastCheckIn = typeof m.lastCheckIn==='string' ? m.lastCheckIn.slice(0,10) : null;
+        m.lastCheckIn = normalizeDate(m.lastCheckIn);
       }
       m.xp = Math.max(0, num(m.xp, 0));
       m.completed = m.completed===true;
@@ -326,29 +401,29 @@
     s.quests.daily = records(s.quests.daily, function(q){
       fixQuest(q);
       fixQuestName(q);
-      q.lastDate = typeof q.lastDate==='string' ? q.lastDate.slice(0,10) : null;
+      q.lastDate = normalizeDate(q.lastDate);
     });
 
     s.inventory = records(s.inventory, function(i){
       i.id = safeId(i.id);
-      i.name = text(i.name, 500);
+      i.name = text(i.name);
       if (CATS.indexOf(i.category)===-1) i.category = 'MISC';
     });
     s.finances.holdings = records(s.finances.holdings, function(h){
       h.id = safeId(h.id);
-      h.label = text(h.label, 60);
+      h.label = text(h.label);
       h.amount = num(h.amount, 0);
       var rate = num(h.rateToCAD, 1);
       h.rateToCAD = rate>0 ? rate : 1;
     });
     var log = records(s.log, function(entry){
       entry.date = text(entry.date, 40);
-      entry.text = text(entry.text, 10000);
+      entry.text = text(entry.text);
       entry.xp = num(entry.xp, 0);
       entry.reason = text(entry.reason, 200);
     });
     s.lifetimeLogEntries = Math.max(log.length, Math.round(num(s.lifetimeLogEntries, 0)));
-    s.log = log.slice(-200);
+    s.log = log.slice(-LOG_MAX);
     return s;
   }
 
@@ -368,17 +443,20 @@
   ST.todayDisplay = todayDisplay;
   ST.commas = commas;
   ST.money = money;
+  ST.capsText = capsText;
   ST.escapeHtml = escapeHtml;
 
-  ST.mergeDefaults = mergeDefaults;
+  ST.migrate = migrate;
   ST.defaultState = defaultState;
   ST.sanitizeImported = sanitizeImported;
   ST.totalHoldingsCAD = totalHoldingsCAD;
-  ST.capsValue = capsValue;
   ST.logEntryCount = logEntryCount;
+  ST.addLogEntry = addLogEntry;
   ST.checkedInToday = checkedInToday;
   ST.currentStreak = currentStreak;
+  ST.streakCheckIn = streakCheckIn;
   ST.grantSkill = grantSkill;
   ST.grantStat = grantStat;
   ST.gainXp = gainXp;
+  ST.completeMain = completeMain;
 })(window.StatusTerminal = window.StatusTerminal || {});
