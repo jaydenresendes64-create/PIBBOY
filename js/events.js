@@ -53,8 +53,15 @@
     var q = readNewQuest('new-main');
     if (!q) return;
     var xp = clamp(parseInt(el('new-main-xp').value,10)||1000,10,5000);
-    app.state.quests.mains.push({id:genId(), questName:q.questName, title:q.objective.slice(0,60),
-      progress:0, xp:xp, completed:false, skillGains:[], bonus:[]});
+    var quest = {id:genId(), questName:q.questName, title:q.objective.slice(0,60),
+      progressType:'percent', progress:0, xp:xp, completed:false, skillGains:[], bonus:[]};
+    if (el('new-main-type').value==='streak'){
+      quest.progressType = 'streak';
+      quest.streakTarget = clamp(parseInt(el('new-main-days').value,10)||7, 1, ST.STREAK_MAX_DAYS);
+      quest.streakDays = 0;
+      quest.lastCheckIn = null;
+    }
+    app.state.quests.mains.push(quest);
     renderQuests(); scheduleSave();
   }
   function findMain(id){
@@ -66,6 +73,15 @@
     addXp(m.xp||0);
     (m.skillGains||[]).forEach(function(g){ grantSkill(g.skill, g.amount); });
     renderStatus();
+  }
+  // A streak quest's check-in, once a day. Days in a row add up; after a
+  // missed day the streak starts again at 1. Reaching the target completes it.
+  function checkIn(m){
+    if (m.completed || ST.checkedInToday(m)) return false;
+    m.streakDays = ST.currentStreak(m) + 1;
+    m.lastCheckIn = todayStr();
+    if (m.streakDays>=m.streakTarget) completeMainQuest(m);
+    return true;
   }
   function addInventoryItem(){
     var name = el('new-item-name').value.trim();
@@ -282,6 +298,9 @@
           var owner = findMain(actionBtn.getAttribute('data-quest'));
           var b = owner && (owner.bonus||[]).filter(function(x){return x.id===id;})[0];
           if (b && !b.done){ b.done = true; addXp(b.xp||0); renderQuests(); scheduleSave(); }
+        } else if (action==='main-checkin'){
+          var sq = findMain(id);
+          if (sq && checkIn(sq)){ renderQuests(); scheduleSave(); }
         } else if (action==='main-remove'){
           app.confirmRemoveMain = id;
           renderQuests();
@@ -326,6 +345,8 @@
         var title = e.target.value.trim().slice(0,60);
         if (mq && title){ mq.title = title; scheduleSave(); }
         else if (mq) e.target.value = mq.title;       // emptied: the objective stays as it was
+      } else if (e.target.id==='new-main-type'){
+        el('new-main-days-field').hidden = e.target.value!=='streak';
       } else if (e.target.classList.contains('rate-input')){
         var hid = e.target.getAttribute('data-id');
         var h = state.finances.holdings.filter(function(x){return x.id===hid;})[0];

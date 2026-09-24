@@ -20,9 +20,15 @@
  *   log: [ { date, text, xp, reason } ]
  * }
  * MainQuest {
- *   id, questName, title, progress(0-100), xp, completed,   // completed ones stay in the list
+ *   id, questName, title, xp, completed,          // completed ones stay in the list
  *   skillGains: [SkillGain],
- *   bonus: [ { id, name, xp, done } ]                        // bonus objectives
+ *   bonus: [ { id, name, xp, done } ],             // bonus objectives
+ *   progressType: 'percent'|'streak',              // missing = 'percent'
+ *   progress: number(0-100),                       // percent: the slider, 100 completes it
+ *   // streak quests only: a check-in a day; reaching streakTarget completes it
+ *   streakTarget: number(1-STREAK_MAX_DAYS),
+ *   streakDays: number,                            // days in a row, up to lastCheckIn...
+ *   lastCheckIn: 'YYYY-M-D'|null                   // ...kept only while that is today or yesterday
  * }
  * SkillGain { skill: one of SKILL_KEYS, amount: number }
  *
@@ -54,6 +60,7 @@
   var CATS = ['WEAPONS','APPAREL','AID','MISC','IMPORTANT'];
   var CAD_PER_CAP = 1000;
   var QUEST_NAME_MAX = 60;
+  var STREAK_MAX_DAYS = 1000;
 
   var DEFAULT_STATE = {
     level:2, xp:0, xpToNext:1000,
@@ -64,7 +71,7 @@
     skills:{SCIENCE:21,SPEECH:42,SURVIVAL:23,COOKING:8,FINANCE:17,MUSIC:35,BUSINESS:5},
     quests:{
       mains:[
-        {id:'m1', questName:'Caps on the Line', title:'Obtain 5 Caps', progress:0, xp:1000, completed:false, skillGains:[{skill:'FINANCE',amount:8},{skill:'BUSINESS',amount:2}], bonus:[
+        {id:'m1', questName:'Caps on the Line', title:'Obtain 5 Caps', progressType:'percent', progress:0, xp:1000, completed:false, skillGains:[{skill:'FINANCE',amount:8},{skill:'BUSINESS',amount:2}], bonus:[
           {id:'b1',name:'Find a job',xp:500,done:false},
           {id:'b2',name:'Launch a project',xp:500,done:false}
         ]}
@@ -143,7 +150,7 @@
     // completion, bonus objectives...), and no name unless it had one.
     var main = quests.main;
     if (!Array.isArray(quests.mains) && main && typeof main==='object' && !Array.isArray(main)){
-      var first = {id:'m1', questName:''};
+      var first = {id:'m1', questName:'', progressType:'percent'};
       Object.keys(main).forEach(function(k){ first[k] = main[k]; });
       quests.mains = [first];
     }
@@ -167,6 +174,28 @@
   // lifetimeLogEntries existed start from the entries they still have.
   function logEntryCount(){
     return Math.max(app.state.lifetimeLogEntries||0, app.state.log.length);
+  }
+
+  // ---------- streak main quests ----------
+  // Whole days from the date 'YYYY-M-D' to today: 0 today, 1 yesterday,
+  // negative for a later date (the clock was moved back); null when unset.
+  function daysSince(date){
+    var m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(date || '');
+    if (!m) return null;
+    var now = new Date();
+    return Math.round((Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) -
+      Date.UTC(+m[1], +m[2]-1, +m[3])) / 864e5);
+  }
+  function checkedInToday(q){
+    var d = daysSince(q.lastCheckIn);
+    return d!==null && d<=0;
+  }
+  // The streak as it stands today: a missed day resets it to 0. A completed
+  // quest keeps the streak it finished with.
+  function currentStreak(q){
+    if (q.completed) return q.streakDays||0;
+    var d = daysSince(q.lastCheckIn);
+    return d!==null && d<=1 ? (q.streakDays||0) : 0;
   }
 
   // ---------- centralized reward logic ----------
@@ -244,7 +273,13 @@
       m.id = safeId(m.id);
       fixQuestName(m);
       m.title = text(m.title, 60);
+      m.progressType = m.progressType==='streak' ? 'streak' : 'percent';
       m.progress = clamp(Math.round(num(m.progress, 0)), 0, 100);
+      if (m.progressType==='streak'){
+        m.streakTarget = clamp(Math.round(num(m.streakTarget, 7)), 1, STREAK_MAX_DAYS);
+        m.streakDays = clamp(Math.round(num(m.streakDays, 0)), 0, m.streakTarget);
+        m.lastCheckIn = typeof m.lastCheckIn==='string' ? m.lastCheckIn.slice(0,10) : null;
+      }
       m.xp = Math.max(0, num(m.xp, 0));
       m.completed = m.completed===true;
       m.skillGains = records(m.skillGains, function(g){ g.amount = num(g.amount, 0); })
@@ -287,6 +322,7 @@
   ST.CATS = CATS;
   ST.CAD_PER_CAP = CAD_PER_CAP;
   ST.QUEST_NAME_MAX = QUEST_NAME_MAX;
+  ST.STREAK_MAX_DAYS = STREAK_MAX_DAYS;
   ST.app = app;
 
   ST.el = el;
@@ -304,6 +340,8 @@
   ST.totalHoldingsCAD = totalHoldingsCAD;
   ST.capsValue = capsValue;
   ST.logEntryCount = logEntryCount;
+  ST.checkedInToday = checkedInToday;
+  ST.currentStreak = currentStreak;
   ST.grantSkill = grantSkill;
   ST.grantStat = grantStat;
   ST.gainXp = gainXp;

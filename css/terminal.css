@@ -200,6 +200,13 @@ button{ cursor:pointer; }
 .progress-row{ display:flex; align-items:center; gap:10px; margin-top:10px; }
 .progress-row input[type="range"]{ flex:1; accent-color:var(--phosphor); }
 .progress-pct{ font-size:0.85rem; color:var(--phosphor-dim); width:3em; text-align:right; }
+.streak-row{ display:flex; align-items:center; gap:10px; margin-top:10px; }
+.streak-days{
+  font-family:'VT323',ui-monospace,monospace; font-size:1.35rem; line-height:1;
+  color:var(--amber); white-space:nowrap;
+}
+.streak-bar{ flex:1; height:8px; background:var(--bg); border:1px solid var(--line); border-radius:2px; overflow:hidden; }
+.streak-fill{ height:100%; background:linear-gradient(90deg,var(--phosphor-dim),var(--phosphor)); }
 .bonus-label{ font-size:0.68rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--phosphor-dim); margin:12px 0 4px; }
 .bonus-list{ display:flex; flex-direction:column; }
 .bonus-item{ display:flex; align-items:center; gap:8px; padding:5px 0; font-size:0.82rem; }
@@ -207,6 +214,7 @@ button{ cursor:pointer; }
 .bonus-item.done .quest-name{ color:var(--phosphor-dim); text-decoration:line-through; }
 .bonus-item .complete-btn{ width:24px; height:24px; }
 .main-xp-note{ font-size:0.7rem; color:var(--phosphor-dim); margin-top:8px; }
+.main-xp-note span{ white-space:nowrap; }
 
 /* Quest names: the name on top, the objective under it, smaller and dimmed.
    Tapping the name swaps it for .quest-title-input. */
@@ -256,6 +264,11 @@ button{ cursor:pointer; }
 .add-row input.field-objective{ flex:1 1 120px; min-width:0; }
 .add-row input[type="number"]{ width:64px; }
 .add-row select{ flex:0 0 auto; }
+.add-row select#new-main-type{ flex:1 1 120px; }
+.add-row input#new-main-xp, .add-row input#new-main-days{ width:72px; }
+.days-field{ display:flex; align-items:center; gap:6px; }
+.days-field[hidden]{ display:none; }
+.days-field span{ font-size:0.75rem; color:var(--phosphor-dim); }
 .add-row button{
   border:1px solid var(--phosphor-dim); border-radius:3px; background:var(--panel-alt);
   color:var(--phosphor); padding:8px 14px; min-height:38px;

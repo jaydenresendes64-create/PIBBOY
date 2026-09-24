@@ -101,8 +101,25 @@
     return btn;
   }
 
+  // A streak quest's progress: "Day 3 / 7", and a check-in button usable once a day.
+  function streakRowHtml(m){
+    var days = ST.currentStreak(m);
+    var done = m.completed || ST.checkedInToday(m);
+    return '<div class="streak-row">'+
+      '<button class="complete-btn'+(done?' done':'')+'" data-action="main-checkin" data-id="'+m.id+'" '+(done?'disabled':'')+' aria-label="Check in for today">'+(done?'&#10003;':'&#9675;')+'</button>'+
+      '<span class="streak-days">Day '+days+' / '+m.streakTarget+'</span>'+
+      '<div class="streak-bar"><div class="streak-fill" style="width:'+clamp(days/m.streakTarget*100,0,100)+'%"></div></div>'+
+    '</div>';
+  }
+  function streakNote(m){
+    if (ST.checkedInToday(m)) return 'Checked in today';
+    if (m.streakDays>0 && ST.currentStreak(m)===0) return 'Missed a day, streak reset';
+    return 'Check in once a day';
+  }
+
   function mainQuestHtml(m){
     var bonus = m.bonus || [];
+    var streak = m.progressType==='streak';
     var html = '<div class="main-quest-card'+(m.questName?' has-name':'')+(m.completed?' completed':'')+'">'+
       '<div class="main-quest-head">'+
         questTitleHtml('main', m)+
@@ -110,11 +127,13 @@
         '<button class="remove-btn" data-action="main-remove" data-id="'+m.id+'" aria-label="Remove main quest">&times;</button>'+
       '</div>'+
       '<input type="text" class="main-title-input" data-id="'+m.id+'" maxlength="60" value="'+escapeHtml(m.title)+'" aria-label="Objective">'+
-      '<div class="progress-row">'+
-        '<input type="range" min="0" max="100" value="'+m.progress+'" class="main-progress-input" data-id="'+m.id+'" aria-label="Progress">'+
-        '<span class="progress-pct">'+m.progress+'%</span>'+
-      '</div>'+
-      '<div class="main-xp-note">'+(m.completed?'Completed — ':'On completion: ')+'+'+(m.xp||0)+' XP</div>';
+      (streak ? streakRowHtml(m) :
+        '<div class="progress-row">'+
+          '<input type="range" min="0" max="100" value="'+m.progress+'" class="main-progress-input" data-id="'+m.id+'" aria-label="Progress">'+
+          '<span class="progress-pct">'+m.progress+'%</span>'+
+        '</div>')+
+      '<div class="main-xp-note">'+(streak && !m.completed ? '<span>'+streakNote(m)+' ·</span> ' : '')+
+        '<span>'+(m.completed?'Completed — ':'On completion: ')+'+'+(m.xp||0)+' XP</span></div>';
     if (bonus.length){
       html += '<div class="bonus-label">Bonus objectives</div><div class="bonus-list">';
       bonus.forEach(function(b){
@@ -137,10 +156,12 @@
     return html+'</div>';
   }
 
+  var questsDay = null;       // the date the quests were last drawn for
   function renderQuests(){
     // Rebuilding the list would drop a rename still in progress: save it first.
     if (app.finishRename) app.finishRename();
     var state = app.state;
+    questsDay = todayStr();
     var html = '<div class="panel-title">Main Quests</div>';
     if (state.quests.mains.length===0){
       html += '<div class="empty-note">No main quests yet — add one below.</div>';
@@ -148,8 +169,15 @@
     state.quests.mains.forEach(function(m){ html += mainQuestHtml(m); });
     html += '<div class="add-row">'+
       '<input type="text" class="field-full" id="new-main-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
-      '<input type="text" class="field-objective" id="new-main-objective" placeholder="Objective..." maxlength="60" required aria-label="Objective">'+
+      '<input type="text" id="new-main-objective" placeholder="Objective..." maxlength="60" required aria-label="Objective">'+
       '<input type="number" id="new-main-xp" value="1000" min="10" max="5000" aria-label="XP reward">'+
+      '<select id="new-main-type" aria-label="Progress type">'+
+        '<option value="percent">Percentage</option>'+
+        '<option value="streak">Day streak</option>'+
+      '</select>'+
+      '<label class="days-field" id="new-main-days-field" hidden>'+
+        '<input type="number" id="new-main-days" value="7" min="1" max="'+ST.STREAK_MAX_DAYS+'" aria-label="Target days"><span>days</span>'+
+      '</label>'+
       '<button id="add-main-btn">Add</button>'+
     '</div>';
 
@@ -300,6 +328,18 @@
       '</div>';
   }
 
+  // Daily quests and streak check-ins open again at midnight. When the date
+  // has changed since the quests were drawn (the app stayed open, or came
+  // back from the background), draw them again; not while something is being
+  // typed there, the next check does it.
+  function refreshIfNewDay(){
+    if (!app.state || questsDay===todayStr()) return;
+    var typing = document.activeElement;
+    if (typing && /^(INPUT|SELECT|TEXTAREA)$/.test(typing.tagName) && typing.closest('#tab-quests')) return;
+    renderHeader();
+    renderQuests();
+  }
+
   function updateAiIndicator(){
     var e = el('ai-indicator');
     if (!e) return;
@@ -345,6 +385,7 @@
     renderLog: renderLog,
     renderProposal: renderProposal,
     swapQuestTitle: swapQuestTitle,
+    refreshIfNewDay: refreshIfNewDay,
     updateAiIndicator: updateAiIndicator,
     renderAll: renderAll,
     showXpToast: showXpToast,

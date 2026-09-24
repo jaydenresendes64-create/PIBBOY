@@ -27,8 +27,12 @@
     // refreshed or sent to the background.
     document.addEventListener('visibilitychange', function(){
       if (document.visibilityState==='hidden') ST.storage.flush();
+      else ST.render.refreshIfNewDay();
     });
     window.addEventListener('pagehide', ST.storage.flush);
+    // A new day opens daily quests and streak check-ins again, even when the
+    // app was left open overnight.
+    setInterval(ST.render.refreshIfNewDay, 60000);
   }
 
   document.addEventListener('DOMContentLoaded', boot);
