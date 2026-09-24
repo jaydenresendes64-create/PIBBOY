@@ -324,12 +324,29 @@
   // A THINGS TO SELL item: its asking price next to the name (edited in
   // place, like a wallet rate) and a Sold button, which asks "Sold for $X?"
   // below it with the amount still editable.
+  // Every item: a small button that opens "Move to:" under its row, with
+  // the other categories to pick from.
+  function moveBtnHtml(i){
+    return '<button class="move-btn" data-action="inv-move" data-id="'+attr(i.id)+'" aria-label="Move to…: '+about(i.name)+'" title="Move to…">&#8644;</button>';
+  }
+  function moveChoiceHtml(i){
+    if (app.confirmMove!==i.id) return '';
+    return '<div class="card-confirm row-confirm move-confirm">'+
+      '<span class="move-question">Move to:</span>'+
+      CATS.filter(function(c){ return c!==i.category; }).map(function(c){
+        return '<button class="confirm-ok" data-action="move-to" data-id="'+attr(i.id)+'" data-key="'+c+'">'+ST.catLabel(c)+'</button>';
+      }).join('')+
+      '<button data-action="move-no">Cancel</button>'+
+    '</div>';
+  }
   function sellItemHtml(i){
     var html = '<div class="inv-item sell-item"><span>'+escapeHtml(i.name)+'</span>'+
       '<label class="price-field">$<input type="number" class="price-input" data-id="'+attr(i.id)+'" value="'+priceValue(i.price)+'" min="0" step="0.01" inputmode="decimal" placeholder="price" aria-label="Asking price in CAD: '+about(i.name)+'"></label>'+
       '<button class="sell-btn" data-action="sell" data-id="'+attr(i.id)+'" aria-label="Sold: '+about(i.name)+'">Sold</button>'+
+      moveBtnHtml(i)+
       '<button class="remove-btn" data-action="inv-remove" data-id="'+attr(i.id)+'" aria-label="Remove: '+about(i.name)+'">&times;</button></div>';
     html += removeConfirmHtml('item', i.id, 'Remove this item?');
+    html += moveChoiceHtml(i);
     if (app.confirmSell===i.id){
       html += '<div class="card-confirm row-confirm sell-confirm">'+
         '<label class="sell-question">Sold for $<input type="number" class="sell-amount" id="sell-amount-'+attr(i.id)+'" data-id="'+attr(i.id)+'" value="'+priceValue(i.price)+'" min="0" step="0.01" inputmode="decimal" aria-label="Sold for, in CAD">?</label>'+
@@ -353,8 +370,10 @@
         items.forEach(function(i){
           if (cat==='SELL'){ html += sellItemHtml(i); return; }
           html += '<div class="inv-item"><span>'+escapeHtml(i.name)+'</span>'+
-            '<button class="remove-btn" data-action="inv-remove" data-id="'+attr(i.id)+'" aria-label="Remove: '+about(i.name)+'">&times;</button></div>'+
-            removeConfirmHtml('item', i.id, 'Remove this item?');
+            '<span class="inv-buttons">'+moveBtnHtml(i)+
+            '<button class="remove-btn" data-action="inv-remove" data-id="'+attr(i.id)+'" aria-label="Remove: '+about(i.name)+'">&times;</button></span></div>'+
+            removeConfirmHtml('item', i.id, 'Remove this item?')+
+            moveChoiceHtml(i);
         });
         html += '</div>';
       }
@@ -434,6 +453,7 @@
     renderQuests();
     renderInventory();
     renderLog();
+    if (ST.map) ST.map.render();
     updateAiIndicator();
   }
 
@@ -460,6 +480,13 @@
     var itemName = document.createElement('span');
     itemName.textContent = name;
     toast('levelup-banner quest-banner', 'SOLD: ', 3200).appendChild(itemName);
+  }
+  // A city or region revealed for the first time (js/map.js), or several at
+  // once: "DISCOVERED: 12 places".
+  function showDiscovered(name){
+    var placeName = document.createElement('span');
+    placeName.textContent = name;
+    toast('levelup-banner quest-banner', 'DISCOVERED: ', 3200).appendChild(placeName);
   }
   function showSaveWarning(){ toast('xp-toast save-warning', 'Not saved — storage unavailable', 2600); }
   function showConflictWarning(){
@@ -498,7 +525,7 @@
   function switchTab(name){
     var swing = shownTab!==null && name!==shownTab;
     shownTab = name;
-    ['status','quests','items','log'].forEach(function(t){
+    ['status','quests','items','map','log'].forEach(function(t){
       var panel = el('tab-'+t);
       panel.style.display = (t===name)?'block':'none';
       panel.classList.toggle('tab-enter', swing && t===name);
@@ -524,6 +551,7 @@
     showQuestCompleted: showQuestCompleted,
     showNotice: showNotice,
     showSold: showSold,
+    showDiscovered: showDiscovered,
     showSaveWarning: showSaveWarning,
     showConflictWarning: showConflictWarning,
     showLoadError: showLoadError,

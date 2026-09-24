@@ -5,6 +5,7 @@
  *
  *   const app = loadApp();                         // state.js + ai.js
  *   const app = loadApp({files: FILES.storage});   // + storage.js
+ *   const app = loadApp({files: FILES.places});    // state.js + places.js (the MAP tab's logic)
  *   app.ST          the window.StatusTerminal namespace
  *   app.setNow(d)   moves the clock (new Date(), Date.now()) to date `d`
  *
@@ -21,6 +22,7 @@ const vm = require('vm');
 const ROOT = path.join(__dirname, '..');
 const FILES = {
   logic: ['js/state.js', 'js/ai.js'],
+  places: ['js/state.js', 'js/places.js'],
   storage: ['js/state.js', 'js/storage.js'],
   render: ['js/state.js', 'js/storage.js', 'js/ai.js', 'js/render.js']
 };
@@ -170,6 +172,14 @@ function loadApp(options) {
     indexedDB: options.indexedDB === null ? undefined : shared.idb,
     localStorage: localStorageFor(shared, win),
     matchMedia: () => ({ matches: false, addEventListener() {} }),
+    // The app's own files (data/...), read from the repository.
+    fetch: url => new Promise(resolve => {
+      fs.readFile(path.join(ROOT, String(url)), 'utf8', (err, text) => resolve({
+        ok: !err, status: err ? 404 : 200,
+        text: () => Promise.resolve(text),
+        json: () => Promise.resolve(JSON.parse(text))
+      }));
+    }),
     addEventListener(type, fn) { (listeners[type] = listeners[type] || []).push(fn); },
     document: {
       getElementById: id => elements[id] || (elements[id] = fakeElement(id)),

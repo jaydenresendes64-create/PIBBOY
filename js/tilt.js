@@ -13,6 +13,9 @@
  * the link's tap asks it; after the app is reopened, if iOS wants to ask
  * again, the first tap anywhere does. With prefers-reduced-motion, or while
  * the app is in the background, it stops completely (no listener, no frame).
+ *
+ * While a finger (or the mouse button) is down on the MAP, the layers hold
+ * still (hold()), so a drag or a pinch there stays exactly under the finger.
  */
 (function(ST){
   'use strict';
@@ -27,6 +30,7 @@
 
   var on = false;               // the player's choice
   var running = false;          // listening and moving (on, visible, motion allowed)
+  var held = false;             // a gesture on the map is under way: stay put
   var target = {x:0, y:0};      // where the layers are heading, -1..1
   var current = {x:0, y:0};
   var rest = null;              // how the phone is held when still
@@ -88,6 +92,7 @@
     apply();
   }
   function aim(x, y){
+    if (held) return;
     target.x = clamp(x); target.y = clamp(y);
     if (frame===null) frame = requestAnimationFrame(step);
   }
@@ -205,5 +210,17 @@
     start();
   }
 
-  ST.tilt = { init: init, toggle: toggle };
+  // The map (js/map.js): true while a gesture is on it. The layers stop where
+  // they are, and follow the motion again once it's over.
+  function hold(value){
+    held = !!value;
+    if (held){
+      if (frame!==null) cancelAnimationFrame(frame);
+      frame = null;
+      lastTime = 0;
+      target.x = current.x; target.y = current.y;
+    }
+  }
+
+  ST.tilt = { init: init, toggle: toggle, hold: hold };
 })(window.StatusTerminal);

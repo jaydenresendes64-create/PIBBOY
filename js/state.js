@@ -17,11 +17,25 @@
  *     daily: [ { id, questName, name, xp, lastDate:'YYYY-M-D'|null } ]  // done today: dailyDoneToday()
  *   },
  *   inventory: [ { id, name, category: one of CATS,     // WEAPONS is gone: see migrate()
- *                  price?: number>=0 } ],    // THINGS TO SELL (SELL) only: asking price in CAD, optional
+ *                  price?: number>=0 } ],    // asking price in CAD, optional, shown in THINGS TO SELL (SELL)
+ *                                           // only; kept when the item moves to another category
  *   finances: { holdings: [ { id, label, amount, rateToCAD: number>0 } ] },  // Caps = total CAD / CAD_PER_CAP
  *                                           // a sale adds to the holding labelled CASH (made if missing)
- *   log: [ { date, text, xp, reason } ]      // date as shown ('Sep 24, 2026'); the latest LOG_MAX only
+ *   log: [ { date, text, xp, reason } ],     // date as shown ('Sep 24, 2026'); the latest LOG_MAX only
+ *   map: {                                  // the MAP tab: what's revealed under the fog (js/places.js)
+ *     cities:  [ { id, name, cc, lat, lon, radius, date, note, gid? } ],  // gid: its GeoNames id, when
+ *                                           // picked from the city list (not placed by hand)
+ *     regions: [ { id, name, cc, code, date, note } ],   // code: REGION_CODE, a region (or a group of
+ *                                           // them, like a French region) of data/regions/<cc>.json
+ *     pins:    [ { id, name, cc, lat, lon, radius, date, note } ],
+ *     discovered: [ key ]                   // every city and region that already gave its XP, even
+ *   }                                       // once removed: 'c:<gid>', 'c:<cc>:<name>' or 'r:<code>'
  * }
+ * Places: `cc` is a country code (COUNTRY_CODES), or '' when unknown (a pin
+ * at sea); lat/lon in degrees; `radius` in metres, CITY_RADIUS_MIN-MAX for a
+ * city, PIN_RADIUS_MIN-MAX for a pin; `date` the day it was revealed,
+ * 'YYYY-M-D'; `note` optional text ('' when none). Saves from before the MAP
+ * tab start with it empty (migrate()).
  * Every `id` is a short string of letters, digits, _ and - (SAFE_ID): genId()
  * for anything the player adds.
  * MainQuest {
@@ -50,7 +64,8 @@
  * what keeps the bounds checks and lifetime counters in one place instead
  * of duplicated at each call site. events.js adds the toasts (addXp()).
  * Selling an item (sellItem()) is one of them too: SALE_XP, plus the money
- * in the wallet and a line in the journal.
+ * in the wallet and a line in the journal. So is revealing a new city or
+ * region on the map (discoverPlace()): CITY_XP or REGION_XP, once per place.
  *
  * LOADING — every document the app takes in (a saved copy, a backup file,
  * another window's save) goes through sanitizeImported(), which runs
@@ -65,8 +80,9 @@
  * changes `stats` otherwise, and a journal proposal is XP + SkillGains only.
  *
  * SCRIPTS — every file attaches to one namespace, window.StatusTerminal, and
- * index.html loads them in dependency order: state → storage → ai → render →
- * mascot → crt → tilt → events → main. They are plain scripts rather than ES modules so the app
+ * index.html loads them in dependency order: state → storage → ai → places →
+ * render → mascot → crt → tilt → map → bulk → events → main (map.js loads Leaflet,
+ * vendor/leaflet/, the first time MAP opens). They are plain scripts rather than ES modules so the app
  * still runs when index.html is opened straight from disk (file://), where
  * browsers refuse to load modules. The tests (tests/) load the same files in
  * Node: `node --test`.
@@ -86,6 +102,24 @@
   var QUEST_NAME_MAX = 60;
   var STREAK_MAX_DAYS = 1000;
   var LOG_MAX = 200;
+  // The MAP tab (see "map" above).
+  var CITY_RADIUS_MIN = 1000, CITY_RADIUS_MAX = 30000;
+  var PIN_RADIUS_MIN = 100, PIN_RADIUS_MAX = 5000;
+  var PLACE_NAME_MAX = 80, PLACE_NOTE_MAX = 500;
+  var CITY_XP = 50, REGION_XP = 100;
+  // Every country a place can be in (GeoNames' country list, as in data/places.txt).
+  var COUNTRY_CODES = ('AD AE AF AG AI AL AM AN AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR '+
+    'BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CS CU CV CW CX CY CZ DE DJ DK DM DO DZ '+
+    'EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY '+
+    'HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA '+
+    'LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY '+
+    'MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS '+
+    'RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM '+
+    'TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS XK YE YT ZA ZM ZW').split(' ');
+  // A region: its country's three letters and a number (CAN-683, GAZ-X00),
+  // a group of regions: G and its name (FRA-G-ile-de-france), or, for the
+  // regions from geoBoundaries (Morocco's), its ISO 3166-2 code (MA-06).
+  var REGION_CODE = /^([A-Z]{3}-(X?\d{1,6}|G-[a-z0-9-]{1,40})|[A-Z]{2}-[A-Z0-9]{1,3})$/;
 
   var DEFAULT_STATE = {
     level:2, xp:0, xpToNext:1000,
@@ -118,7 +152,8 @@
       {id:'i2',name:'Keys',category:'IMPORTANT'}
     ],
     finances:{ holdings:[] },   // starts empty: add your own in ITEMS → wallet
-    log:[]
+    log:[],
+    map:{ cities:[], regions:[], pins:[], discovered:[] }
   };
 
   // Shared runtime state. `state` is the persisted document described above;
@@ -132,6 +167,7 @@
     confirmRemoveMain: null,    // id of the main quest whose removal awaits "Yes, remove"
     confirmSell: null,          // id of the item whose sale awaits "Yes"
     confirmRemove: null,        // {kind:'side'|'daily'|'item'|'wallet', id} whose removal awaits "Yes, remove"
+    confirmMove: null,          // id of the item whose "Move to" choice is open
     confirmSpecial: null        // SPECIAL key whose level-up point awaits "Yes"
   };
 
@@ -184,6 +220,7 @@
     migrateMainQuests(doc.quests);
     migrateSkills(doc);
     migrateInventory(doc);
+    migrateMap(doc);
     return doc;
   }
   // Older saves have a single main quest, the object quests.main. It
@@ -224,6 +261,14 @@
   function migrateInventory(doc){
     (Array.isArray(doc.inventory) ? doc.inventory : []).forEach(function(i){
       if (i && i.category==='WEAPONS') i.category = 'MISC';
+    });
+  }
+  // The MAP tab came later: a save from before it gets an empty map (no
+  // city, region or pin), and nothing else changes.
+  function migrateMap(doc){
+    if (!doc.map || typeof doc.map!=='object' || Array.isArray(doc.map)) doc.map = {};
+    ['cities','regions','pins','discovered'].forEach(function(list){
+      if (!Array.isArray(doc.map[list])) doc.map[list] = [];
     });
   }
   function has(obj, key){ return Object.prototype.hasOwnProperty.call(obj, key); }
@@ -278,6 +323,40 @@
     cash.amount = cents((Number(cash.amount)||0) + amount/(Number(cash.rateToCAD)||1));
     addLogEntry({date:todayDisplay(), text:'Sold '+item.name+' for $'+money(amount), xp:SALE_XP, reason:'Item sold'});
     return {name:item.name, amount:amount, leveled:gainXp(SALE_XP)};
+  }
+
+  // ---------- places on the map ----------
+  // A name to compare, whatever its accents, case, spaces and punctuation:
+  // 'Montréal' and 'MONTREAL', 'Tanger - Tétouan' and 'Tanger-Tetouan'.
+  var FOLD = {'ø':'o','æ':'ae','œ':'oe','ß':'ss','ł':'l','đ':'d','ı':'i','ð':'d','þ':'th'};
+  function foldName(name){
+    return String(name===null || name===undefined ? '' : name).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/[øæœßłđıðþ]/g, function(c){ return FOLD[c]; }).replace(/[^\p{L}\p{N}]+/gu, '');
+  }
+  // What a place is known by for its XP: a listed city by its GeoNames id,
+  // one placed by hand by its country and name, a region by its code.
+  function placeKey(kind, place){
+    if (kind==='region') return 'r:'+place.code;
+    return place.gid ? 'c:'+place.gid : 'c:'+(place.cc||'')+':'+foldName(place.name);
+  }
+  // A new city or region's XP, once ever per place: the key stays in
+  // map.discovered when the place is removed, so adding it back pays
+  // nothing. Returns null when it already paid, else {xp, leveled}.
+  function discoverPlace(key, xp){
+    var list = app.state.map.discovered;
+    if (list.indexOf(key)!==-1) return null;
+    list.push(key);
+    return {xp:xp, leveled:gainXp(xp)};
+  }
+
+  // Moves an item to another category, keeping everything else (an asking
+  // price too: it shows again if the item goes back to THINGS TO SELL).
+  // Returns false when there's no such item or category.
+  function moveItem(id, cat){
+    var item = app.state.inventory.filter(function(i){ return i.id===id; })[0];
+    if (!item || CATS.indexOf(cat)===-1 || item.category===cat) return false;
+    item.category = cat;
+    return true;
   }
 
   // ---------- dates ----------
@@ -479,7 +558,62 @@
     });
     s.lifetimeLogEntries = Math.max(log.length, Math.round(num(s.lifetimeLogEntries, 0)));
     s.log = log.slice(-LOG_MAX);
+    sanitizeMap(s.map);
     return s;
+  }
+
+  // The map's places. A place with no usable position (coordinates out of
+  // range, an unknown region code) is dropped; a second copy of the same
+  // city or region too. Everything else is brought within its limits.
+  function fixPlace(p){
+    p.id = safeId(p.id);
+    p.name = text(p.name, PLACE_NAME_MAX).trim() || 'Unnamed place';
+    p.cc = COUNTRY_CODES.indexOf(p.cc)!==-1 ? p.cc : '';
+    p.date = normalizeDate(p.date);
+    p.note = text(p.note, PLACE_NOTE_MAX);
+  }
+  // A coordinate: a number, or text holding one (missing or empty is none, not 0).
+  function coordinate(v){
+    return (typeof v==='number' || (typeof v==='string' && v.trim())) ? num(v, NaN) : NaN;
+  }
+  function fixPosition(p, min, max){
+    p.lat = coordinate(p.lat);
+    p.lon = coordinate(p.lon);
+    p.radius = clamp(Math.round(num(p.radius, min)), min, max);
+  }
+  function onEarth(p){ return p.lat>=-90 && p.lat<=90 && p.lon>=-180 && p.lon<=180; }
+  function once(list, key){
+    var seen = {};
+    return list.filter(function(p){
+      var k = key(p);
+      if (k===null) return true;
+      if (seen[k]) return false;
+      seen[k] = true;
+      return true;
+    });
+  }
+  function sanitizeMap(m){
+    m.cities = once(records(m.cities, function(c){
+      fixPlace(c);
+      fixPosition(c, CITY_RADIUS_MIN, CITY_RADIUS_MAX);
+      var gid = num(c.gid, 0);
+      if (gid>0 && gid===Math.floor(gid)) c.gid = gid;
+      else delete c.gid;
+    }).filter(onEarth), function(c){ return c.gid ? 'c:'+c.gid : null; });
+    m.regions = once(records(m.regions, function(r){
+      fixPlace(r);
+      r.code = REGION_CODE.test(r.code) ? r.code : null;
+    }).filter(function(r){ return r.code; }), function(r){ return r.code; });
+    m.pins = records(m.pins, function(p){
+      fixPlace(p);
+      fixPosition(p, PIN_RADIUS_MIN, PIN_RADIUS_MAX);
+    }).filter(onEarth);
+    var keys = {};
+    m.discovered = (Array.isArray(m.discovered) ? m.discovered : []).filter(function(k){
+      if (typeof k!=='string' || !/^[cr]:\S{1,120}$/.test(k) || keys[k]) return false;
+      keys[k] = true;
+      return true;
+    });
   }
 
   ST.STAT_KEYS = STAT_KEYS;
@@ -490,6 +624,16 @@
   ST.CAD_PER_CAP = CAD_PER_CAP;
   ST.QUEST_NAME_MAX = QUEST_NAME_MAX;
   ST.STREAK_MAX_DAYS = STREAK_MAX_DAYS;
+  ST.CITY_RADIUS_MIN = CITY_RADIUS_MIN;
+  ST.CITY_RADIUS_MAX = CITY_RADIUS_MAX;
+  ST.PIN_RADIUS_MIN = PIN_RADIUS_MIN;
+  ST.PIN_RADIUS_MAX = PIN_RADIUS_MAX;
+  ST.PLACE_NAME_MAX = PLACE_NAME_MAX;
+  ST.PLACE_NOTE_MAX = PLACE_NOTE_MAX;
+  ST.CITY_XP = CITY_XP;
+  ST.REGION_XP = REGION_XP;
+  ST.COUNTRY_CODES = COUNTRY_CODES;
+  ST.REGION_CODE = REGION_CODE;
   ST.app = app;
 
   ST.el = el;
@@ -518,4 +662,8 @@
   ST.gainXp = gainXp;
   ST.completeMain = completeMain;
   ST.sellItem = sellItem;
+  ST.moveItem = moveItem;
+  ST.foldName = foldName;
+  ST.placeKey = placeKey;
+  ST.discoverPlace = discoverPlace;
 })(window.StatusTerminal = window.StatusTerminal || {});

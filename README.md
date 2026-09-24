@@ -3,7 +3,8 @@
 A personal, Fallout-inspired life tracker: S.P.E.C.I.A.L. stats, skills, main / side / daily quests,
 inventory, a Caps wallet, and a journal that turns diary entries into XP and skill proposals you
 accept or reject. In ITEMS, **THINGS TO SELL** keeps an asking price per item; tapping **Sold** puts
-the money in the wallet's CASH row, gives 25 XP and writes the sale in the journal.
+the money in the wallet's CASH row, gives 25 XP and writes the sale in the journal. The **⇄** button on
+an item moves it to another category (its asking price is kept for if it goes back to THINGS TO SELL).
 
 Plain HTML, CSS and JavaScript: no framework, no build step.
 
@@ -21,11 +22,18 @@ js/render.js        builds each tab
 js/mascot.js        when the mascot walks or gestures (his moves are in css/terminal.css)
 js/crt.js           the screen's rare flicker (the tube look itself is in css/terminal.css)
 js/tilt.js          3D tilt: the screen's layers follow the phone's motion (or the mouse)
+js/places.js        the MAP tab's logic: positions, city and region lists, finding and revealing places
+js/map.js           the MAP tab (loads Leaflet the first time it's opened) and its fog of war
+js/bulk.js          MAP: "Add several places" (paste a list, review it, reveal it all)
+vendor/leaflet/     Leaflet 1.9.4, the map library (licence: vendor/leaflet/LICENSE)
 js/events.js        user actions
 js/main.js          startup
 sw.js               service worker: offline use (network first for the app, so updates show right away)
 manifest.webmanifest name, colours and icons (icons/) for installing on a phone
-images/mascot.png   the amber mascot in the top-right corner
+images/mascot.png   the amber mascot in the top-right corner (mascot-hand.svg: his raised hand on MAP)
+data/places.txt     MAP: every country, region and city (15,000 people or more), for searching
+data/regions/       MAP: one file per country with the shapes of its regions
+tools/              build-map-data.js, which makes data/ (see "Map data")
 fonts/              the two terminal fonts, VT323 and IBM Plex Mono (licence: fonts/OFL.txt)
 api/analyze.js      optional serverless AI function (not used on GitHub Pages, see below)
 tests/              automated tests (see "Run the tests")
@@ -69,10 +77,88 @@ On iPhone, turning it on asks for motion access (allow it); if iOS asks again af
 the first tap anywhere brings the question back. It pauses in the background and never runs with
 **Reduce Motion** switched on.
 
+## MAP tab
+
+A world map at city level, tinted amber like the rest of the screen. Drag and pinch on the phone
+(drag and the mouse wheel on a computer). The round buttons on the map: **⌖** recenters on your latest
+place (the whole world when there's none yet), **⛶** zooms to show all your places.
+
+- **Map library:** [Leaflet](https://leafletjs.com) 1.9.4, kept in `vendor/leaflet/` (no CDN). It's
+  only loaded the first time you open MAP, so the app starts as fast as before.
+- **Map pictures (tiles):** CARTO's dark basemap ("Dark Matter", made from OpenStreetMap data), chosen
+  because its dark greys turn into a clean amber with a CSS filter, it has street-level detail and
+  labels, and CARTO allows free use for a personal, non-commercial app (up to 75,000 map views a
+  month, far more than one person uses) as long as the credit shows: the small
+  "© OpenStreetMap © CARTO" in the map's corner. OpenStreetMap's own tiles would work too, but their
+  usage policy asks apps not to lean on their servers, and their bright colours tint poorly.
+- Tiles you've looked at are kept on the phone (at most 400, the oldest go first; never downloaded
+  ahead), so places you've seen still show offline. With no tile at all, the map shows a plain dark
+  background and everything else still works.
+- With 3D tilt on, the map holds still while your finger is on it, so drags and pinches land exactly.
+
+**Fog of war:** dark, grainy fog covers the whole world. Only the exact places you've been are cut
+out of it, with soft smoky edges: a circle around each city and pin, the exact shape of each region.
+Sizes are real distances, so a 5 km circle stays 5 km whatever the zoom. The fog is one canvas
+drawn over the tiles, redrawn at most once per frame while the map moves, and only then.
+
+**Revealing places** (under the map):
+
+- **Search city:** type a name (accents and capitals don't matter; "Paris, Texas" or "Paris, USA"
+  narrows it down) and tap it. It reveals a circle around the city: about 3 km for a town of 15,000
+  people up to 15 km for a city of 3 million or more. The slider changes it (1-30 km).
+- **Mark a region:** pick a country, then one of its provinces, states or departments; the exact
+  shape of that region is revealed. In France, Italy, Spain, Belgium and the Philippines you can
+  also pick a whole region (Île-de-France, Lombardia...), which reveals all its departments/provinces.
+- **Pins:** long-press the map (or right-click on a computer), or tap **Drop pin** and then the map.
+  Name it, add a note if you like; it reveals a 500 m circle (100 m to 5 km with the slider).
+- **I'm here:** asks for your location once (never followed afterwards) and offers to reveal the
+  city you're in, your region, or a pin on the spot.
+- **Add several places:** paste a list, one place per line, like `Montréal, Canada` or
+  `region: Casablanca-Settat, Morocco` (a region or state after the city narrows it down:
+  `Springfield, Illinois, USA`). **Check the list** matches every line against the city list and the
+  regions (accents and capitals don't matter) and shows a review before anything is saved: what was
+  found (city or region, with its region and country; untick to leave one out), a choice when a
+  name is ambiguous or only close names were found (Marrakech → Marrakesh), and lines not found,
+  which you can fix and check again, skip, or place by hand with a tap on the map (a 3 km circle with
+  that name). **Reveal all** adds them all at once: one DISCOVERED banner, XP once per new place.
+- Tap a place in the lists (or its mark on the map) to go there, rename it, resize it, add a note or
+  remove it (asks first).
+- The line above the map counts your places: "3 countries · 14 cities · 5 regions · 8 pins". The
+  countries are the ones your cities, regions and pins are in.
+- A city or region revealed for the first time shows **DISCOVERED** and gives 50 XP (city) or
+  100 XP (region), once per place: removing it and adding it back gives nothing again. Pins give no XP.
+
+**Map data** (`data/`, made by `tools/build-map-data.js`):
+
+- Cities: [GeoNames](https://www.geonames.org) "cities15000", every place of 15,000 people or more,
+  licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (credit: GeoNames,
+  geonames.org). `data/places.txt` is about 1.7 MB (about 0.8 MB as sent). It's downloaded with the
+  app when it installs (and again with each new version), so city search works offline from the first
+  open; the app only reads it the first time you search, mark a region or drop a pin.
+- Regions: [Natural Earth](https://www.naturalearthdata.com) 1:10m "Admin 1 – States, Provinces"
+  (public domain), version 5.1.2, simplified to about 400 m and split into one small file per country
+  (`data/regions/CA.json`...), each loaded only when a region of that country is shown or looked up.
+- Morocco's regions: its 12 current regions (since 2015: Casablanca-Settat, Marrakech-Safi,
+  Fez-Meknes...) from [geoBoundaries](https://www.geoboundaries.org) (gbOpen release, made from
+  OpenStreetMap), because Natural Earth still has the 16 from before 2015. Their licence is
+  [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/), not CC BY: it asks for the credit
+  "© OpenStreetMap contributors" (already in the map's corner) and that `data/regions/MA.json`, made
+  from it, stays under ODbL (the file says so in its `source` field). Each region's code is its
+  ISO 3166-2 code (`MA-06` for Casablanca-Settat); French spellings are found too (Fès-Meknès).
+- To rebuild them (only to update the data), download
+  [ne_10m_admin_1_states_provinces.geojson](https://github.com/nvkelso/natural-earth-vector/tree/v5.1.2/geojson),
+  `cities15000.zip` (unzipped) and `countryInfo.txt` from
+  [download.geonames.org/export/dump](https://download.geonames.org/export/dump/), and
+  [geoBoundaries-MAR-ADM1.geojson](https://github.com/wmgeolab/geoBoundaries/tree/5c25134028196d43ce97b5071934fd0cfc92f09f/releaseData/gbOpen/MAR/ADM1)
+  (the version used), then run
+  `node tools/build-map-data.js ne_10m_admin_1_states_provinces.geojson cities15000.txt countryInfo.txt geoBoundaries-MAR-ADM1.geojson`.
+  The files in this repository were made from the copy of GeoNames' cities15000 and country list
+  packaged in geonamescache 3.0.2 (the same data, in JSON).
+
 ## Run it locally
 
-Double-click `index.html`. Everything works the same as on GitHub Pages, except installing and
-offline use, which need the site to be served over http(s) (for example `npx http-server` in this
+Double-click `index.html`. Everything works the same as on GitHub Pages, except installing, offline
+use and the MAP tab's city and region lists, which need the site to be served over http(s) (for example `npx http-server` in this
 folder, then http://localhost:8080). Served that way, the browser console shows one harmless 404: the
 app checking whether the optional AI function exists (it never checks on GitHub Pages).
 
@@ -100,6 +186,9 @@ next to a commit means a test failed.
   empty. Another browser or device starts empty. Use **Export backup / Import backup** in the footer
   to move it (a backup is saved as `status-terminal-backup-YYYY-MM-DD.json`, dated the day you made it). An imported file is checked (and brought up to date if it comes from an older
   version) before you confirm; a file that isn't a backup is refused and nothing changes.
+- The MAP tab's places (cities, regions, pins, and which ones already gave XP) are part of the same
+  data: saved in the browser and included in backups. A backup from before the MAP tab loads with an
+  empty map and nothing else changed.
 - The app asks the browser to keep its storage even when space runs low (on a phone this is silent).
 - With the app open in two tabs, each follows the other's changes. A change can never overwrite a
   newer one made in the other tab: if both change at the same moment, the second one gives way and

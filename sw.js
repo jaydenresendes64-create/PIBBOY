@@ -14,19 +14,32 @@
  * from the first visit.
  *
  * The optional AI function (api/) is never cached.
+ *
+ * The MAP tab's pictures (tiles, from CARTO) are kept in their own cache as
+ * they're seen, at most TILE_MAX of them (the oldest go first), so the
+ * places already looked at still show offline. Only tiles actually shown are
+ * kept, never fetched ahead. The map's city and region list
+ * (data/places.txt) is cached at install with the app, so city search works
+ * offline from the first open; the region shapes (data/regions/) are cached
+ * like the app's files, the first time each is used.
  */
 'use strict';
 
 var CACHE_PREFIX = 'status-terminal-';
-var CACHE = CACHE_PREFIX + 'v4';
+var CACHE = CACHE_PREFIX + 'v6';
+var TILE_CACHE = CACHE_PREFIX + 'tiles';       // kept across versions
+var TILE_HOST = /(^|\.)basemaps\.cartocdn\.com$/;
+var TILE_MAX = 400;
 
 // Cached at install, so the app opens offline after the first visit.
 var APP_SHELL = [
   './',
   'index.html',
   'css/terminal.css',
-  'js/state.js', 'js/storage.js', 'js/ai.js', 'js/render.js', 'js/mascot.js', 'js/crt.js', 'js/tilt.js', 'js/events.js', 'js/main.js',
-  'images/mascot.png',
+  'js/state.js', 'js/storage.js', 'js/ai.js', 'js/places.js', 'js/render.js', 'js/mascot.js', 'js/crt.js', 'js/tilt.js', 'js/map.js', 'js/bulk.js', 'js/events.js', 'js/main.js',
+  'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css',
+  'data/places.txt',
+  'images/mascot.png', 'images/mascot-hand.svg',
   'fonts/vt323.woff2', 'fonts/ibm-plex-mono.woff2',
   'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png'
@@ -48,7 +61,7 @@ self.addEventListener('activate', function(event){
   event.waitUntil(
     caches.keys().then(function(keys){
       return Promise.all(keys.filter(function(key){
-        return key.indexOf(CACHE_PREFIX)===0 && key!==CACHE;
+        return key.indexOf(CACHE_PREFIX)===0 && key!==CACHE && key!==TILE_CACHE;
       }).map(function(key){ return caches.delete(key); }));
     }).then(function(){ return self.clients.claim(); })
   );
@@ -90,6 +103,36 @@ function networkFirst(event){
   });
 }
 
+// A map tile: the kept copy, else the network (then kept). Only a readable
+// (CORS) answer is kept: an opaque one would take far more room. Offline,
+// a tile never seen is an empty picture: the map's own dark grid shows
+// through, and the page gets no network error for it.
+var NO_TILE = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAXpeqz8AAAAASUVORK5CYII=';
+function emptyTile(){
+  var bytes = Uint8Array.from(atob(NO_TILE), function(c){ return c.charCodeAt(0); });
+  return new Response(bytes, {status:200, headers:{'Content-Type':'image/png'}});
+}
+function tile(event){
+  var request = event.request;
+  return caches.open(TILE_CACHE).then(function(cache){
+    return cache.match(request).then(function(cached){
+      if (cached) return cached;
+      return fetch(request).then(function(response){
+        if (response.status===200 && response.type==='cors'){
+          var copy = response.clone();
+          event.waitUntil(cache.put(request, copy).then(function(){ return trim(cache); }));
+        }
+        return response;
+      });
+    });
+  }).catch(emptyTile);
+}
+function trim(cache){
+  return cache.keys().then(function(keys){
+    return Promise.all(keys.slice(0, Math.max(0, keys.length-TILE_MAX)).map(function(key){ return cache.delete(key); }));
+  });
+}
+
 self.addEventListener('fetch', function(event){
   var request = event.request;
   if (request.method!=='GET') return;
@@ -97,5 +140,7 @@ self.addEventListener('fetch', function(event){
   if (url.origin===self.location.origin){
     if (request.url.indexOf(API_URL)===0) return;      // never cached
     event.respondWith(networkFirst(event));
+  } else if (url.protocol==='https:' && TILE_HOST.test(url.hostname)){
+    event.respondWith(tile(event));
   }
 });

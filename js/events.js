@@ -1,6 +1,7 @@
 /**
  * User actions — every change to the state document happens here, followed
- * by the matching re-render and a (debounced) save.
+ * by the matching re-render and a (debounced) save. The MAP tab's are in
+ * js/map.js (with js/places.js).
  */
 (function(ST){
   'use strict';
@@ -182,6 +183,7 @@
   function askRemove(kind, id){
     app.confirmRemove = {kind:kind, id:id};
     app.confirmSell = null;
+    app.confirmMove = null;
     redraw(kind);
     var cancel = document.querySelector('[data-action="remove-no"]');
     if (cancel) cancel.focus();
@@ -321,6 +323,7 @@
     app.confirmRemoveMain = null;
     app.confirmSell = null;
     app.confirmRemove = null;
+    app.confirmMove = null;
     app.confirmSpecial = null;
     pendingImport = null;
     el('reset-confirm-area').innerHTML = '';
@@ -344,6 +347,7 @@
     app.confirmRemoveMain = null;
     app.confirmSell = null;
     app.confirmRemove = null;
+    app.confirmMove = null;
     app.confirmSpecial = null;
     el('reset-confirm-area').innerHTML = '';
     renderAll();
@@ -358,6 +362,7 @@
     app.confirmRemoveMain = null;
     app.confirmSell = null;
     app.confirmRemove = null;
+    app.confirmMove = null;
     app.confirmSpecial = null;
     renderAll();
     if (lost) R.showConflictWarning();
@@ -376,6 +381,7 @@
       if (tabBtn){
         var tab = tabBtn.getAttribute('data-tab');
         R.switchTab(tab);
+        if (tab==='map' && ST.map) ST.map.show();
         if (ST.mascot) ST.mascot.onTab(tab);
         return;
       }
@@ -429,9 +435,24 @@
         } else if (action==='remove-no'){
           app.confirmRemove = null;
           redraw(actionBtn.getAttribute('data-kind'));
+        } else if (action==='inv-move'){
+          app.confirmMove = app.confirmMove===id ? null : id;
+          app.confirmRemove = null;
+          app.confirmSell = null;
+          renderInventory();
+          var firstChoice = document.querySelector('[data-action="move-to"]');
+          if (firstChoice) firstChoice.focus();
+        } else if (action==='move-to'){
+          app.confirmMove = null;
+          if (ST.moveItem(id, key)) scheduleSave();
+          renderInventory();
+        } else if (action==='move-no'){
+          app.confirmMove = null;
+          renderInventory();
         } else if (action==='sell'){
           app.confirmSell = id;
           app.confirmRemove = null;
+          app.confirmMove = null;
           renderInventory();
           var amountBox = el('sell-amount-'+id);
           if (amountBox) amountBox.focus();
