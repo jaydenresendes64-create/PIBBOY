@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MALIK // Status Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    box-sizing:border-box;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    --bg:#0d0602;
+    --panel:#1f1206;
+    --panel-alt:#2b1a08;
+    --line:#4a2e0f;
+    --phosphor:#e8a33d;
+    --phosphor-dim:#9c6a24;
+    --amber:#ff9a2e;
+    --amber-dim:#b8631a;
+    --danger:#ff4433;
+    color-scheme:dark;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#0d0602; --panel:#1f1206; --panel-alt:#2b1a08; --line:#4a2e0f;
+      --phosphor:#e8a33d; --phosphor-dim:#9c6a24; --amber:#ff9a2e; --amber-dim:#b8631a; --danger:#ff4433;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0d0602; --panel:#1f1206; --panel-alt:#2b1a08; --line:#4a2e0f;
+    --phosphor:#e8a33d; --phosphor-dim:#9c6a24; --amber:#ff9a2e; --amber-dim:#b8631a; --danger:#ff4433;
+  }
+  html{ scroll-padding-top:env(safe-area-inset-top,0px); }
+  *,*::before,*::after{ box-sizing:inherit; }
+  body{
+    margin:0;
+    min-height:100vh;
+    background:var(--bg);
+    color:var(--phosphor);
+    font-family:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    -webkit-font-smoothing:antialiased;
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{ animation:none !important; transition:none !important; }
+  }
+  button, input, select, textarea{
+    font-family:inherit; color:inherit; background:none; border:none;
+  }
+  button{ cursor:pointer; }
+  ::selection{ background:var(--phosphor); color:var(--bg); }
+
+  .frame{
+    position:relative;
+    max-width:520px;
+    margin:0 auto;
+    min-height:100vh;
+    border-left:1px solid var(--line);
+    border-right:1px solid var(--line);
+    padding:16px 16px 32px;
+    overflow:hidden;
+  }
+  .scan-overlay{
+    pointer-events:none;
+    position:absolute; inset:0;
+    background:repeating-linear-gradient(
+      to bottom, rgba(232,163,61,0.045) 0px, rgba(232,163,61,0.045) 1px,
+      transparent 2px, transparent 3px
+    );
+    mix-blend-mode:screen;
+    z-index:2;
+  }
+
+  .toast-layer{
+    position:fixed; top:0; left:0; right:0;
+    padding-top:calc(14px + env(safe-area-inset-top,0px));
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    pointer-events:none; z-index:1000;
+  }
+  .xp-toast{
+    background:var(--panel-alt); border:1px solid var(--amber-dim); color:var(--amber);
+    padding:6px 14px; border-radius:3px; font-size:0.85rem; letter-spacing:0.03em;
+    animation:toastUp 1.4s ease-out forwards;
+  }
+  .levelup-banner{
+    background:var(--panel-alt); border:1px solid var(--amber); color:var(--amber);
+    padding:10px 20px; border-radius:3px; font-family:'VT323',ui-monospace,monospace;
+    font-size:1.4rem; letter-spacing:0.08em;
+    animation:toastUp 2.2s ease-out forwards;
+  }
+  @keyframes toastUp{
+    0%{ opacity:0; transform:translateY(-6px); }
+    12%{ opacity:1; transform:translateY(0); }
+    75%{ opacity:1; }
+    100%{ opacity:0; transform:translateY(-10px); }
+  }
+
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    font-size:0.75rem; letter-spacing:0.12em; color:var(--phosphor-dim);
+    position:relative; z-index:3; padding-top:2px;
+  }
+  .status-dot{
+    display:inline-block; width:7px; height:7px; border-radius:50%;
+    background:var(--phosphor); margin-right:6px; vertical-align:middle;
+    animation:pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.35; } }
+
+  .hero{ margin-top:18px; position:relative; z-index:3; }
+  .hero-name{
+    font-family:'VT323',ui-monospace,monospace;
+    font-size:clamp(2.1rem,10vw,2.8rem);
+    line-height:1; color:var(--phosphor);
+    text-shadow:0 0 8px rgba(232,163,61,0.4);
+  }
+  .hero-sub{
+    font-size:0.7rem; letter-spacing:0.14em; color:var(--phosphor-dim);
+    text-transform:uppercase; margin-top:2px;
+  }
+
+  .level-block{ margin-top:18px; position:relative; z-index:3; }
+  .level-row{ display:flex; align-items:baseline; gap:10px; }
+  .level-tag{ font-size:0.75rem; letter-spacing:0.14em; color:var(--phosphor-dim); }
+  .level-num{
+    font-family:'VT323',ui-monospace,monospace; font-size:clamp(2.4rem,12vw,3.2rem);
+    color:var(--amber); line-height:1; text-shadow:0 0 10px rgba(255,154,46,0.4);
+  }
+  .xp-bar-outer{
+    margin-top:8px; height:14px; background:var(--panel);
+    border:1px solid var(--line); border-radius:2px; overflow:hidden;
+  }
+  .xp-bar-fill{
+    height:100%; background:linear-gradient(90deg,var(--phosphor-dim),var(--phosphor));
+    width:0%; transition:width 0.5s ease-out;
+  }
+  .xp-text{ margin-top:5px; font-size:0.78rem; color:var(--phosphor-dim); letter-spacing:0.04em; }
+
+  .tabs{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:6px;
+    margin-top:20px; position:relative; z-index:3;
+  }
+  .tab-btn{
+    padding:9px 4px; font-size:0.72rem; letter-spacing:0.08em;
+    border:1px solid var(--line); border-radius:3px; background:var(--panel);
+    color:var(--phosphor-dim); min-height:38px;
+  }
+  .tab-btn.active{ color:var(--bg); background:var(--phosphor); border-color:var(--phosphor); }
+  .tab-btn:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{
+    outline:2px solid var(--amber); outline-offset:2px;
+  }
+
+  .tab-content{
+    margin-top:16px; position:relative; z-index:3;
+    border:1px solid var(--line); border-radius:3px; background:var(--panel);
+    padding:14px;
+  }
+  .panel-title{
+    font-size:0.72rem; letter-spacing:0.12em; text-transform:uppercase;
+    color:var(--phosphor-dim); margin:14px 0 8px;
+  }
+  .panel-title:first-child{ margin-top:0; }
+  .empty-note{ font-size:0.85rem; color:var(--phosphor-dim); padding:6px 0; }
+
+  .assign-banner{ border:1px solid var(--amber); border-radius:3px; background:var(--panel-alt); padding:10px 12px; margin-bottom:14px; }
+  .assign-label{ font-size:0.82rem; color:var(--amber); margin-bottom:8px; }
+  .assign-buttons{ display:flex; flex-wrap:wrap; gap:6px; }
+  .assign-btn{ border:1px solid var(--amber-dim); border-radius:3px; background:var(--bg); color:var(--amber); padding:7px 10px; font-size:0.76rem; min-height:34px; }
+
+  .stat-row{
+    display:grid; grid-template-columns:1fr auto 1.6em auto; align-items:center;
+    gap:8px; padding:6px 0; border-bottom:1px solid var(--line);
+  }
+  .stat-row:last-child{ border-bottom:none; }
+  .stat-label{ font-size:0.82rem; }
+  .seg-bar{ display:flex; gap:2px; }
+  .seg{ width:9px; height:12px; background:var(--panel-alt); border:1px solid var(--line); }
+  .seg.filled{ background:var(--phosphor); border-color:var(--phosphor); }
+  .stat-value{ text-align:right; color:var(--amber); font-size:0.85rem; }
+  .stepper{ display:flex; gap:4px; }
+  .step-btn{
+    min-width:26px; min-height:26px; border:1px solid var(--line); border-radius:3px;
+    color:var(--phosphor); background:var(--panel-alt); font-size:0.9rem; line-height:1;
+  }
+
+  .skill-row{
+    display:grid; grid-template-columns:5.5em 1fr 2em auto; align-items:center;
+    gap:8px; padding:6px 0; border-bottom:1px solid var(--line);
+  }
+  .skill-row:last-child{ border-bottom:none; }
+  .skill-label{ font-size:0.72rem; letter-spacing:0.04em; color:var(--phosphor-dim); }
+  .skill-bar{ height:8px; background:var(--panel-alt); border:1px solid var(--line); border-radius:2px; overflow:hidden; }
+  .skill-fill{ height:100%; background:var(--phosphor-dim); transition:width 0.4s ease-out; }
+  .skill-value{ text-align:right; font-size:0.78rem; color:var(--amber); }
+
+  .main-quest-card{ border:1px solid var(--line); border-radius:3px; padding:10px; background:var(--panel-alt); }
+  .main-title-input{
+    width:100%; border:1px solid var(--line); border-radius:3px; background:var(--bg);
+    padding:8px; font-size:0.95rem; color:var(--amber); letter-spacing:0.03em;
+  }
+  .progress-row{ display:flex; align-items:center; gap:10px; margin-top:10px; }
+  .progress-row input[type="range"]{ flex:1; accent-color:var(--phosphor); }
+  .progress-pct{ font-size:0.85rem; color:var(--phosphor-dim); width:3em; text-align:right; }
+  .bonus-label{ font-size:0.68rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--phosphor-dim); margin:12px 0 4px; }
+  .bonus-list{ display:flex; flex-direction:column; }
+  .bonus-item{ display:flex; align-items:center; gap:8px; padding:5px 0; font-size:0.82rem; }
+  .bonus-item .quest-name{ flex:1; }
+  .bonus-item.done .quest-name{ color:var(--phosphor-dim); text-decoration:line-through; }
+  .bonus-item .complete-btn{ width:24px; height:24px; }
+  .main-xp-note{ font-size:0.7rem; color:var(--phosphor-dim); margin-top:8px; }
+
+  .quest-list{ display:flex; flex-direction:column; }
+  .quest-item{
+    display:grid; grid-template-columns:auto 1fr auto auto; align-items:center;
+    gap:8px; padding:8px 0; border-bottom:1px solid var(--line);
+  }
+  .quest-item:last-child{ border-bottom:none; }
+  .quest-name{ font-size:0.85rem; }
+  .quest-xp{ font-size:0.72rem; color:var(--phosphor-dim); white-space:nowrap; }
+  .complete-btn{
+    width:30px; height:30px; border:1px solid var(--phosphor-dim); border-radius:50%;
+    color:var(--phosphor);
+  }
+  .complete-btn.done{ background:var(--phosphor-dim); color:var(--bg); }
+  .complete-btn:disabled{ opacity:0.6; cursor:default; }
+  .remove-btn{ width:26px; height:26px; color:var(--danger); font-size:1rem; }
+
+  .add-row{ display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
+  .add-row input[type="text"], .add-row input[type="number"], .add-row select{
+    border:1px solid var(--line); border-radius:3px; background:var(--panel-alt);
+    padding:8px; font-size:0.85rem; min-height:38px;
+  }
+  .add-row input[type="text"]{ flex:1 1 60%; min-width:110px; }
+  .add-row input[type="number"]{ width:64px; }
+  .add-row select{ flex:0 0 auto; }
+  .add-row button{
+    border:1px solid var(--phosphor-dim); border-radius:3px; background:var(--panel-alt);
+    color:var(--phosphor); padding:8px 14px; min-height:38px;
+  }
+
+  .inv-list{ display:flex; flex-direction:column; }
+  .inv-item{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:7px 0; border-bottom:1px solid var(--line); font-size:0.85rem;
+  }
+  .inv-item:last-child{ border-bottom:none; }
+
+  .wallet-card{ border:1px solid var(--amber-dim); border-radius:3px; background:var(--panel-alt); margin-bottom:16px; overflow:hidden; }
+  .wallet-toggle{ width:100%; display:flex; justify-content:space-between; align-items:center; padding:12px 14px; min-height:44px; }
+  .wallet-caps{ font-family:'VT323',ui-monospace,monospace; font-size:1.5rem; color:var(--amber); letter-spacing:0.04em; }
+  .wallet-chevron{ color:var(--phosphor-dim); font-size:0.8rem; }
+  .wallet-detail{ padding:0 14px 12px; border-top:1px solid var(--line); }
+  .wallet-row{ padding:8px 0; border-bottom:1px solid var(--line); font-size:0.85rem; }
+  .wallet-row-main{ display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:8px; }
+  .wallet-row-sub{ font-size:0.72rem; color:var(--phosphor-dim); margin-top:3px; display:flex; align-items:center; gap:5px; }
+  .rate-input{ width:64px; border:1px solid var(--line); border-radius:3px; background:var(--bg); color:var(--phosphor); padding:3px 5px; font-size:0.72rem; }
+  .wallet-label{ color:var(--phosphor-dim); }
+  .wallet-total-row{ display:flex; justify-content:space-between; padding:8px 0 2px; font-size:0.85rem; color:var(--amber); margin-top:2px; }
+  .wallet-rate{ font-size:0.66rem; color:var(--phosphor-dim); margin-top:8px; text-align:right; }
+
+  #log-input{
+    width:100%; border:1px solid var(--line); border-radius:3px; background:var(--panel-alt);
+    padding:10px; font-size:0.9rem; resize:vertical; min-height:88px;
+  }
+  #analyze-btn{
+    margin-top:8px; border:1px solid var(--amber-dim); border-radius:3px;
+    background:var(--panel-alt); color:var(--amber); padding:9px 16px; min-height:40px;
+    font-size:0.85rem; letter-spacing:0.03em;
+  }
+  .thinking{ font-size:0.82rem; color:var(--phosphor-dim); padding:10px 0; }
+  .proposal-card{
+    margin-top:10px; border:1px solid var(--amber-dim); border-radius:3px;
+    background:var(--panel-alt); padding:12px;
+  }
+  .proposal-head{ font-size:0.75rem; letter-spacing:0.08em; color:var(--phosphor-dim); margin-bottom:6px; }
+  .badge{ border:1px solid var(--amber-dim); color:var(--amber); border-radius:3px; padding:1px 6px; font-size:0.65rem; margin-left:6px; }
+  .badge.dim{ border-color:var(--line); color:var(--phosphor-dim); }
+  .proposal-line{ font-family:'VT323',ui-monospace,monospace; font-size:1.5rem; color:var(--amber); }
+  .proposal-reason{ font-size:0.85rem; margin-top:2px; }
+  .proposal-sub{ font-size:0.78rem; color:var(--phosphor-dim); margin-top:2px; }
+  .proposal-actions{ display:flex; gap:8px; margin-top:10px; }
+  .proposal-actions button{
+    flex:1; border:1px solid var(--line); border-radius:3px; padding:9px; min-height:40px; font-size:0.85rem;
+  }
+  #accept-proposal-btn{ border-color:var(--phosphor-dim); color:var(--phosphor); }
+  #reject-proposal-btn{ color:var(--danger); border-color:var(--danger); }
+
+  .log-history{ display:flex; flex-direction:column; }
+  .log-entry{ padding:9px 0; border-bottom:1px solid var(--line); }
+  .log-entry:last-child{ border-bottom:none; }
+  .log-date{ font-size:0.68rem; letter-spacing:0.08em; color:var(--phosphor-dim); }
+  .log-text{ font-size:0.85rem; margin-top:2px; }
+  .log-xp{ font-size:0.75rem; color:var(--amber); margin-top:2px; }
+
+  .footer-row{
+    margin-top:16px; display:flex; justify-content:space-between; align-items:center;
+    font-size:0.68rem; color:var(--phosphor-dim); letter-spacing:0.04em; position:relative; z-index:3;
+    flex-wrap:wrap; gap:8px;
+  }
+  .footer-actions{ display:flex; gap:10px; }
+  .footer-actions button{ color:var(--phosphor-dim); text-decoration:underline; font-size:0.68rem; }
+  #export-btn{ display:none; }
+  .reset-warning{ color:var(--danger); }
+  #reset-confirm-area button{ text-decoration:underline; font-size:0.68rem; margin-left:6px; }
+  #reset-confirm-btn{ color:var(--danger); }
+</style>
+</head>
+<body>
+  <div class="toast-layer" id="toast-layer"></div>
+  <div class="frame">
+    <div class="scan-overlay"></div>
+
+    <div class="topbar">
+      <span><span class="status-dot"></span>ONLINE</span>
+      <span id="hdr-date"></span>
+    </div>
+
+    <div class="hero">
+      <div class="hero-name">MALIK</div>
+      <div class="hero-sub">Personal Status Terminal</div>
+    </div>
+
+    <div class="level-block">
+      <div class="level-row">
+        <span class="level-tag">LVL</span>
+        <span class="level-num" id="hdr-level">07</span>
+      </div>
+      <div class="xp-bar-outer"><div class="xp-bar-fill" id="hdr-xp-fill"></div></div>
+      <div class="xp-text" id="hdr-xp-text"></div>
+    </div>
+
+    <nav class="tabs">
+      <button class="tab-btn" data-tab="status">STATUS</button>
+      <button class="tab-btn" data-tab="quests">QUESTS</button>
+      <button class="tab-btn" data-tab="items">ITEMS</button>
+      <button class="tab-btn" data-tab="log">LOG</button>
+    </nav>
+
+    <section class="tab-content" id="tab-status"></section>
+    <section class="tab-content" id="tab-quests" style="display:none"></section>
+    <section class="tab-content" id="tab-items" style="display:none"></section>
+    <section class="tab-content" id="tab-log" style="display:none"></section>
+
+    <div class="footer-row">
+      <span id="ai-indicator">AI analysis: checking…</span>
+      <div class="footer-actions">
+        <button id="export-btn">Export backup</button>
+        <button id="reset-btn">Reset</button>
+      </div>
+    </div>
+    <div class="footer-row" id="reset-confirm-area"></div>
+  </div>
+
+<script>
+(function(){
+  'use strict';
+
+  var STAT_KEYS = ['STR','END','CHA','INT','AGI'];
+  var STAT_LABELS = {STR:'Strength',END:'Endurance',CHA:'Charisma',INT:'Intelligence',AGI:'Agility'};
+  var SKILL_KEYS = ['SCIENCE','SPEECH','SURVIVAL','COOKING','FINANCE','MUSIC','BUSINESS'];
+  var CATS = ['WEAPONS','APPAREL','AID','MISC','IMPORTANT'];
+  var STORAGE_KEY = 'status_terminal_state_v1';
+
+  var DEFAULT_STATE = {
+    level:2, xp:0, xpToNext:1000,
+    unspentSpecialPoints:0,
+    stats:{STR:4,END:3,CHA:4,INT:5,AGI:2},
+    skills:{SCIENCE:21,SPEECH:42,SURVIVAL:23,COOKING:8,FINANCE:17,MUSIC:35,BUSINESS:5},
+    quests:{
+      main:{title:'Obtain 5 Caps', progress:0, xp:1000, completed:false, skillGains:[{skill:'FINANCE',amount:8},{skill:'BUSINESS',amount:2}], bonus:[
+        {id:'b1',name:'Find a job',xp:500,done:false},
+        {id:'b2',name:'Launch a project',xp:500,done:false}
+      ]},
+      side:[
+        {id:'s1',name:'Pass the PSSAC / CIZR certification',xp:150,done:false},
+        {id:'s2',name:'Build up savings',xp:100,done:false},
+        {id:'s3',name:'Get back into consistent training',xp:100,done:false},
+        {id:'s4',name:'Push the music project forward',xp:100,done:false}
+      ],
+      daily:[
+        {id:'d1',name:'Move your body',xp:20,lastDate:null},
+        {id:'d2',name:'Learn or study something',xp:20,lastDate:null},
+        {id:'d3',name:'Reach out to someone',xp:15,lastDate:null}
+      ]
+    },
+    inventory:[
+      {id:'i1',name:'Phone',category:'MISC'},
+      {id:'i2',name:'Keys',category:'IMPORTANT'}
+    ],
+    finances:{
+      holdings:[
+        {id:'f1',label:'USDT',amount:855.8,rateToCAD:1.406},
+        {id:'f2',label:'CASH',amount:160,rateToCAD:1}
+      ]
+    },
+    log:[]
+  };
+  var CAD_PER_CAP = 1000;
+  var walletExpanded = false;
+
+  var state = null;
+  var db = null, playerDoc = null, sampleFn = null, downloadsCap = null;
+  var aiAvailable = false;
+  var saveTimer = null;
+  var pendingProposal = null;
+
+  function el(id){ return document.getElementById(id); }
+  function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
+  function genId(){ return 'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+  function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+  function todayDisplay(){ return new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+  function commas(n){ return Number(n).toLocaleString('en-US'); }
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g,function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  // ---------- persistence ----------
+  function loadLocal(){
+    try{ var raw=localStorage.getItem(STORAGE_KEY); return raw?JSON.parse(raw):null; }catch(e){ return null; }
+  }
+  function saveLocal(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+  }
+  function mergeDefaults(loaded){
+    var s = JSON.parse(JSON.stringify(DEFAULT_STATE));
+    if (loaded && typeof loaded === 'object'){
+      Object.keys(loaded).forEach(function(k){ s[k]=loaded[k]; });
+    }
+    return s;
+  }
+  function scheduleSave(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(doSave, 500);
+  }
+  function doSave(){
+    if (playerDoc){
+      playerDoc.set(state).catch(function(){ saveLocal(); });
+    } else {
+      saveLocal();
+    }
+  }
+
+  // ---------- rendering ----------
+  function renderHeader(){
+    el('hdr-date').textContent = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    el('hdr-level').textContent = (state.level<10?'0':'')+state.level;
+    var pct = clamp((state.xp/state.xpToNext)*100,0,100);
+    el('hdr-xp-fill').style.width = pct+'%';
+    el('hdr-xp-text').textContent = commas(state.xp)+' / '+commas(state.xpToNext)+' XP';
+  }
+
+  function statRowHtml(key){
+    var value = state.stats[key];
+    var segs='';
+    for (var i=1;i<=10;i++){ segs += '<span class="seg'+(i<=value?' filled':'')+'"></span>'; }
+    return '<div class="stat-row">'+
+      '<div class="stat-label">'+STAT_LABELS[key]+'</div>'+
+      '<div class="seg-bar">'+segs+'</div>'+
+      '<div class="stat-value">'+value+'</div>'+
+      '<div class="stepper">'+
+        '<button class="step-btn" data-action="stat" data-key="'+key+'" data-dir="-1" aria-label="Decrease '+STAT_LABELS[key]+'">-</button>'+
+        '<button class="step-btn" data-action="stat" data-key="'+key+'" data-dir="1" aria-label="Increase '+STAT_LABELS[key]+'">+</button>'+
+      '</div>'+
+    '</div>';
+  }
+
+  function skillRowHtml(key){
+    var value = state.skills[key];
+    var pct = clamp(value,0,100);
+    return '<div class="skill-row">'+
+      '<div class="skill-label">'+key+'</div>'+
+      '<div class="skill-bar"><div class="skill-fill" style="width:'+pct+'%"></div></div>'+
+      '<div class="skill-value">'+value+'</div>'+
+      '<div class="stepper">'+
+        '<button class="step-btn" data-action="skill" data-key="'+key+'" data-dir="-1" aria-label="Decrease '+key+'">-</button>'+
+        '<button class="step-btn" data-action="skill" data-key="'+key+'" data-dir="1" aria-label="Increase '+key+'">+</button>'+
+      '</div>'+
+    '</div>';
+  }
+
+  function renderStatus(){
+    var pts = state.unspentSpecialPoints||0;
+    var html = '';
+    if (pts>0){
+      html += '<div class="assign-banner">'+
+        '<div class="assign-label">&#9733; '+pts+' SPECIAL point'+(pts>1?'s':'')+' to assign</div>'+
+        '<div class="assign-buttons">'+
+          STAT_KEYS.map(function(k){ return '<button class="assign-btn" data-action="special-assign" data-key="'+k+'">'+STAT_LABELS[k]+'</button>'; }).join('')+
+        '</div>'+
+      '</div>';
+    }
+    html += '<div class="panel-title">S.P.E.C.I.A.L.</div>';
+    STAT_KEYS.forEach(function(k){ html += statRowHtml(k); });
+    html += '<div class="panel-title">Skills</div>';
+    SKILL_KEYS.forEach(function(k){ html += skillRowHtml(k); });
+    el('tab-status').innerHTML = html;
+  }
+
+  function renderQuests(){
+    var m = state.quests.main;
+    var bonus = m.bonus || [];
+    var html = '<div class="panel-title">Main Quest</div>'+
+      '<div class="main-quest-card">'+
+        '<input type="text" class="main-title-input" id="main-title-input" value="'+escapeHtml(m.title)+'">'+
+        '<div class="progress-row">'+
+          '<input type="range" min="0" max="100" value="'+m.progress+'" id="main-progress-input">'+
+          '<span class="progress-pct">'+m.progress+'%</span>'+
+        '</div>'+
+        '<div class="main-xp-note">'+(m.completed?'Completed — ':'On completion: ')+'+'+(m.xp||0)+' XP</div>';
+    if (bonus.length){
+      html += '<div class="bonus-label">Bonus objectives</div><div class="bonus-list">';
+      bonus.forEach(function(b){
+        html += '<div class="bonus-item'+(b.done?' done':'')+'">'+
+          '<button class="complete-btn'+(b.done?' done':'')+'" data-action="bonus-toggle" data-id="'+b.id+'" '+(b.done?'disabled':'')+' aria-label="Toggle">'+(b.done?'&#10003;':'&#9675;')+'</button>'+
+          '<span class="quest-name">'+escapeHtml(b.name)+'</span>'+
+          '<span class="quest-xp">+'+(b.xp||0)+' XP</span>'+
+        '</div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+
+    html += '<div class="panel-title">Side Quests</div>';
+    var active = state.quests.side.filter(function(q){ return !q.done; });
+    if (active.length===0){
+      html += '<div class="empty-note">No side quests yet — add one below.</div>';
+    } else {
+      html += '<div class="quest-list">';
+      active.forEach(function(q){
+        html += '<div class="quest-item">'+
+          '<button class="complete-btn" data-action="quest-complete" data-id="'+q.id+'" aria-label="Complete">&#10003;</button>'+
+          '<span class="quest-name">'+escapeHtml(q.name)+'</span>'+
+          '<span class="quest-xp">+'+q.xp+' XP</span>'+
+          '<button class="remove-btn" data-action="quest-remove" data-id="'+q.id+'" aria-label="Remove">&times;</button>'+
+        '</div>';
+      });
+      html += '</div>';
+    }
+    html += '<div class="add-row">'+
+      '<input type="text" id="new-quest-name" placeholder="New side quest...">'+
+      '<input type="number" id="new-quest-xp" value="100" min="5" max="500">'+
+      '<button id="add-quest-btn">Add</button>'+
+    '</div>';
+
+    html += '<div class="panel-title">Daily Quests</div><div class="quest-list">';
+    var today = todayStr();
+    state.quests.daily.forEach(function(q){
+      var doneToday = q.lastDate===today;
+      html += '<div class="quest-item">'+
+        '<button class="complete-btn'+(doneToday?' done':'')+'" data-action="daily-toggle" data-id="'+q.id+'" '+(doneToday?'disabled':'')+' aria-label="Mark done">'+(doneToday?'&#10003;':'&#9675;')+'</button>'+
+        '<span class="quest-name">'+escapeHtml(q.name)+'</span>'+
+        '<span class="quest-xp">+'+q.xp+' XP</span>'+
+        '<button class="remove-btn" data-action="daily-remove" data-id="'+q.id+'" aria-label="Remove">&times;</button>'+
+      '</div>';
+    });
+    html += '</div><div class="add-row">'+
+      '<input type="text" id="new-daily-name" placeholder="New daily habit...">'+
+      '<input type="number" id="new-daily-xp" value="15" min="5" max="100">'+
+      '<button id="add-daily-btn">Add</button>'+
+    '</div>';
+
+    el('tab-quests').innerHTML = html;
+  }
+
+  function money(n){ return Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function totalHoldingsCAD(){
+    return state.finances.holdings.reduce(function(sum,h){
+      return sum + (Number(h.amount)||0) * (Number(h.rateToCAD)||1);
+    }, 0);
+  }
+  function capsValue(){
+    return totalHoldingsCAD() / CAD_PER_CAP;
+  }
+  function renderWallet(){
+    var html = '<div class="wallet-card">'+
+      '<button class="wallet-toggle" id="wallet-toggle-btn">'+
+        '<span class="wallet-caps">'+capsValue().toFixed(2)+' CAPS</span>'+
+        '<span class="wallet-chevron">'+(walletExpanded?'\u25B4':'\u25BE')+'</span>'+
+      '</button>';
+    if (walletExpanded){
+      html += '<div class="wallet-detail">';
+      if (state.finances.holdings.length===0){
+        html += '<div class="empty-note">No holdings yet.</div>';
+      } else {
+        state.finances.holdings.forEach(function(h){
+          var rate = Number(h.rateToCAD)||1;
+          var cad = (Number(h.amount)||0)*rate;
+          html += '<div class="wallet-row">'+
+            '<div class="wallet-row-main">'+
+              '<span class="wallet-label">'+escapeHtml(h.label)+'</span>'+
+              '<span class="wallet-cad">$'+money(cad)+'</span>'+
+              '<button class="remove-btn" data-action="wallet-remove" data-id="'+h.id+'" aria-label="Remove">&times;</button>'+
+            '</div>'+
+            '<div class="wallet-row-sub">'+money(h.amount)+' &times; <input type="number" class="rate-input" data-id="'+h.id+'" value="'+rate+'" step="0.001" aria-label="Rate to CAD"> CAD</div>'+
+          '</div>';
+        });
+        html += '<div class="wallet-total-row"><span>Total</span><span>$'+money(totalHoldingsCAD())+'</span></div>';
+      }
+      html += '<div class="add-row">'+
+        '<input type="text" id="new-wallet-label" placeholder="Label (e.g. USDT)">'+
+        '<input type="number" id="new-wallet-amount" placeholder="Amount">'+
+        '<input type="number" id="new-wallet-rate" placeholder="Rate to CAD" step="0.001" value="1">'+
+        '<button id="add-wallet-btn">Add</button>'+
+      '</div>';
+      html += '<div class="wallet-rate">'+commas(CAD_PER_CAP)+' CAD = 1 Cap &mdash; rates are set by you, updated manually</div>';
+      html += '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+  function addHolding(){
+    var labelInput = el('new-wallet-label');
+    var amountInput = el('new-wallet-amount');
+    var rateInput = el('new-wallet-rate');
+    var label = labelInput.value.trim();
+    var amount = Number(amountInput.value);
+    var rate = Number(rateInput.value);
+    if (!label || !isFinite(amount)) return;
+    if (!isFinite(rate) || rate<=0) rate = 1;
+    state.finances.holdings.push({id:genId(), label:label, amount:amount, rateToCAD:rate});
+    renderInventory(); scheduleSave();
+  }
+
+  function renderInventory(){
+    var html = renderWallet();
+    CATS.forEach(function(cat){
+      var items = state.inventory.filter(function(i){ return i.category===cat; });
+      html += '<div class="panel-title">'+cat+'</div>';
+      if (items.length===0){
+        html += '<div class="empty-note">Nothing here yet.</div>';
+      } else {
+        html += '<div class="inv-list">';
+        items.forEach(function(i){
+          html += '<div class="inv-item"><span>'+escapeHtml(i.name)+'</span>'+
+            '<button class="remove-btn" data-action="inv-remove" data-id="'+i.id+'" aria-label="Remove">&times;</button></div>';
+        });
+        html += '</div>';
+      }
+    });
+    html += '<div class="add-row">'+
+      '<input type="text" id="new-item-name" placeholder="Item name...">'+
+      '<select id="new-item-cat">'+CATS.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('')+'</select>'+
+      '<button id="add-item-btn">Add</button>'+
+    '</div>';
+    el('tab-items').innerHTML = html;
+  }
+
+  function renderLog(){
+    var html = '<div class="panel-title">Log an entry</div>'+
+      '<textarea id="log-input" rows="4" placeholder="What did you do today?"></textarea>'+
+      '<button id="analyze-btn">Analyze</button>'+
+      '<div id="proposal-area"></div>'+
+      '<div class="panel-title">History</div><div class="log-history">';
+    if (state.log.length===0){
+      html += '<div class="empty-note">No entries yet.</div>';
+    } else {
+      state.log.slice().reverse().slice(0,30).forEach(function(entry){
+        html += '<div class="log-entry">'+
+          '<div class="log-date">'+escapeHtml(entry.date)+'</div>'+
+          '<div class="log-text">'+escapeHtml(entry.text)+'</div>'+
+          '<div class="log-xp">+'+entry.xp+' XP — '+escapeHtml(entry.reason||'')+'</div>'+
+        '</div>';
+      });
+    }
+    html += '</div>';
+    el('tab-log').innerHTML = html;
+  }
+
+  function updateAiIndicator(){
+    var e = el('ai-indicator');
+    if (!e) return;
+    e.textContent = 'AI analysis: '+(aiAvailable?'on':'offline rules');
+  }
+  function updateExportButton(){
+    var b = el('export-btn');
+    if (!b) return;
+    b.style.display = downloadsCap ? 'inline-block' : 'none';
+  }
+
+  function renderAll(){
+    renderHeader();
+    renderStatus();
+    renderQuests();
+    renderInventory();
+    renderLog();
+    updateAiIndicator();
+    updateExportButton();
+  }
+
+  // ---------- XP / toasts ----------
+  function addXp(amount){
+    state.xp += amount;
+    var leveled = false;
+    while (state.xp >= state.xpToNext){
+      state.xp -= state.xpToNext;
+      state.level += 1;
+      state.xpToNext += 400;
+      state.unspentSpecialPoints = (state.unspentSpecialPoints||0) + 1;
+      leveled = true;
+    }
+    showXpToast(amount);
+    if (leveled) showLevelUp();
+    renderHeader();
+  }
+  function showXpToast(amount){
+    var t = document.createElement('div');
+    t.className = 'xp-toast';
+    t.textContent = '+'+amount+' XP';
+    el('toast-layer').appendChild(t);
+    setTimeout(function(){ t.remove(); }, 1400);
+  }
+  function showLevelUp(){
+    var t = document.createElement('div');
+    t.className = 'levelup-banner';
+    t.textContent = 'LEVEL UP — '+state.level;
+    el('toast-layer').appendChild(t);
+    setTimeout(function(){ t.remove(); }, 2200);
+  }
+
+  // ---------- quest / inventory actions ----------
+  function addSideQuest(){
+    var name = el('new-quest-name').value.trim();
+    if (!name) return;
+    var xp = clamp(parseInt(el('new-quest-xp').value,10)||100,5,500);
+    state.quests.side.push({id:genId(),name:name,xp:xp,done:false});
+    renderQuests(); scheduleSave();
+  }
+  function addDailyQuest(){
+    var name = el('new-daily-name').value.trim();
+    if (!name) return;
+    var xp = clamp(parseInt(el('new-daily-xp').value,10)||15,5,100);
+    state.quests.daily.push({id:genId(),name:name,xp:xp,lastDate:null});
+    renderQuests(); scheduleSave();
+  }
+  function addInventoryItem(){
+    var name = el('new-item-name').value.trim();
+    if (!name) return;
+    var cat = el('new-item-cat').value;
+    state.inventory.push({id:genId(),name:name,category:cat});
+    renderInventory(); scheduleSave();
+  }
+
+  // ---------- log analysis ----------
+  function buildPrompt(text){
+    return 'You are a supportive game master converting a real personal diary entry into small role-playing game rewards for a life-tracking app.\n'+
+      'Valid skill keys: '+SKILL_KEYS.join(', ')+'.\n'+
+      'Diary entry: "'+text.replace(/"/g,"'")+'"\n'+
+      'Reply with ONLY JSON, no other text, in exactly this shape:\n'+
+      '{"xp": <integer 5-80>, "reason": "<reason, under 10 words>", "skillGains": [{"skill": "<valid skill key>", "amount": <1-3>}]}\n'+
+      'Include at most 2 skillGains, only ones clearly supported by the entry. Empty array is fine. If the entry is vague, use xp 5-10 and an empty array.';
+  }
+  function sanitizeProposal(data){
+    data = data || {};
+    var xp = clamp(Math.round(Number(data.xp)||10),1,150);
+    var reason = typeof data.reason==='string' ? data.reason.slice(0,80) : 'Logged activity';
+    var skillGains = Array.isArray(data.skillGains) ? data.skillGains.filter(function(g){
+      return g && SKILL_KEYS.indexOf(g.skill)!==-1;
+    }).slice(0,2).map(function(g){ return {skill:g.skill, amount:clamp(Math.round(Number(g.amount)||1),1,5)}; }) : [];
+    return {xp:xp, reason:reason, skillGains:skillGains};
+  }
+  function localHeuristic(text){
+    var t = text.toLowerCase();
+    var rules = [
+      {kws:['gym','workout','run','walk','marche','sport','entra','training','exercise'], skill:'SURVIVAL', xp:20, reason:'Physical activity'},
+      {kws:['study','read','course','class','exam','learn','tudier','livre','cours','apprendre','cizr','pssac','certificat'], skill:'SCIENCE', xp:25, reason:'Learning / studying'},
+      {kws:['friend','social','call','met','meeting','ami','rencontre','appel','parl','party','soir'], skill:'SPEECH', xp:15, reason:'Social connection'},
+      {kws:['cook','recipe','meal','cuisine','recette','repas'], skill:'COOKING', xp:15, reason:'Cooking'},
+      {kws:['music','guitar','song','musique','guitare','chanson','compose'], skill:'MUSIC', xp:15, reason:'Music practice'},
+      {kws:['budget','save','money','finance','pargne','argent'], skill:'FINANCE', xp:15, reason:'Financial progress'},
+      {kws:['work','job','application','projet','travail','bureau','deadline','business'], skill:'BUSINESS', xp:20, reason:'Work progress'}
+    ];
+    var totalXp = 8, reasons=[], skillGains=[];
+    rules.forEach(function(r){
+      for (var i=0;i<r.kws.length;i++){
+        if (t.indexOf(r.kws[i])!==-1){
+          totalXp += r.xp;
+          reasons.push(r.reason);
+          if (r.skill && skillGains.length<2 && !skillGains.some(function(g){return g.skill===r.skill;})) skillGains.push({skill:r.skill,amount:2});
+          break;
+        }
+      }
+    });
+    totalXp = Math.min(100,totalXp);
+    return {xp:totalXp, reason: reasons.length? reasons.slice(0,2).join(' + ') : 'Logged your day', skillGains:skillGains};
+  }
+  function renderProposal(source){
+    var p = pendingProposal;
+    var lines = '<div class="proposal-line">+'+p.xp+' XP</div>'+
+      '<div class="proposal-reason">'+escapeHtml(p.reason)+'</div>';
+    p.skillGains.forEach(function(g){ lines += '<div class="proposal-sub">+'+g.amount+' '+g.skill+'</div>'; });
+    var badge = source==='ai' ? '<span class="badge">AI</span>' : '<span class="badge dim">Offline rules</span>';
+    el('proposal-area').innerHTML =
+      '<div class="proposal-card">'+
+        '<div class="proposal-head">Proposal'+badge+'</div>'+
+        lines+
+        '<div class="proposal-actions">'+
+          '<button id="accept-proposal-btn">Accept</button>'+
+          '<button id="reject-proposal-btn">Reject</button>'+
+        '</div>'+
+      '</div>';
+  }
+  function acceptProposal(){
+    if (!pendingProposal) return;
+    var p = pendingProposal;
+    addXp(p.xp);
+    p.skillGains.forEach(function(g){ state.skills[g.skill] = clamp(state.skills[g.skill]+g.amount,0,100); });
+    state.log.push({date:todayDisplay(), text:p.text, xp:p.xp, reason:p.reason});
+    if (state.log.length>200) state.log = state.log.slice(-200);
+    pendingProposal = null;
+    renderStatus(); renderLog();
+    scheduleSave();
+  }
+  function rejectProposal(){
+    pendingProposal = null;
+    var area = el('proposal-area');
+    if (area) area.innerHTML = '';
+  }
+  function analyzeEntry(){
+    var input = el('log-input');
+    var text = input.value.trim();
+    if (!text) return;
+    var btn = el('analyze-btn');
+    btn.disabled = true;
+    el('proposal-area').innerHTML = '<div class="thinking">Thinking...</div>';
+
+    function handleResult(result, source){
+      pendingProposal = {text:text, xp:result.xp, reason:result.reason, skillGains:result.skillGains};
+      renderProposal(source);
+      btn.disabled = false;
+      input.value = '';
+    }
+
+    if (sampleFn){
+      sampleFn.json(buildPrompt(text), {modelTier:'quick'}).then(function(data){
+        handleResult(sanitizeProposal(data), 'ai');
+      }).catch(function(err){
+        var permanent = ['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed'];
+        if (err && permanent.indexOf(err.code)!==-1){ aiAvailable=false; sampleFn=null; updateAiIndicator(); }
+        handleResult(localHeuristic(text), 'offline');
+      });
+    } else {
+      handleResult(localHeuristic(text), 'offline');
+    }
+  }
+
+  // ---------- export / reset ----------
+  function exportData(){
+    if (!downloadsCap) return;
+    downloadsCap.save({filename:'status-terminal-backup.json', data:JSON.stringify(state,null,2)}).catch(function(){});
+  }
+  function showResetConfirm(){
+    el('reset-confirm-area').innerHTML =
+      '<span class="reset-warning">Erase all data?</span>'+
+      '<button id="reset-confirm-btn">Yes, erase</button>'+
+      '<button id="reset-cancel-btn">Cancel</button>';
+  }
+  function doReset(){
+    state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+    el('reset-confirm-area').innerHTML = '';
+    renderAll();
+    scheduleSave();
+  }
+
+  // ---------- tabs ----------
+  function switchTab(name){
+    ['status','quests','items','log'].forEach(function(t){
+      el('tab-'+t).style.display = (t===name)?'block':'none';
+    });
+    document.querySelectorAll('[data-tab]').forEach(function(b){
+      b.classList.toggle('active', b.getAttribute('data-tab')===name);
+    });
+  }
+
+  // ---------- events ----------
+  function setupEvents(){
+    document.body.addEventListener('click', function(e){
+      var tabBtn = e.target.closest('[data-tab]');
+      if (tabBtn){ switchTab(tabBtn.getAttribute('data-tab')); return; }
+
+      var actionBtn = e.target.closest('[data-action]');
+      if (actionBtn){
+        var action = actionBtn.getAttribute('data-action');
+        var key = actionBtn.getAttribute('data-key');
+        var id = actionBtn.getAttribute('data-id');
+        var dir = parseInt(actionBtn.getAttribute('data-dir')||'0',10);
+        if (action==='stat'){
+          state.stats[key] = clamp(state.stats[key]+dir,0,10);
+          renderStatus(); scheduleSave();
+        } else if (action==='special-assign'){
+          if ((state.unspentSpecialPoints||0)>0){
+            state.stats[key] = clamp(state.stats[key]+1,0,10);
+            state.unspentSpecialPoints -= 1;
+            renderStatus(); scheduleSave();
+          }
+        } else if (action==='skill'){
+          state.skills[key] = clamp(state.skills[key]+dir,0,100);
+          renderStatus(); scheduleSave();
+        } else if (action==='quest-complete'){
+          var q = state.quests.side.filter(function(x){return x.id===id;})[0];
+          if (q){ q.done=true; addXp(q.xp); renderQuests(); scheduleSave(); }
+        } else if (action==='quest-remove'){
+          state.quests.side = state.quests.side.filter(function(x){return x.id!==id;});
+          renderQuests(); scheduleSave();
+        } else if (action==='daily-toggle'){
+          var d = state.quests.daily.filter(function(x){return x.id===id;})[0];
+          if (d && d.lastDate!==todayStr()){ d.lastDate=todayStr(); addXp(d.xp); renderQuests(); scheduleSave(); }
+        } else if (action==='daily-remove'){
+          state.quests.daily = state.quests.daily.filter(function(x){return x.id!==id;});
+          renderQuests(); scheduleSave();
+        } else if (action==='inv-remove'){
+          state.inventory = state.inventory.filter(function(x){return x.id!==id;});
+          renderInventory(); scheduleSave();
+        } else if (action==='wallet-remove'){
+          state.finances.holdings = state.finances.holdings.filter(function(x){return x.id!==id;});
+          renderInventory(); scheduleSave();
+        } else if (action==='bonus-toggle'){
+          var b = (state.quests.main.bonus||[]).filter(function(x){return x.id===id;})[0];
+          if (b && !b.done){ b.done = true; addXp(b.xp||0); renderQuests(); scheduleSave(); }
+        }
+        return;
+      }
+
+      if (e.target.closest('#wallet-toggle-btn')){ walletExpanded = !walletExpanded; renderInventory(); return; }
+
+      if (e.target.id==='add-quest-btn') addSideQuest();
+      else if (e.target.id==='add-daily-btn') addDailyQuest();
+      else if (e.target.id==='add-item-btn') addInventoryItem();
+      else if (e.target.id==='add-wallet-btn') addHolding();
+      else if (e.target.id==='analyze-btn') analyzeEntry();
+      else if (e.target.id==='accept-proposal-btn') acceptProposal();
+      else if (e.target.id==='reject-proposal-btn') rejectProposal();
+      else if (e.target.id==='export-btn') exportData();
+      else if (e.target.id==='reset-btn') showResetConfirm();
+      else if (e.target.id==='reset-confirm-btn') doReset();
+      else if (e.target.id==='reset-cancel-btn') el('reset-confirm-area').innerHTML='';
+    });
+
+    document.body.addEventListener('change', function(e){
+      if (e.target.id==='main-title-input'){
+        state.quests.main.title = e.target.value.slice(0,60) || 'BUILD THE LIFE I WANT';
+        scheduleSave();
+      } else if (e.target.classList.contains('rate-input')){
+        var hid = e.target.getAttribute('data-id');
+        var h = state.finances.holdings.filter(function(x){return x.id===hid;})[0];
+        var newRate = Number(e.target.value);
+        if (h && isFinite(newRate) && newRate>0){
+          h.rateToCAD = newRate;
+          renderInventory(); scheduleSave();
+        }
+      }
+    });
+    document.body.addEventListener('input', function(e){
+      if (e.target.id==='main-progress-input'){
+        var m = state.quests.main;
+        m.progress = parseInt(e.target.value,10);
+        if (m.progress>=100 && !m.completed){
+          m.completed = true;
+          addXp(m.xp||0);
+          (m.skillGains||[]).forEach(function(g){
+            if (SKILL_KEYS.indexOf(g.skill)!==-1) state.skills[g.skill] = clamp(state.skills[g.skill]+g.amount,0,100);
+          });
+          renderStatus();
+          renderQuests();
+        } else {
+          var pctEl = document.querySelector('.progress-pct');
+          if (pctEl) pctEl.textContent = m.progress+'%';
+        }
+        scheduleSave();
+      }
+    });
+    document.body.addEventListener('keydown', function(e){
+      if (e.key!=='Enter') return;
+      if (e.target.id==='new-quest-name' || e.target.id==='new-quest-xp') addSideQuest();
+      else if (e.target.id==='new-daily-name' || e.target.id==='new-daily-xp') addDailyQuest();
+      else if (e.target.id==='new-item-name') addInventoryItem();
+      else if (e.target.id==='new-wallet-label' || e.target.id==='new-wallet-amount') addHolding();
+    });
+  }
+
+  // ---------- boot ----------
+  function boot(){
+    state = mergeDefaults(loadLocal());
+    setupEvents();
+    switchTab('status');
+    renderAll();
+
+    if (window.claude && typeof window.claude.use === 'function'){
+      window.claude.use('db').then(function(d){
+        db = d;
+        if (!db) return;
+        playerDoc = db.doc('state/player');
+        return playerDoc.get().then(function(snap){
+          if (snap.exists && snap.data()){
+            state = mergeDefaults(snap.data());
+            renderAll();
+          } else {
+            return playerDoc.set(state);
+          }
+        });
+      }).catch(function(){});
+
+      window.claude.use('sample').then(function(s){
+        sampleFn = s;
+        aiAvailable = !!s;
+        updateAiIndicator();
+      }).catch(function(){ aiAvailable=false; updateAiIndicator(); });
+
+      window.claude.use('downloads').then(function(d){
+        downloadsCap = d;
+        updateExportButton();
+      }).catch(function(){});
+    } else {
+      updateAiIndicator();
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', boot);
+})();
+</script>
+</body>
+</html>
