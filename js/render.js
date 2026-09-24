@@ -6,7 +6,8 @@
   'use strict';
 
   var el = ST.el, clamp = ST.clamp, commas = ST.commas, money = ST.money, escapeHtml = ST.escapeHtml, todayStr = ST.todayStr;
-  var STAT_KEYS = ST.STAT_KEYS, STAT_LABELS = ST.STAT_LABELS, SKILL_KEYS = ST.SKILL_KEYS, CATS = ST.CATS, CAD_PER_CAP = ST.CAD_PER_CAP;
+  var STAT_KEYS = ST.STAT_KEYS, STAT_LABELS = ST.STAT_LABELS, SKILL_KEYS = ST.SKILL_KEYS, CATS = ST.CATS, CAD_PER_CAP = ST.CAD_PER_CAP,
+      QUEST_NAME_MAX = ST.QUEST_NAME_MAX;
   var app = ST.app;
 
   function renderHeader(){
@@ -71,30 +72,114 @@
     el('tab-status').innerHTML = html;
   }
 
-  function renderQuests(){
-    var state = app.state;
-    var m = state.quests.main;
+  // A quest's name, which is tapped to rename it. A quest without one (saved
+  // before quest names existed) gets a small "+ name" link in its place.
+  function questTitleHtml(kind, q){
+    var ref = ' data-action="rename" data-kind="'+kind+'"'+(q.id ? ' data-id="'+q.id+'"' : '');
+    return q.questName
+      ? '<button class="quest-title"'+ref+' title="Rename">'+escapeHtml(q.questName)+'</button>'
+      : '<button class="add-name"'+ref+'>+ name</button>';
+  }
+  // Side and daily quests: the name on top, the objective under it.
+  function questTextHtml(kind, q){
+    return '<div class="quest-text'+(q.questName?' has-name':'')+'">'+
+      questTitleHtml(kind, q)+
+      '<span class="quest-name">'+escapeHtml(q.name)+'</span>'+
+    '</div>';
+  }
+  // Puts a quest's name (or its "+ name" link) back where its rename box was
+  // and returns it. Only that spot changes, so the tap that ended the rename
+  // still lands on whatever it was aimed at.
+  function swapQuestTitle(input, kind, q){
+    if (!input.parentNode) return null;
+    var box = input.closest('.quest-text, .main-quest-card');
+    var holder = document.createElement('div');
+    holder.innerHTML = questTitleHtml(kind, q);
+    var btn = holder.firstChild;
+    input.replaceWith(btn);
+    if (box) box.classList.toggle('has-name', !!q.questName);
+    return btn;
+  }
+
+  // A streak quest's progress: "Day 3 / 7", and a check-in button usable once a day.
+  function streakRowHtml(m){
+    var days = ST.currentStreak(m);
+    var done = m.completed || ST.checkedInToday(m);
+    return '<div class="streak-row">'+
+      '<button class="complete-btn'+(done?' done':'')+'" data-action="main-checkin" data-id="'+m.id+'" '+(done?'disabled':'')+' aria-label="Check in for today">'+(done?'&#10003;':'&#9675;')+'</button>'+
+      '<span class="streak-days">Day '+days+' / '+m.streakTarget+'</span>'+
+      '<div class="streak-bar"><div class="streak-fill" style="width:'+clamp(days/m.streakTarget*100,0,100)+'%"></div></div>'+
+    '</div>';
+  }
+  function streakNote(m){
+    if (ST.checkedInToday(m)) return 'Checked in today';
+    if (m.streakDays>0 && ST.currentStreak(m)===0) return 'Missed a day, streak reset';
+    return 'Check in once a day';
+  }
+
+  function mainQuestHtml(m){
     var bonus = m.bonus || [];
-    var html = '<div class="panel-title">Main Quest</div>'+
-      '<div class="main-quest-card">'+
-        '<input type="text" class="main-title-input" id="main-title-input" value="'+escapeHtml(m.title)+'">'+
+    var streak = m.progressType==='streak';
+    var html = '<div class="main-quest-card'+(m.questName?' has-name':'')+(m.completed?' completed':'')+'">'+
+      '<div class="main-quest-head">'+
+        questTitleHtml('main', m)+
+        (m.completed ? '<span class="badge">Completed</span>' : '')+
+        '<button class="remove-btn" data-action="main-remove" data-id="'+m.id+'" aria-label="Remove main quest">&times;</button>'+
+      '</div>'+
+      '<input type="text" class="main-title-input" data-id="'+m.id+'" maxlength="60" value="'+escapeHtml(m.title)+'" aria-label="Objective">'+
+      (streak ? streakRowHtml(m) :
         '<div class="progress-row">'+
-          '<input type="range" min="0" max="100" value="'+m.progress+'" id="main-progress-input">'+
+          '<input type="range" min="0" max="100" value="'+m.progress+'" class="main-progress-input" data-id="'+m.id+'" aria-label="Progress">'+
           '<span class="progress-pct">'+m.progress+'%</span>'+
-        '</div>'+
-        '<div class="main-xp-note">'+(m.completed?'Completed — ':'On completion: ')+'+'+(m.xp||0)+' XP</div>';
+        '</div>')+
+      '<div class="main-xp-note">'+(streak && !m.completed ? '<span>'+streakNote(m)+' ·</span> ' : '')+
+        '<span>'+(m.completed?'Completed — ':'On completion: ')+'+'+(m.xp||0)+' XP</span></div>';
     if (bonus.length){
       html += '<div class="bonus-label">Bonus objectives</div><div class="bonus-list">';
       bonus.forEach(function(b){
         html += '<div class="bonus-item'+(b.done?' done':'')+'">'+
-          '<button class="complete-btn'+(b.done?' done':'')+'" data-action="bonus-toggle" data-id="'+b.id+'" '+(b.done?'disabled':'')+' aria-label="Toggle">'+(b.done?'&#10003;':'&#9675;')+'</button>'+
+          '<button class="complete-btn'+(b.done?' done':'')+'" data-action="bonus-toggle" data-quest="'+m.id+'" data-id="'+b.id+'" '+(b.done?'disabled':'')+' aria-label="Toggle">'+(b.done?'&#10003;':'&#9675;')+'</button>'+
           '<span class="quest-name">'+escapeHtml(b.name)+'</span>'+
           '<span class="quest-xp">+'+(b.xp||0)+' XP</span>'+
         '</div>';
       });
       html += '</div>';
     }
-    html += '</div>';
+    // Removing a main quest asks first, like Reset.
+    if (app.confirmRemoveMain===m.id){
+      html += '<div class="card-confirm">'+
+        '<span class="reset-warning">Remove this quest?</span>'+
+        '<button class="confirm-yes" data-action="main-remove-yes" data-id="'+m.id+'">Yes, remove</button>'+
+        '<button data-action="main-remove-no">Cancel</button>'+
+      '</div>';
+    }
+    return html+'</div>';
+  }
+
+  var questsDay = null;       // the date the quests were last drawn for
+  function renderQuests(){
+    // Rebuilding the list would drop a rename still in progress: save it first.
+    if (app.finishRename) app.finishRename();
+    var state = app.state;
+    questsDay = todayStr();
+    var html = '<div class="panel-title">Main Quests</div>';
+    if (state.quests.mains.length===0){
+      html += '<div class="empty-note">No main quests yet — add one below.</div>';
+    }
+    state.quests.mains.forEach(function(m){ html += mainQuestHtml(m); });
+    html += '<div class="add-row">'+
+      '<input type="text" class="field-full" id="new-main-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
+      '<input type="text" id="new-main-objective" placeholder="Objective..." maxlength="60" required aria-label="Objective">'+
+      '<input type="number" id="new-main-xp" value="1000" min="10" max="5000" aria-label="XP reward">'+
+      '<select id="new-main-type" aria-label="Progress type">'+
+        '<option value="percent">Percentage</option>'+
+        '<option value="streak">Day streak</option>'+
+      '</select>'+
+      '<label class="days-field" id="new-main-days-field" hidden>'+
+        '<input type="number" id="new-main-days" value="7" min="1" max="'+ST.STREAK_MAX_DAYS+'" aria-label="Target days"><span>days</span>'+
+      '</label>'+
+      '<button id="add-main-btn">Add</button>'+
+    '</div>';
 
     html += '<div class="panel-title">Side Quests</div>';
     var active = state.quests.side.filter(function(q){ return !q.done; });
@@ -105,7 +190,7 @@
       active.forEach(function(q){
         html += '<div class="quest-item">'+
           '<button class="complete-btn" data-action="quest-complete" data-id="'+q.id+'" aria-label="Complete">&#10003;</button>'+
-          '<span class="quest-name">'+escapeHtml(q.name)+'</span>'+
+          questTextHtml('side', q)+
           '<span class="quest-xp">+'+q.xp+' XP</span>'+
           '<button class="remove-btn" data-action="quest-remove" data-id="'+q.id+'" aria-label="Remove">&times;</button>'+
         '</div>';
@@ -113,8 +198,9 @@
       html += '</div>';
     }
     html += '<div class="add-row">'+
-      '<input type="text" id="new-quest-name" placeholder="New side quest...">'+
-      '<input type="number" id="new-quest-xp" value="100" min="5" max="500">'+
+      '<input type="text" class="field-full" id="new-quest-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
+      '<input type="text" class="field-objective" id="new-quest-objective" placeholder="Objective..." required aria-label="Objective">'+
+      '<input type="number" id="new-quest-xp" value="100" min="5" max="500" aria-label="XP reward">'+
       '<button id="add-quest-btn">Add</button>'+
     '</div>';
 
@@ -124,14 +210,15 @@
       var doneToday = q.lastDate===today;
       html += '<div class="quest-item">'+
         '<button class="complete-btn'+(doneToday?' done':'')+'" data-action="daily-toggle" data-id="'+q.id+'" '+(doneToday?'disabled':'')+' aria-label="Mark done">'+(doneToday?'&#10003;':'&#9675;')+'</button>'+
-        '<span class="quest-name">'+escapeHtml(q.name)+'</span>'+
+        questTextHtml('daily', q)+
         '<span class="quest-xp">+'+q.xp+' XP</span>'+
         '<button class="remove-btn" data-action="daily-remove" data-id="'+q.id+'" aria-label="Remove">&times;</button>'+
       '</div>';
     });
     html += '</div><div class="add-row">'+
-      '<input type="text" id="new-daily-name" placeholder="New daily habit...">'+
-      '<input type="number" id="new-daily-xp" value="15" min="5" max="100">'+
+      '<input type="text" class="field-full" id="new-daily-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
+      '<input type="text" class="field-objective" id="new-daily-objective" placeholder="Daily habit..." required aria-label="Objective">'+
+      '<input type="number" id="new-daily-xp" value="15" min="5" max="100" aria-label="XP reward">'+
       '<button id="add-daily-btn">Add</button>'+
     '</div>';
 
@@ -241,6 +328,18 @@
       '</div>';
   }
 
+  // Daily quests and streak check-ins open again at midnight. When the date
+  // has changed since the quests were drawn (the app stayed open, or came
+  // back from the background), draw them again; not while something is being
+  // typed there, the next check does it.
+  function refreshIfNewDay(){
+    if (!app.state || questsDay===todayStr()) return;
+    var typing = document.activeElement;
+    if (typing && /^(INPUT|SELECT|TEXTAREA)$/.test(typing.tagName) && typing.closest('#tab-quests')) return;
+    renderHeader();
+    renderQuests();
+  }
+
   function updateAiIndicator(){
     var e = el('ai-indicator');
     if (!e) return;
@@ -263,10 +362,35 @@
     t.textContent = text;
     el('toast-layer').appendChild(t);
     setTimeout(function(){ t.remove(); }, ms);
+    return t;
   }
   function showXpToast(amount){ toast('xp-toast', '+'+amount+' XP', 1400); }
   function showLevelUp(){ toast('levelup-banner', 'LEVEL UP — '+app.state.level, 2200); }
+  // The name in its own box: when the banner needs two lines, it breaks
+  // after the dash rather than inside the name.
+  function showQuestCompleted(name){
+    var questName = document.createElement('span');
+    questName.textContent = name;
+    toast('levelup-banner quest-banner', 'QUEST COMPLETED — ', 3200).appendChild(questName);
+  }
   function showSaveWarning(){ toast('xp-toast save-warning', 'Not saved — storage unavailable', 2600); }
+
+  // ---------- check animation ----------
+  var CHECK_ANIMATION_MS = 500;
+  function reducedMotion(){
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+  // A tapped check button pops and fills in amber with a glow, and its row
+  // flashes like a terminal redraw; `then` runs once that is over. With
+  // reduced motion there is no animation and `then` runs right away.
+  function playCheck(btn, then){
+    if (reducedMotion()){ then(); return; }
+    var row = btn.closest('.quest-item, .bonus-item, .streak-row');
+    btn.innerHTML = '&#10003;';
+    btn.classList.add('check-pop');
+    if (row) row.classList.add('row-flash');
+    setTimeout(then, CHECK_ANIMATION_MS);
+  }
 
   // ---------- tabs ----------
   function switchTab(name){
@@ -285,11 +409,15 @@
     renderInventory: renderInventory,
     renderLog: renderLog,
     renderProposal: renderProposal,
+    swapQuestTitle: swapQuestTitle,
+    refreshIfNewDay: refreshIfNewDay,
     updateAiIndicator: updateAiIndicator,
     renderAll: renderAll,
     showXpToast: showXpToast,
     showLevelUp: showLevelUp,
+    showQuestCompleted: showQuestCompleted,
     showSaveWarning: showSaveWarning,
+    playCheck: playCheck,
     switchTab: switchTab
   };
 })(window.StatusTerminal);
