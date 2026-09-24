@@ -30,8 +30,8 @@
 <script defer src="js/main.js"></script>
 </head>
 <body>
-  <div class="toast-layer" id="toast-layer"></div>
-  <div class="frame">
+  <div class="toast-layer" id="toast-layer" role="status" aria-live="polite"></div>
+  <main class="frame">
     <div class="scan-overlay"></div>
     <!-- The mascot: under the scanlines, taps go through him (css/terminal.css, js/mascot.js). -->
     <div class="mascot" id="mascot" aria-hidden="true">
@@ -44,7 +44,7 @@
     </div>
 
     <div class="hero">
-      <div class="hero-name">MALIK</div>
+      <h1 class="hero-name">MALIK</h1>
       <div class="hero-sub">Personal Status Terminal</div>
     </div>
 
@@ -79,6 +79,6 @@
     </div>
     <div class="footer-row" id="reset-confirm-area"></div>
     <input type="file" id="import-file" accept="application/json,.json" hidden>
-  </div>
+  </main>
 </body>
 </html>

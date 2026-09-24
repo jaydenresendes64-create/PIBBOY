@@ -16,6 +16,8 @@
   // numbers; this keeps the page safe even for data that skipped it.
   var attr = escapeHtml;
   function num(v){ var n = Number(v); return isFinite(n) ? n : 0; }
+  // What an icon-only button acts on, for its label: "Remove: Paper Trail".
+  function about(name, fallback){ return escapeHtml(name || fallback || ''); }
 
   // ---------- what was typed ----------
   // Redrawing a tab rebuilds its boxes. What was typed in a box with an id
@@ -114,7 +116,7 @@
     var ref = ' data-action="rename" data-kind="'+kind+'"'+(q.id ? ' data-id="'+attr(q.id)+'"' : '');
     return q.questName
       ? '<button class="quest-title"'+ref+' title="Rename">'+escapeHtml(q.questName)+'</button>'
-      : '<button class="add-name"'+ref+'>+ name</button>';
+      : '<button class="add-name"'+ref+' aria-label="Add a quest name">+ name</button>';
   }
   // Side and daily quests: the name on top, the objective under it.
   function questTextHtml(kind, q){
@@ -142,7 +144,7 @@
     var days = num(ST.currentStreak(m)), target = num(m.streakTarget);
     var done = m.completed || ST.checkedInToday(m);
     return '<div class="streak-row">'+
-      '<button class="complete-btn'+(done?' done':'')+'" data-action="main-checkin" data-id="'+attr(m.id)+'" '+(done?'disabled':'')+' aria-label="Check in for today">'+(done?'&#10003;':'&#9675;')+'</button>'+
+      '<button class="complete-btn'+(done?' done':'')+'" data-action="main-checkin" data-id="'+attr(m.id)+'" '+(done?'disabled':'')+' aria-label="Check in for today: '+about(m.questName, m.title)+'">'+(done?'&#10003;':'&#9675;')+'</button>'+
       '<span class="streak-days">Day '+days+' / '+target+'</span>'+
       '<div class="streak-bar"><div class="streak-fill" style="width:'+(target ? clamp(days/target*100,0,100) : 0)+'%"></div></div>'+
     '</div>';
@@ -160,7 +162,7 @@
       '<div class="main-quest-head">'+
         questTitleHtml('main', m)+
         (m.completed ? '<span class="badge">Completed</span>' : '')+
-        '<button class="remove-btn" data-action="main-remove" data-id="'+attr(m.id)+'" aria-label="Remove main quest">&times;</button>'+
+        '<button class="remove-btn" data-action="main-remove" data-id="'+attr(m.id)+'" aria-label="Remove main quest: '+about(m.questName, m.title)+'">&times;</button>'+
       '</div>'+
       '<input type="text" class="main-title-input" data-id="'+attr(m.id)+'" maxlength="60" value="'+escapeHtml(m.title)+'" aria-label="Objective">'+
       (streak ? streakRowHtml(m) :
@@ -174,7 +176,7 @@
       html += '<div class="bonus-label">Bonus objectives</div><div class="bonus-list">';
       bonus.forEach(function(b){
         html += '<div class="bonus-item'+(b.done?' done':'')+'">'+
-          '<button class="complete-btn'+(b.done?' done':'')+'" data-action="bonus-toggle" data-quest="'+attr(m.id)+'" data-id="'+attr(b.id)+'" '+(b.done?'disabled':'')+' aria-label="Toggle">'+(b.done?'&#10003;':'&#9675;')+'</button>'+
+          '<button class="complete-btn'+(b.done?' done':'')+'" data-action="bonus-toggle" data-quest="'+attr(m.id)+'" data-id="'+attr(b.id)+'" '+(b.done?'disabled':'')+' aria-label="Complete bonus objective: '+about(b.name)+'">'+(b.done?'&#10003;':'&#9675;')+'</button>'+
           '<span class="quest-name">'+escapeHtml(b.name)+'</span>'+
           '<span class="quest-xp">+'+num(b.xp)+' XP</span>'+
         '</div>';
@@ -225,10 +227,10 @@
       html += '<div class="quest-list">';
       active.forEach(function(q){
         html += '<div class="quest-item">'+
-          '<button class="complete-btn" data-action="quest-complete" data-id="'+attr(q.id)+'" aria-label="Complete">&#10003;</button>'+
+          '<button class="complete-btn" data-action="quest-complete" data-id="'+attr(q.id)+'" aria-label="Complete: '+about(q.questName, q.name)+'">&#10003;</button>'+
           questTextHtml('side', q)+
           '<span class="quest-xp">+'+num(q.xp)+' XP</span>'+
-          '<button class="remove-btn" data-action="quest-remove" data-id="'+attr(q.id)+'" aria-label="Remove">&times;</button>'+
+          '<button class="remove-btn" data-action="quest-remove" data-id="'+attr(q.id)+'" aria-label="Remove: '+about(q.questName, q.name)+'">&times;</button>'+
         '</div>';
       });
       html += '</div>';
@@ -245,10 +247,10 @@
     state.quests.daily.forEach(function(q){
       var doneToday = q.lastDate===today;
       html += '<div class="quest-item">'+
-        '<button class="complete-btn'+(doneToday?' done':'')+'" data-action="daily-toggle" data-id="'+attr(q.id)+'" '+(doneToday?'disabled':'')+' aria-label="Mark done">'+(doneToday?'&#10003;':'&#9675;')+'</button>'+
+        '<button class="complete-btn'+(doneToday?' done':'')+'" data-action="daily-toggle" data-id="'+attr(q.id)+'" '+(doneToday?'disabled':'')+' aria-label="Mark done today: '+about(q.questName, q.name)+'">'+(doneToday?'&#10003;':'&#9675;')+'</button>'+
         questTextHtml('daily', q)+
         '<span class="quest-xp">+'+num(q.xp)+' XP</span>'+
-        '<button class="remove-btn" data-action="daily-remove" data-id="'+attr(q.id)+'" aria-label="Remove">&times;</button>'+
+        '<button class="remove-btn" data-action="daily-remove" data-id="'+attr(q.id)+'" aria-label="Remove: '+about(q.questName, q.name)+'">&times;</button>'+
       '</div>';
     });
     html += '</div><div class="add-row">'+
@@ -266,9 +268,9 @@
   function renderWallet(){
     var state = app.state;
     var html = '<div class="wallet-card">'+
-      '<button class="wallet-toggle" id="wallet-toggle-btn">'+
+      '<button class="wallet-toggle" id="wallet-toggle-btn" aria-expanded="'+app.walletExpanded+'">'+
         '<span class="wallet-caps">'+ST.capsText()+' CAPS</span>'+
-        '<span class="wallet-chevron">'+(app.walletExpanded?'▴':'▾')+'</span>'+
+        '<span class="wallet-chevron" aria-hidden="true">'+(app.walletExpanded?'▴':'▾')+'</span>'+
       '</button>';
     if (app.walletExpanded){
       html += '<div class="wallet-detail">';
@@ -282,17 +284,17 @@
             '<div class="wallet-row-main">'+
               '<span class="wallet-label">'+escapeHtml(h.label)+'</span>'+
               '<span class="wallet-cad">$'+money(cad)+'</span>'+
-              '<button class="remove-btn" data-action="wallet-remove" data-id="'+attr(h.id)+'" aria-label="Remove">&times;</button>'+
+              '<button class="remove-btn" data-action="wallet-remove" data-id="'+attr(h.id)+'" aria-label="Remove: '+about(h.label)+'">&times;</button>'+
             '</div>'+
-            '<div class="wallet-row-sub">'+money(h.amount)+' &times; <input type="number" class="rate-input" data-id="'+attr(h.id)+'" value="'+rate+'" step="0.001" aria-label="Rate to CAD"> CAD</div>'+
+            '<div class="wallet-row-sub">'+money(h.amount)+' &times; <input type="number" class="rate-input" data-id="'+attr(h.id)+'" value="'+rate+'" step="0.001" aria-label="Rate to CAD: '+about(h.label)+'"> CAD</div>'+
           '</div>';
         });
         html += '<div class="wallet-total-row"><span>Total</span><span>$'+money(ST.totalHoldingsCAD())+'</span></div>';
       }
       html += '<div class="add-row">'+
-        '<input type="text" id="new-wallet-label" placeholder="Label (e.g. USDT)">'+
-        '<input type="number" id="new-wallet-amount" placeholder="Amount">'+
-        '<input type="number" id="new-wallet-rate" placeholder="Rate to CAD" step="0.001" value="1">'+
+        '<input type="text" id="new-wallet-label" placeholder="Label (e.g. USDT)" aria-label="Label">'+
+        '<input type="number" id="new-wallet-amount" placeholder="Amount" aria-label="Amount">'+
+        '<input type="number" id="new-wallet-rate" placeholder="Rate to CAD" step="0.001" value="1" aria-label="Rate to CAD">'+
         '<button id="add-wallet-btn">Add</button>'+
       '</div>';
       html += '<div class="wallet-rate">'+commas(CAD_PER_CAP)+' CAD = 1 Cap &mdash; rates are set by you, updated manually</div>';
@@ -314,14 +316,14 @@
         html += '<div class="inv-list">';
         items.forEach(function(i){
           html += '<div class="inv-item"><span>'+escapeHtml(i.name)+'</span>'+
-            '<button class="remove-btn" data-action="inv-remove" data-id="'+attr(i.id)+'" aria-label="Remove">&times;</button></div>';
+            '<button class="remove-btn" data-action="inv-remove" data-id="'+attr(i.id)+'" aria-label="Remove: '+about(i.name)+'">&times;</button></div>';
         });
         html += '</div>';
       }
     });
     html += '<div class="add-row">'+
-      '<input type="text" id="new-item-name" placeholder="Item name...">'+
-      '<select id="new-item-cat">'+CATS.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('')+'</select>'+
+      '<input type="text" id="new-item-name" placeholder="Item name..." aria-label="Item name">'+
+      '<select id="new-item-cat" aria-label="Category">'+CATS.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('')+'</select>'+
       '<button id="add-item-btn">Add</button>'+
     '</div>';
     var tab = el('tab-items');
@@ -331,7 +333,7 @@
   function renderLog(){
     var state = app.state;
     var html = '<div class="panel-title">Log an entry</div>'+
-      '<textarea id="log-input" rows="4" placeholder="What did you do today?"></textarea>'+
+      '<textarea id="log-input" rows="4" placeholder="What did you do today?" aria-label="Journal entry"></textarea>'+
       '<button id="analyze-btn">Analyze</button>'+
       '<div id="proposal-area"></div>'+
       '<div class="panel-title">History</div><div class="log-history">';
