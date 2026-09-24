@@ -106,13 +106,48 @@
     if (result==='target') completeMainQuest(m);
     return !!result;
   }
+  // A price typed in a box: a number of 0 or more, null when the box is
+  // empty, undefined when what's in it isn't a price.
+  function readPrice(input){
+    var text = input.value.trim();
+    if (!text) return null;
+    var price = Number(text);
+    return isFinite(price) && price>=0 ? price : undefined;
+  }
   function addInventoryItem(){
     var name = el('new-item-name').value.trim();
     if (!name) return;
     var cat = el('new-item-cat').value;
-    app.state.inventory.push({id:genId(),name:name,category:cat});
+    var item = {id:genId(),name:name,category:cat};
+    if (cat==='SELL'){
+      var priceInput = el('new-item-price');
+      var price = readPrice(priceInput);
+      if (price===undefined){ priceInput.focus(); return; }
+      if (price!==null) item.price = price;
+    }
+    app.state.inventory.push(item);
     R.clearTyped('new-item-');
     renderInventory(); scheduleSave();
+  }
+  function findItem(id){
+    return app.state.inventory.filter(function(x){ return x.id===id; })[0] || null;
+  }
+  // "Sold for $X? Yes": the amount in the question's box, which starts at
+  // the asking price and can be changed. An empty or wrong amount keeps the
+  // question open with the cursor in the box.
+  function confirmSale(id){
+    var input = el('sell-amount-'+id);
+    var amount = input ? readPrice(input) : undefined;
+    if (amount===undefined || amount===null){ if (input) input.focus(); return; }
+    var sale = ST.sellItem(id, amount);
+    app.confirmSell = null;
+    if (sale){
+      R.showSold(sale.name);
+      showXp(ST.SALE_XP, sale.leveled);
+      renderStatus(); renderLog();
+      scheduleSave();
+    }
+    renderInventory();
   }
   function addHolding(){
     var labelInput = el('new-wallet-label');
@@ -252,6 +287,7 @@
     app.state = pendingImport;
     app.pendingProposal = null;
     app.confirmRemoveMain = null;
+    app.confirmSell = null;
     app.confirmSpecial = null;
     pendingImport = null;
     el('reset-confirm-area').innerHTML = '';
@@ -273,6 +309,7 @@
     app.state = ST.defaultState();
     app.pendingProposal = null;
     app.confirmRemoveMain = null;
+    app.confirmSell = null;
     app.confirmSpecial = null;
     el('reset-confirm-area').innerHTML = '';
     renderAll();
@@ -285,6 +322,7 @@
   function adoptState(state, lost){
     app.state = state;
     app.confirmRemoveMain = null;
+    app.confirmSell = null;
     app.confirmSpecial = null;
     renderAll();
     if (lost) R.showConflictWarning();
@@ -354,6 +392,16 @@
         } else if (action==='inv-remove'){
           state.inventory = state.inventory.filter(function(x){return x.id!==id;});
           renderInventory(); scheduleSave();
+        } else if (action==='sell'){
+          app.confirmSell = id;
+          renderInventory();
+          var amountBox = el('sell-amount-'+id);
+          if (amountBox) amountBox.focus();
+        } else if (action==='sell-yes'){
+          confirmSale(id);
+        } else if (action==='sell-no'){
+          app.confirmSell = null;
+          renderInventory();
         } else if (action==='wallet-remove'){
           state.finances.holdings = state.finances.holdings.filter(function(x){return x.id!==id;});
           renderInventory(); scheduleSave();
@@ -411,8 +459,14 @@
         if (mq) e.target.value = mq.title;       // emptied: the objective stays as it was
       } else if (e.target.id==='new-main-type'){
         el('new-main-days-field').hidden = e.target.value!=='streak';
+      } else if (e.target.id==='new-item-cat'){
+        el('new-item-price').hidden = e.target.value!=='SELL';
       } else if (e.target.classList.contains('rate-input')){
         renderInventory();          // the CAD values and total, with the rate kept
+      } else if (e.target.classList.contains('price-input')){
+        // Only a wrong price needs redrawing (the stored one put back): a
+        // redraw here would replace the row under a tap on its Sold button.
+        if (readPrice(e.target)===undefined) renderInventory();
       } else if (e.target.id==='import-file'){
         var file = e.target.files && e.target.files[0];
         e.target.value = '';
@@ -433,6 +487,12 @@
           h.rateToCAD = newRate;
           scheduleSave();
         }
+      } else if (e.target.classList.contains('price-input')){
+        var item = findItem(e.target.getAttribute('data-id'));
+        var price = readPrice(e.target);
+        if (!item || price===undefined) return;
+        if (price===null){ if ('price' in item){ delete item.price; scheduleSave(); } }
+        else if (price!==item.price){ item.price = price; scheduleSave(); }
       } else if (e.target.classList.contains('main-progress-input')){
         var m = findMain(e.target.getAttribute('data-id'));
         if (!m) return;
@@ -453,7 +513,8 @@
       if (targetId.indexOf('new-main-')===0) addMainQuest();
       else if (targetId.indexOf('new-quest-')===0) addSideQuest();
       else if (targetId.indexOf('new-daily-')===0) addDailyQuest();
-      else if (e.target.id==='new-item-name') addInventoryItem();
+      else if (e.target.id==='new-item-name' || e.target.id==='new-item-price') addInventoryItem();
+      else if (e.target.classList.contains('sell-amount')) confirmSale(e.target.getAttribute('data-id'));
       else if (e.target.id==='new-wallet-label' || e.target.id==='new-wallet-amount') addHolding();
     });
   }

@@ -16,8 +16,10 @@
  *     side:  [ { id, questName, name, xp, done } ],  // done ones stay, hidden, for the Lifetime count
  *     daily: [ { id, questName, name, xp, lastDate:'YYYY-M-D'|null } ]  // done = lastDate===todayStr()
  *   },
- *   inventory: [ { id, name, category: one of CATS } ],
+ *   inventory: [ { id, name, category: one of CATS,     // WEAPONS is gone: see migrate()
+ *                  price?: number>=0 } ],    // THINGS TO SELL (SELL) only: asking price in CAD, optional
  *   finances: { holdings: [ { id, label, amount, rateToCAD: number>0 } ] },  // Caps = total CAD / CAD_PER_CAP
+ *                                           // a sale adds to the holding labelled CASH (made if missing)
  *   log: [ { date, text, xp, reason } ]      // date as shown ('Sep 24, 2026'); the latest LOG_MAX only
  * }
  * Every `id` is a short string of letters, digits, _ and - (SAFE_ID): genId()
@@ -47,6 +49,8 @@
  * quest) rather than touching state.skills / state.xp directly — that's
  * what keeps the bounds checks and lifetime counters in one place instead
  * of duplicated at each call site. events.js adds the toasts (addXp()).
+ * Selling an item (sellItem()) is one of them too: SALE_XP, plus the money
+ * in the wallet and a line in the journal.
  *
  * LOADING — every document the app takes in (a saved copy, a backup file,
  * another window's save) goes through sanitizeImported(), which runs
@@ -73,7 +77,11 @@
   var STAT_KEYS = ['STR','END','CHA','INT','AGI'];
   var STAT_LABELS = {STR:'Strength',END:'Endurance',CHA:'Charisma',INT:'Intelligence',AGI:'Agility'};
   var SKILL_KEYS = ['CONCENTRATION','KNOWLEDGE','SPEECH','SURVIVAL','COOKING','FINANCE','MUSIC','BUSINESS'];
-  var CATS = ['WEAPONS','APPAREL','AID','MISC','IMPORTANT'];
+  // Inventory categories, in the order the ITEMS tab and its Add form show
+  // them. The key is what is saved; CAT_LABELS gives a longer name to show.
+  var CATS = ['SELL','APPAREL','AID','MISC','IMPORTANT'];
+  var CAT_LABELS = {SELL:'THINGS TO SELL'};
+  var SALE_XP = 25;
   var CAD_PER_CAP = 1000;
   var QUEST_NAME_MAX = 60;
   var STREAK_MAX_DAYS = 1000;
@@ -122,6 +130,7 @@
     pendingProposal: null,
     finishRename: null,         // saves the quest name being edited, while its box is open
     confirmRemoveMain: null,    // id of the main quest whose removal awaits "Yes, remove"
+    confirmSell: null,          // id of the item whose sale awaits "Yes"
     confirmSpecial: null        // SPECIAL key whose level-up point awaits "Yes"
   };
 
@@ -173,6 +182,7 @@
     if (!doc || typeof doc!=='object') return doc;
     migrateMainQuests(doc.quests);
     migrateSkills(doc);
+    migrateInventory(doc);
     return doc;
   }
   // Older saves have a single main quest, the object quests.main. It
@@ -209,11 +219,18 @@
       });
     });
   }
+  // The WEAPONS category was removed: its items move to MISC, nothing is lost.
+  function migrateInventory(doc){
+    (Array.isArray(doc.inventory) ? doc.inventory : []).forEach(function(i){
+      if (i && i.category==='WEAPONS') i.category = 'MISC';
+    });
+  }
   function has(obj, key){ return Object.prototype.hasOwnProperty.call(obj, key); }
   function mergeDefaults(loaded){
     return deepMergeDefaults(DEFAULT_STATE, migrate(loaded||{}));
   }
   function defaultState(){ return clone(DEFAULT_STATE); }
+  function catLabel(cat){ return CAT_LABELS[cat] || cat; }
 
   function totalHoldingsCAD(){
     return app.state.finances.holdings.reduce(function(sum,h){
@@ -236,6 +253,30 @@
     state.lifetimeLogEntries = logEntryCount() + 1;
     state.log.push(entry);
     if (state.log.length>LOG_MAX) state.log = state.log.slice(-LOG_MAX);
+  }
+
+  // ---------- selling ----------
+  // Sells a THINGS TO SELL item for `amount` CAD: the item goes, the amount
+  // goes into the wallet's CASH holding (made at rate 1 if there is none; at
+  // another rate, the CAD value still grows by `amount`), SALE_XP and a
+  // journal line. Returns null when there's nothing to sell or the amount
+  // isn't a price, else {name, amount, leveled} for the toasts.
+  function sellItem(id, amount){
+    var state = app.state;
+    amount = Number(amount);
+    if (!(amount>=0) || !isFinite(amount)) return null;
+    amount = cents(amount);
+    var item = state.inventory.filter(function(i){ return i.id===id && i.category==='SELL'; })[0];
+    if (!item) return null;
+    state.inventory = state.inventory.filter(function(i){ return i!==item; });
+    var cash = state.finances.holdings.filter(function(h){ return String(h.label).trim().toUpperCase()==='CASH'; })[0];
+    if (!cash){
+      cash = {id:genId(), label:'CASH', amount:0, rateToCAD:1};
+      state.finances.holdings.push(cash);
+    }
+    cash.amount = cents((Number(cash.amount)||0) + amount/(Number(cash.rateToCAD)||1));
+    addLogEntry({date:todayDisplay(), text:'Sold '+item.name+' for $'+money(amount), xp:SALE_XP, reason:'Item sold'});
+    return {name:item.name, amount:amount, leveled:gainXp(SALE_XP)};
   }
 
   // ---------- dates ----------
@@ -408,6 +449,12 @@
       i.id = safeId(i.id);
       i.name = text(i.name);
       if (CATS.indexOf(i.category)===-1) i.category = 'MISC';
+      if (i.price===undefined || i.price===null || i.price==='') delete i.price;
+      else {
+        var price = num(i.price, -1);
+        if (price>=0) i.price = price;
+        else delete i.price;
+      }
     });
     s.finances.holdings = records(s.finances.holdings, function(h){
       h.id = safeId(h.id);
@@ -431,6 +478,7 @@
   ST.STAT_LABELS = STAT_LABELS;
   ST.SKILL_KEYS = SKILL_KEYS;
   ST.CATS = CATS;
+  ST.SALE_XP = SALE_XP;
   ST.CAD_PER_CAP = CAD_PER_CAP;
   ST.QUEST_NAME_MAX = QUEST_NAME_MAX;
   ST.STREAK_MAX_DAYS = STREAK_MAX_DAYS;
@@ -445,6 +493,7 @@
   ST.money = money;
   ST.capsText = capsText;
   ST.escapeHtml = escapeHtml;
+  ST.catLabel = catLabel;
 
   ST.migrate = migrate;
   ST.defaultState = defaultState;
@@ -459,4 +508,5 @@
   ST.grantStat = grantStat;
   ST.gainXp = gainXp;
   ST.completeMain = completeMain;
+  ST.sellItem = sellItem;
 })(window.StatusTerminal = window.StatusTerminal || {});

@@ -2,7 +2,8 @@
 
 A personal, Fallout-inspired life tracker: S.P.E.C.I.A.L. stats, skills, main / side / daily quests,
 inventory, a Caps wallet, and a journal that turns diary entries into XP and skill proposals you
-accept or reject.
+accept or reject. In ITEMS, **THINGS TO SELL** keeps an asking price per item; tapping **Sold** puts
+the money in the wallet's CASH row, gives 25 XP and writes the sale in the journal.
 
 Plain HTML, CSS and JavaScript: no framework, no build step.
 
@@ -84,7 +85,7 @@ node --test
 No install step and no dependencies: the tests use Node's built-in test runner and load the app's own
 scripts from `js/` with a small fake browser (`tests/helpers.js`). They cover migrating every earlier
 save format, checking backup files (including hostile ones), XP and level-ups, skill and
-S.P.E.C.I.A.L. limits, streaks across days, the offline journal rules in English and French, safe
+S.P.E.C.I.A.L. limits, selling items, streaks across days, the offline journal rules in English and French, safe
 HTML output, and saving (both copies, damaged copies, two tabs).
 
 ## Your data

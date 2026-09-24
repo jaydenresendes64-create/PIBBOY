@@ -38,6 +38,7 @@ test('user text is escaped in every tab', () => {
     s.quests.side[0].questName = EVIL; s.quests.side[0].name = EVIL;
     s.quests.daily[0].questName = EVIL; s.quests.daily[0].name = EVIL;
     s.inventory[0].name = EVIL;
+    s.inventory.push({ id: 'xs', name: EVIL, category: 'SELL', price: 5 });
     s.finances.holdings = [{ id: 'h1', label: EVIL, amount: 5, rateToCAD: 1 }];
     s.log = [{ date: EVIL, text: EVIL, xp: 5, reason: EVIL }];
     return s;
@@ -57,6 +58,7 @@ test('hostile ids and numbers that skipped sanitizeImported stay inert', () => {
     s.quests.side[0].id = EVIL; s.quests.side[0].xp = EVIL;
     s.quests.daily[0].id = EVIL; s.quests.daily[0].xp = EVIL;
     s.inventory[0].id = EVIL;
+    s.inventory.push({ id: EVIL, name: 'n', category: 'SELL', price: EVIL });
     s.finances.holdings = [{ id: EVIL, label: 'L', amount: EVIL, rateToCAD: EVIL }];
     s.log = [{ date: 'd', text: 't', xp: EVIL, reason: 'r' }];
     return s;

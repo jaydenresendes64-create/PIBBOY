@@ -304,17 +304,39 @@
     return html;
   }
 
+  // A price box's value: the price as a plain number, or empty.
+  function priceValue(v){ return v===undefined || v===null || v==='' ? '' : num(v); }
+
+  // A THINGS TO SELL item: its asking price next to the name (edited in
+  // place, like a wallet rate) and a Sold button, which asks "Sold for $X?"
+  // below it with the amount still editable.
+  function sellItemHtml(i){
+    var html = '<div class="inv-item sell-item"><span>'+escapeHtml(i.name)+'</span>'+
+      '<label class="price-field">$<input type="number" class="price-input" data-id="'+attr(i.id)+'" value="'+priceValue(i.price)+'" min="0" step="0.01" inputmode="decimal" placeholder="price" aria-label="Asking price in CAD: '+about(i.name)+'"></label>'+
+      '<button class="sell-btn" data-action="sell" data-id="'+attr(i.id)+'" aria-label="Sold: '+about(i.name)+'">Sold</button>'+
+      '<button class="remove-btn" data-action="inv-remove" data-id="'+attr(i.id)+'" aria-label="Remove: '+about(i.name)+'">&times;</button></div>';
+    if (app.confirmSell===i.id){
+      html += '<div class="card-confirm row-confirm sell-confirm">'+
+        '<label class="sell-question">Sold for $<input type="number" class="sell-amount" id="sell-amount-'+attr(i.id)+'" data-id="'+attr(i.id)+'" value="'+priceValue(i.price)+'" min="0" step="0.01" inputmode="decimal" aria-label="Sold for, in CAD">?</label>'+
+        '<button class="confirm-ok" data-action="sell-yes" data-id="'+attr(i.id)+'">Yes</button>'+
+        '<button data-action="sell-no">Cancel</button>'+
+      '</div>';
+    }
+    return html;
+  }
+
   function renderInventory(){
     var state = app.state;
     var html = renderWallet();
     CATS.forEach(function(cat){
       var items = state.inventory.filter(function(i){ return i.category===cat; });
-      html += '<div class="panel-title">'+cat+'</div>';
+      html += '<div class="panel-title">'+ST.catLabel(cat)+'</div>';
       if (items.length===0){
         html += '<div class="empty-note">Nothing here yet.</div>';
       } else {
         html += '<div class="inv-list">';
         items.forEach(function(i){
+          if (cat==='SELL'){ html += sellItemHtml(i); return; }
           html += '<div class="inv-item"><span>'+escapeHtml(i.name)+'</span>'+
             '<button class="remove-btn" data-action="inv-remove" data-id="'+attr(i.id)+'" aria-label="Remove: '+about(i.name)+'">&times;</button></div>';
         });
@@ -323,11 +345,13 @@
     });
     html += '<div class="add-row">'+
       '<input type="text" id="new-item-name" placeholder="Item name..." aria-label="Item name">'+
-      '<select id="new-item-cat" aria-label="Category">'+CATS.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('')+'</select>'+
+      '<select id="new-item-cat" aria-label="Category">'+CATS.map(function(c){ return '<option value="'+c+'">'+ST.catLabel(c)+'</option>'; }).join('')+'</select>'+
+      '<input type="number" id="new-item-price" placeholder="Price $" min="0" step="0.01" inputmode="decimal" aria-label="Asking price in CAD (optional)">'+
       '<button id="add-item-btn">Add</button>'+
     '</div>';
     var tab = el('tab-items');
     keepTyped(tab, function(){ tab.innerHTML = html; });
+    el('new-item-price').hidden = el('new-item-cat').value!=='SELL';
   }
 
   function renderLog(){
@@ -416,6 +440,11 @@
     toast('levelup-banner quest-banner', 'QUEST COMPLETED — ', 3200).appendChild(questName);
   }
   function showNotice(text){ toast('xp-toast', text, 2600).style.animationDuration = '2.6s'; }
+  function showSold(name){
+    var itemName = document.createElement('span');
+    itemName.textContent = name;
+    toast('levelup-banner quest-banner', 'SOLD: ', 3200).appendChild(itemName);
+  }
   function showSaveWarning(){ toast('xp-toast save-warning', 'Not saved — storage unavailable', 2600); }
   function showConflictWarning(){
     toast('xp-toast save-warning', 'Changed in another window — your last change wasn’t saved', 4000).style.animationDuration = '4s';
@@ -478,6 +507,7 @@
     showLevelUp: showLevelUp,
     showQuestCompleted: showQuestCompleted,
     showNotice: showNotice,
+    showSold: showSold,
     showSaveWarning: showSaveWarning,
     showConflictWarning: showConflictWarning,
     showLoadError: showLoadError,

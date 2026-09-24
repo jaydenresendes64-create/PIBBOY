@@ -447,10 +447,10 @@ button{ cursor:pointer; }
    control counts as part of it. Each is sized to stay clear of its
    neighbours' (checked at 375px wide): 40px or more where the spacing
    allows. Inputs can't have one. */
-.step-btn, .remove-btn, .complete-btn, .tab-btn, .assign-btn, .add-row button, .add-name,
+.step-btn, .remove-btn, .complete-btn, .tab-btn, .assign-btn, .add-row button, .add-name, .sell-btn,
 .footer-actions button, #reset-confirm-area button, .card-confirm button{ position:relative; }
 .step-btn::before, .remove-btn::before, .complete-btn::before, .tab-btn::before, .assign-btn::before,
-.add-row button::before, .add-name::before, .footer-actions button::before,
+.add-row button::before, .add-name::before, .sell-btn::before, .footer-actions button::before,
 #reset-confirm-area button::before, .card-confirm button::before{ content:''; position:absolute; }
 .remove-btn::before{ inset:-7px; }                             /* 26 -> 40 */
 .complete-btn::before{ inset:-5px; }                           /* 30 -> 40 */
@@ -461,6 +461,7 @@ button{ cursor:pointer; }
 .tab-btn::before, .assign-btn::before{ inset:-3px; }           /* 6px apart: 38 -> 44, 34 -> 40 */
 .add-row button::before{ inset:-1px; }                         /* 38 -> 40 */
 .add-name::before{ inset:-8px -3px; }
+.sell-btn::before{ inset:-5px -1px; }                          /* 34 -> 44 tall; clear of the remove button 8px away */
 .footer-actions button::before{ inset:-12px -5px -8px; }       /* 16 -> 36: the confirm row is 16px below */
 #reset-confirm-area button::before{ inset:-8px -3px -12px; }
 .card-confirm button::before{ inset:-8px -6px; }               /* 22 -> 38 */
@@ -474,6 +475,8 @@ button{ cursor:pointer; }
 .add-row input.field-full{ flex:1 1 100%; }
 .add-row input.field-objective{ flex:1 1 120px; min-width:0; }
 .add-row input[type="number"]{ width:64px; }
+.add-row input#new-item-price{ width:84px; }
+.add-row input[hidden]{ display:none; }
 .add-row select{ flex:0 0 auto; }
 .add-row select#new-main-type{ flex:1 1 120px; }
 .add-row input#new-main-xp, .add-row input#new-main-days{ width:72px; }
@@ -491,6 +494,26 @@ button{ cursor:pointer; }
   padding:7px 0; border-bottom:1px solid var(--line); font-size:0.85rem;
 }
 .inv-item:last-child{ border-bottom:none; }
+/* THINGS TO SELL: name, asking price, Sold, remove. */
+.sell-item{ gap:8px; }
+.sell-item > span{ flex:1 1 auto; }
+.price-field{ display:flex; align-items:center; gap:3px; color:var(--text-dim); font-size:0.8rem; }
+.price-input, .sell-amount{
+  width:72px; min-height:34px; border:1px solid var(--line); border-radius:3px; background:var(--bg);
+  color:var(--amber); padding:4px 6px; font-size:0.82rem;
+}
+.sell-btn{
+  border:1px solid var(--amber-dim); border-radius:3px; background:var(--bg); color:var(--amber);
+  padding:6px 9px; min-height:34px; font-size:0.76rem; letter-spacing:0.04em;
+}
+/* A question under its row ("Remove this ...?", "Sold for $X?"), in the
+   same style as a main quest's. */
+.row-confirm{ margin-top:0; padding:6px 0 8px; border-top:none; border-bottom:1px solid var(--line); }
+.row-confirm:last-child{ border-bottom:none; }
+.sell-confirm{ font-size:0.82rem; }
+.sell-question{ display:flex; align-items:center; gap:3px; color:var(--phosphor); }
+.card-confirm .confirm-ok{ color:var(--amber); font-size:0.82rem; }
+.sell-confirm button{ font-size:0.82rem; }
 
 .wallet-card{ border:1px solid var(--amber-dim); border-radius:3px; background:var(--panel-alt); margin-bottom:16px; overflow:hidden; }
 .wallet-toggle{ width:100%; display:flex; justify-content:space-between; align-items:center; padding:12px 14px; min-height:44px; }
