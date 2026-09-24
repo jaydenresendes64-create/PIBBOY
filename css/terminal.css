@@ -158,6 +158,7 @@ button{ cursor:pointer; }
 .xp-toast{
   background:var(--panel-alt); border:1px solid var(--amber-dim); color:var(--amber);
   padding:6px 14px; border-radius:3px; font-size:0.85rem; letter-spacing:0.03em;
+  max-width:calc(100vw - 32px); text-align:center;
   animation:toastUp 1.4s ease-out forwards;
 }
 .xp-toast.save-warning{ border-color:var(--danger); color:var(--danger); animation-duration:2.6s; }

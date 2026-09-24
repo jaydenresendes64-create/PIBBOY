@@ -2,7 +2,7 @@
  * DATA MODEL — informal reference (no build step here, so this is the
  * closest thing to types/interfaces; keep it in sync when the shape below
  * changes). All of `state` is one JSON document, persisted whole by
- * storage.js (IndexedDB, falling back to localStorage).
+ * storage.js (a copy in IndexedDB and one in localStorage).
  *
  * State {
  *   level: number, xp: number, xpToNext: number, lifetimeXp: number,
@@ -265,14 +265,21 @@
     return leveled;
   }
 
-  // ---------- backup import ----------
-  // A backup file is untrusted input. render.js writes numbers and ids into
-  // HTML without escaping (the app itself only ever stores numbers and
-  // generated ids there), so every field is coerced back to the type the data
-  // model gives it before an import may replace the current state.
+  // ---------- checking a document ----------
+  // Every document the app takes in goes through sanitizeImported(): a
+  // backup file (untrusted input), each copy storage.js loads, and a copy
+  // saved by another window. Every field is coerced back to the type the
+  // data model gives it, so a broken or hostile document can't break the
+  // page or put markup into it. Text is only shortened where the app itself
+  // never writes more (quest names and main objectives: 60, like their
+  // boxes; journal dates and reasons), so a document the app saved or
+  // exported comes back exactly as it was.
   var SAFE_ID = /^[A-Za-z0-9_-]{1,40}$/;
   function num(v, fallback){ var n = Number(v); return isFinite(n) ? n : fallback; }
-  function text(v, max){ return (v===null || v===undefined ? '' : String(v)).slice(0, max); }
+  function text(v, max){
+    var str = v===null || v===undefined ? '' : String(v);
+    return max ? str.slice(0, max) : str;
+  }
   function safeId(v){ return (typeof v==='string' && SAFE_ID.test(v)) ? v : genId(); }
   function records(list, fix){
     return (Array.isArray(list) ? list : []).filter(function(x){
@@ -286,13 +293,14 @@
   }
   function fixQuest(q){
     q.id = safeId(q.id);
-    q.name = text(q.name, 500);
+    q.name = text(q.name);
     q.xp = Math.max(0, num(q.xp, 0));
   }
   function fixDoneQuest(q){ fixQuest(q); q.done = q.done===true; }
   function fixQuestName(q){ q.questName = text(q.questName, QUEST_NAME_MAX).trim(); }
 
-  // Returns a clean state document, or null when `raw` isn't a backup of this app.
+  // Returns a clean state document, or null when `raw` isn't a state document
+  // of this app (a backup, or a saved copy).
   function sanitizeImported(raw){
     if (!raw || typeof raw!=='object' || Array.isArray(raw)) return null;
     if (!raw.stats || typeof raw.stats!=='object' || !raw.quests || typeof raw.quests!=='object') return null;
@@ -331,19 +339,19 @@
 
     s.inventory = records(s.inventory, function(i){
       i.id = safeId(i.id);
-      i.name = text(i.name, 500);
+      i.name = text(i.name);
       if (CATS.indexOf(i.category)===-1) i.category = 'MISC';
     });
     s.finances.holdings = records(s.finances.holdings, function(h){
       h.id = safeId(h.id);
-      h.label = text(h.label, 60);
+      h.label = text(h.label);
       h.amount = num(h.amount, 0);
       var rate = num(h.rateToCAD, 1);
       h.rateToCAD = rate>0 ? rate : 1;
     });
     var log = records(s.log, function(entry){
       entry.date = text(entry.date, 40);
-      entry.text = text(entry.text, 10000);
+      entry.text = text(entry.text);
       entry.xp = num(entry.xp, 0);
       entry.reason = text(entry.reason, 200);
     });
@@ -370,7 +378,6 @@
   ST.money = money;
   ST.escapeHtml = escapeHtml;
 
-  ST.mergeDefaults = mergeDefaults;
   ST.defaultState = defaultState;
   ST.sanitizeImported = sanitizeImported;
   ST.totalHoldingsCAD = totalHoldingsCAD;

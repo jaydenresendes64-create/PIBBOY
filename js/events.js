@@ -60,6 +60,7 @@
     if (!q) return;
     var xp = clamp(parseInt(el('new-quest-xp').value,10)||100,5,500);
     app.state.quests.side.push({id:genId(),questName:q.questName,name:q.objective,xp:xp,done:false});
+    R.clearTyped('new-quest-');
     renderQuests(); scheduleSave();
   }
   function addDailyQuest(){
@@ -67,6 +68,7 @@
     if (!q) return;
     var xp = clamp(parseInt(el('new-daily-xp').value,10)||15,5,100);
     app.state.quests.daily.push({id:genId(),questName:q.questName,name:q.objective,xp:xp,lastDate:null});
+    R.clearTyped('new-daily-');
     renderQuests(); scheduleSave();
   }
   function addMainQuest(){
@@ -82,6 +84,7 @@
       quest.lastCheckIn = null;
     }
     app.state.quests.mains.push(quest);
+    R.clearTyped('new-main-');
     renderQuests(); scheduleSave();
   }
   function findMain(id){
@@ -109,6 +112,7 @@
     if (!name) return;
     var cat = el('new-item-cat').value;
     app.state.inventory.push({id:genId(),name:name,category:cat});
+    R.clearTyped('new-item-');
     renderInventory(); scheduleSave();
   }
   function addHolding(){
@@ -124,6 +128,7 @@
     if (!amountText || !isFinite(amount)){ amountInput.focus(); return; }
     if (!isFinite(rate) || rate<=0) rate = 1;
     app.state.finances.holdings.push({id:genId(), label:label, amount:amount, rateToCAD:rate});
+    R.clearTyped('new-wallet-');
     renderInventory(); scheduleSave();
   }
 
@@ -156,7 +161,9 @@
       open = false;
       app.finishRename = null;
       document.removeEventListener('pointerdown', onPointerDown, true);
-      if (save){
+      // Not when the quest is no longer in the state (another window's
+      // newer save replaced it): that would save nothing.
+      if (save && findQuest(kind, quest.id)===quest){
         var name = input.value.trim().slice(0, ST.QUEST_NAME_MAX);
         if (name!==(quest.questName||'')){ quest.questName = name; scheduleSave(); }
       }
@@ -271,7 +278,24 @@
     app.confirmSpecial = null;
     el('reset-confirm-area').innerHTML = '';
     renderAll();
-    scheduleSave();
+    ST.storage.saveNow();
+  }
+
+  // ---------- other windows / leaving ----------
+  // Another window saved newer data (storage.js): show it instead. `lost`:
+  // a change made here wasn't saved, since it would have overwritten it.
+  function adoptState(state, lost){
+    app.state = state;
+    app.confirmRemoveMain = null;
+    app.confirmSpecial = null;
+    renderAll();
+    if (lost) R.showConflictWarning();
+  }
+  // Before the page is hidden or closed: a quest name still being typed is
+  // saved like a tap elsewhere would. (Objectives and rates are in the state
+  // as they're typed.)
+  function commitEdits(){
+    if (app.finishRename) app.finishRename();
   }
 
   // ---------- events ----------
@@ -379,23 +403,17 @@
       else if (e.target.id==='reset-cancel-btn') el('reset-confirm-area').innerHTML='';
     });
 
+    // A main quest's objective and a holding's rate go into the state as
+    // they're typed, so closing the app mid-edit keeps them; leaving the box
+    // puts back what is stored when what was typed isn't valid.
     document.body.addEventListener('change', function(e){
-      var state = app.state;
       if (e.target.classList.contains('main-title-input')){
         var mq = findMain(e.target.getAttribute('data-id'));
-        var title = e.target.value.trim().slice(0,60);
-        if (mq && title){ mq.title = title; scheduleSave(); }
-        else if (mq) e.target.value = mq.title;       // emptied: the objective stays as it was
+        if (mq) e.target.value = mq.title;       // emptied: the objective stays as it was
       } else if (e.target.id==='new-main-type'){
         el('new-main-days-field').hidden = e.target.value!=='streak';
       } else if (e.target.classList.contains('rate-input')){
-        var hid = e.target.getAttribute('data-id');
-        var h = state.finances.holdings.filter(function(x){return x.id===hid;})[0];
-        var newRate = Number(e.target.value);
-        if (h && isFinite(newRate) && newRate>0){
-          h.rateToCAD = newRate;
-          renderInventory(); scheduleSave();
-        }
+        renderInventory();          // the CAD values and total, with the rate kept
       } else if (e.target.id==='import-file'){
         var file = e.target.files && e.target.files[0];
         e.target.value = '';
@@ -403,7 +421,20 @@
       }
     });
     document.body.addEventListener('input', function(e){
-      if (e.target.classList.contains('main-progress-input')){
+      var state = app.state;
+      if (e.target.classList.contains('main-title-input')){
+        var mq = findMain(e.target.getAttribute('data-id'));
+        var title = e.target.value.trim().slice(0,60);
+        if (mq && title && title!==mq.title){ mq.title = title; scheduleSave(); }
+      } else if (e.target.classList.contains('rate-input')){
+        var hid = e.target.getAttribute('data-id');
+        var h = state.finances.holdings.filter(function(x){return x.id===hid;})[0];
+        var newRate = Number(e.target.value);
+        if (h && e.target.value.trim() && isFinite(newRate) && newRate>0 && newRate!==h.rateToCAD){
+          h.rateToCAD = newRate;
+          scheduleSave();
+        }
+      } else if (e.target.classList.contains('main-progress-input')){
         var m = findMain(e.target.getAttribute('data-id'));
         if (!m) return;
         m.progress = parseInt(e.target.value,10);
@@ -428,5 +459,5 @@
     });
   }
 
-  ST.events = { setup: setupEvents };
+  ST.events = { setup: setupEvents, adoptState: adoptState, commitEdits: commitEdits };
 })(window.StatusTerminal);

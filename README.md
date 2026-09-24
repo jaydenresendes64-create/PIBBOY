@@ -60,8 +60,14 @@ folder, then http://localhost:8080).
 
 ## Your data
 
-- Saved in the browser you use (IndexedDB, falling back to localStorage). Another browser or device
-  starts empty. Use **Export backup / Import backup** in the footer to move it.
+- Saved in the browser you use, twice (IndexedDB and localStorage): if one copy is damaged, the
+  other is used. If neither can be read, the app says so and changes nothing rather than starting
+  empty. Another browser or device starts empty. Use **Export backup / Import backup** in the footer
+  to move it.
+- The app asks the browser to keep its storage even when space runs low (on a phone this is silent).
+- With the app open in two tabs, each follows the other's changes. A change can never overwrite a
+  newer one made in the other tab: if both change at the same moment, the second one gives way and
+  says so.
 - **Coming from the Claude version:** open it in Claude, click **Export backup**, then **Import backup**
   in this app.
 - With the offline rules, diary entries never leave your browser.

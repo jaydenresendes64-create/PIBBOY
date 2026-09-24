@@ -10,6 +10,27 @@
       QUEST_NAME_MAX = ST.QUEST_NAME_MAX;
   var app = ST.app;
 
+  // ---------- what was typed ----------
+  // Redrawing a tab rebuilds its boxes. What was typed in a box with an id
+  // (an add row, the journal entry) is put back, so a tap elsewhere or a
+  // save from another window doesn't wipe it. The add row that was just used
+  // is the exception: clearTyped() empties it on the next redraw.
+  var clearPrefix = null;
+  function clearTyped(prefix){ clearPrefix = prefix; }
+  function keepTyped(tab, build){
+    var typed = [];
+    tab.querySelectorAll('input[id], select[id], textarea[id]').forEach(function(box){
+      if (box.type==='file' || (clearPrefix && box.id.indexOf(clearPrefix)===0)) return;
+      typed.push([box.id, box.value]);
+    });
+    clearPrefix = null;
+    build();
+    typed.forEach(function(entry){
+      var box = el(entry[0]);
+      if (box && tab.contains(box)) box.value = entry[1];
+    });
+  }
+
   function renderHeader(){
     var state = app.state;
     el('hdr-date').textContent = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
@@ -230,7 +251,9 @@
       '<button id="add-daily-btn">Add</button>'+
     '</div>';
 
-    el('tab-quests').innerHTML = html;
+    var tab = el('tab-quests');
+    keepTyped(tab, function(){ tab.innerHTML = html; });
+    el('new-main-days-field').hidden = el('new-main-type').value!=='streak';
   }
 
   function renderWallet(){
@@ -294,7 +317,8 @@
       '<select id="new-item-cat">'+CATS.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('')+'</select>'+
       '<button id="add-item-btn">Add</button>'+
     '</div>';
-    el('tab-items').innerHTML = html;
+    var tab = el('tab-items');
+    keepTyped(tab, function(){ tab.innerHTML = html; });
   }
 
   function renderLog(){
@@ -316,7 +340,8 @@
       });
     }
     html += '</div>';
-    el('tab-log').innerHTML = html;
+    var tab = el('tab-log');
+    keepTyped(tab, function(){ tab.innerHTML = html; });
   }
 
   function renderProposal(source){
@@ -382,6 +407,16 @@
     toast('levelup-banner quest-banner', 'QUEST COMPLETED — ', 3200).appendChild(questName);
   }
   function showSaveWarning(){ toast('xp-toast save-warning', 'Not saved — storage unavailable', 2600); }
+  function showConflictWarning(){
+    toast('xp-toast save-warning', 'Changed in another window — your last change wasn’t saved', 4000).style.animationDuration = '4s';
+  }
+  // The saved data exists but couldn't be read (storage.js). Nothing is
+  // shown or saved, so it stays as it is for the next try.
+  function showLoadError(){
+    el('tab-status').innerHTML = '<div class="empty-note reset-warning" role="alert">'+
+      'Your saved data couldn’t be read, so nothing was loaded or changed. '+
+      'Close the app completely and open it again.</div>';
+  }
 
   // ---------- check animation ----------
   var CHECK_ANIMATION_MS = 500;
@@ -425,6 +460,9 @@
     showLevelUp: showLevelUp,
     showQuestCompleted: showQuestCompleted,
     showSaveWarning: showSaveWarning,
+    showConflictWarning: showConflictWarning,
+    showLoadError: showLoadError,
+    clearTyped: clearTyped,
     playCheck: playCheck,
     switchTab: switchTab
   };
