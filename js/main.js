@@ -43,7 +43,8 @@
     });
     window.addEventListener('pagehide', leaving);
     // A new day opens daily quests and streak check-ins again, even when the
-    // app was left open overnight.
+    // app was left open overnight or comes back from the browser's page cache.
+    window.addEventListener('pageshow', ST.render.refreshIfNewDay);
     setInterval(ST.render.refreshIfNewDay, 60000);
   }
 

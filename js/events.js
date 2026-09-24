@@ -18,8 +18,10 @@
   var checkPlaying = false;     // a check button's animation is running
 
   function addXp(amount){
-    var leveled = ST.gainXp(amount);
-    R.showXpToast(amount);
+    showXp(amount, ST.gainXp(amount));
+  }
+  function showXp(amount, leveled){
+    R.showXpToast(Number(amount)||0);
     if (leveled) R.showLevelUp();
     renderHeader();
   }
@@ -90,22 +92,19 @@
   function findMain(id){
     return app.state.quests.mains.filter(function(x){ return x.id===id; })[0] || null;
   }
-  // Grants a main quest's XP and skill gains, once.
+  // Grants a main quest's XP and skill gains, once (ST.completeMain).
   function completeMainQuest(m){
-    m.completed = true;
+    var reward = ST.completeMain(m);
+    if (!reward) return;
     R.showQuestCompleted(m.questName || m.title);
-    addXp(m.xp||0);
-    (m.skillGains||[]).forEach(function(g){ grantSkill(g.skill, g.amount); });
+    showXp(reward.xp, reward.leveled);
     renderStatus();
   }
-  // A streak quest's check-in, once a day. Days in a row add up; after a
-  // missed day the streak starts again at 1. Reaching the target completes it.
+  // A streak quest's check-in, once a day; reaching the target completes it.
   function checkIn(m){
-    if (m.completed || ST.checkedInToday(m)) return false;
-    m.streakDays = ST.currentStreak(m) + 1;
-    m.lastCheckIn = todayStr();
-    if (m.streakDays>=m.streakTarget) completeMainQuest(m);
-    return true;
+    var result = ST.streakCheckIn(m);
+    if (result==='target') completeMainQuest(m);
+    return !!result;
   }
   function addInventoryItem(){
     var name = el('new-item-name').value.trim();
@@ -193,9 +192,7 @@
     var p = app.pendingProposal;
     addXp(p.xp);
     p.skillGains.forEach(function(g){ grantSkill(g.skill, g.amount); });
-    app.state.lifetimeLogEntries = ST.logEntryCount() + 1;
-    app.state.log.push({date:todayDisplay(), text:p.text, xp:p.xp, reason:p.reason});
-    if (app.state.log.length>200) app.state.log = app.state.log.slice(-200);
+    ST.addLogEntry({date:todayDisplay(), text:p.text, xp:p.xp, reason:p.reason});
     app.pendingProposal = null;
     renderStatus(); renderLog();
     scheduleSave();
@@ -274,6 +271,7 @@
   }
   function doReset(){
     app.state = ST.defaultState();
+    app.pendingProposal = null;
     app.confirmRemoveMain = null;
     app.confirmSpecial = null;
     el('reset-confirm-area').innerHTML = '';
@@ -339,7 +337,7 @@
           renderStatus();
           focusStatus('[data-action="special-assign"][data-key="'+askedKey+'"]');
         } else if (action==='skill'){
-          state.skills[key] = clamp(state.skills[key]+dir,0,100);
+          grantSkill(key, dir);
           renderStatus(); scheduleSave();
         } else if (action==='quest-complete'){
           var q = state.quests.side.filter(function(x){return x.id===id;})[0];

@@ -260,7 +260,7 @@
     var state = app.state;
     var html = '<div class="wallet-card">'+
       '<button class="wallet-toggle" id="wallet-toggle-btn">'+
-        '<span class="wallet-caps">'+ST.capsValue().toFixed(2)+' CAPS</span>'+
+        '<span class="wallet-caps">'+ST.capsText()+' CAPS</span>'+
         '<span class="wallet-chevron">'+(app.walletExpanded?'▴':'▾')+'</span>'+
       '</button>';
     if (app.walletExpanded){

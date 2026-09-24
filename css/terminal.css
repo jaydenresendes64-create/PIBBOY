@@ -353,6 +353,9 @@ button{ cursor:pointer; }
 }
 .quest-item:last-child{ border-bottom:none; }
 .quest-name{ font-size:0.85rem; }
+/* A very long word (a pasted link, a name without spaces) wraps instead of
+   pushing the XP, the amount or the remove button out of its row. */
+.quest-name, .inv-item > span, .wallet-label, .log-text, .log-xp{ min-width:0; overflow-wrap:anywhere; }
 .quest-xp{ font-size:0.72rem; color:var(--phosphor-dim); white-space:nowrap; }
 .complete-btn{
   width:30px; height:30px; border:1px solid var(--phosphor-dim); border-radius:50%;

@@ -168,7 +168,7 @@
   // "J'ai étudié l'œuvre" → ['j','ai','etudie','l','oeuvre']
   function toWords(text){
     return String(text).toLowerCase()
-      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')    // accents, split off by NFD
       .replace(/œ/g, 'oe').replace(/æ/g, 'ae')
       .split(/[^a-z0-9]+/)
       .filter(Boolean);

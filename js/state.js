@@ -67,6 +67,7 @@
   var CAD_PER_CAP = 1000;
   var QUEST_NAME_MAX = 60;
   var STREAK_MAX_DAYS = 1000;
+  var LOG_MAX = 200;
 
   var DEFAULT_STATE = {
     level:2, xp:0, xpToNext:1000,
@@ -120,7 +121,9 @@
   function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
   function todayDisplay(){ return new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
   function commas(n){ return Number(n).toLocaleString('en-US'); }
-  function money(n){ return Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  // Rounded to the cent first, so a tiny negative amount shows 0.00, not -0.00.
+  function cents(n){ return Math.round(Number(n)*100)/100 || 0; }
+  function money(n){ return cents(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
   function escapeHtml(str){
     return String(str).replace(/[&<>"']/g,function(c){
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
@@ -205,32 +208,67 @@
   function capsValue(){
     return totalHoldingsCAD() / CAD_PER_CAP;
   }
-  // `log` only keeps the latest 200 entries. Saves made before
+  function capsText(){ return cents(capsValue()).toFixed(2); }
+  // `log` only keeps the latest LOG_MAX entries. Saves made before
   // lifetimeLogEntries existed start from the entries they still have.
   function logEntryCount(){
     return Math.max(app.state.lifetimeLogEntries||0, app.state.log.length);
   }
+  // An accepted journal entry: counted for good, and kept in `log` among
+  // the latest LOG_MAX.
+  function addLogEntry(entry){
+    var state = app.state;
+    state.lifetimeLogEntries = logEntryCount() + 1;
+    state.log.push(entry);
+    if (state.log.length>LOG_MAX) state.log = state.log.slice(-LOG_MAX);
+  }
 
-  // ---------- streak main quests ----------
-  // Whole days from the date 'YYYY-M-D' to today: 0 today, 1 yesterday,
-  // negative for a later date (the clock was moved back); null when unset.
+  // ---------- dates ----------
+  // Dates are stored as local calendar days, 'YYYY-M-D' (todayStr()).
+  var DATE = /^(\d{4})-(\d{1,2})-(\d{1,2})$/;
+  // The same day written 'YYYY-M-D' ('2026-09-04' becomes '2026-9-4'), or
+  // null when `date` isn't one.
+  function normalizeDate(date){
+    var m = DATE.exec(typeof date==='string' ? date : '');
+    return m ? (+m[1])+'-'+(+m[2])+'-'+(+m[3]) : null;
+  }
+  // Whole days from the date to today: 0 today, 1 yesterday, negative for a
+  // later date; null when unset. Counted on calendar days, so daylight
+  // saving changes don't matter.
   function daysSince(date){
-    var m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(date || '');
+    var m = DATE.exec(date || '');
     if (!m) return null;
     var now = new Date();
     return Math.round((Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) -
       Date.UTC(+m[1], +m[2]-1, +m[3])) / 864e5);
   }
+
+  // ---------- streak main quests ----------
+  // A check-in dated tomorrow still counts as today's: after flying west,
+  // the calendar can be a day behind the check-in. One dated later than
+  // that can only come from a clock that was wrong: it doesn't lock the
+  // quest until that date, the next check-in simply continues the streak.
   function checkedInToday(q){
     var d = daysSince(q.lastCheckIn);
-    return d!==null && d<=0;
+    return d!==null && d<=0 && d>=-1;
   }
-  // The streak as it stands today: a missed day resets it to 0. A completed
-  // quest keeps the streak it finished with.
+  // The streak as it stands today: a missed day resets it to 0 (as soon as
+  // the app is opened, not only at the next check-in). A completed quest
+  // keeps the streak it finished with.
   function currentStreak(q){
     if (q.completed) return q.streakDays||0;
     var d = daysSince(q.lastCheckIn);
     return d!==null && d<=1 ? (q.streakDays||0) : 0;
+  }
+  // Today's check-in: days in a row add up; after a missed day the streak
+  // starts again at 1. Returns false when there's nothing to do (checked in
+  // already, or completed), 'target' when this one reaches the target (the
+  // caller then completes the quest), true otherwise.
+  function streakCheckIn(q){
+    if (q.completed || checkedInToday(q)) return false;
+    q.streakDays = currentStreak(q) + 1;
+    q.lastCheckIn = todayStr();
+    return q.streakDays>=q.streakTarget ? 'target' : true;
   }
 
   // ---------- centralized reward logic ----------
@@ -240,18 +278,24 @@
   // a level-up point, once the player confirmed it (see S.P.E.C.I.A.L. above).
   function grantSkill(key, amount){
     var state = app.state;
-    if (SKILL_KEYS.indexOf(key)===-1 || !amount) return;
-    state.skills[key] = clamp((state.skills[key]||0)+amount, 0, 100);
+    amount = Number(amount);
+    if (SKILL_KEYS.indexOf(key)===-1 || !amount || !isFinite(amount)) return;
+    state.skills[key] = clamp((Number(state.skills[key])||0)+amount, 0, 100);
   }
   function grantStat(key, amount){
     var state = app.state;
-    if (STAT_KEYS.indexOf(key)===-1 || !amount) return;
-    state.stats[key] = clamp((state.stats[key]||0)+amount, 0, 10);
+    amount = Number(amount);
+    if (STAT_KEYS.indexOf(key)===-1 || !amount || !isFinite(amount)) return;
+    state.stats[key] = clamp((Number(state.stats[key])||0)+amount, 0, 10);
   }
   // The state half of addXp() (events.js adds the toasts). Returns true when
-  // the player levelled up.
+  // the player levelled up; several levels at once each give their point.
+  // Anything but a positive amount is ignored, so XP can't become NaN or
+  // go down.
   function gainXp(amount){
     var state = app.state;
+    amount = Number(amount);
+    if (!(amount>0) || !isFinite(amount)) return false;
     state.xp += amount;
     state.lifetimeXp = (state.lifetimeXp||0) + amount;
     var leveled = false;
@@ -263,6 +307,15 @@
       leveled = true;
     }
     return leveled;
+  }
+  // Completes a main quest: its XP and skill gains, once. Returns null when
+  // it was completed already, else {xp, leveled} for the toasts.
+  function completeMain(m){
+    if (m.completed) return null;
+    m.completed = true;
+    (m.skillGains||[]).forEach(function(g){ grantSkill(g.skill, g.amount); });
+    var xp = Number(m.xp)||0;
+    return {xp:xp, leveled:gainXp(xp)};
   }
 
   // ---------- checking a document ----------
@@ -322,7 +375,7 @@
       if (m.progressType==='streak'){
         m.streakTarget = clamp(Math.round(num(m.streakTarget, 7)), 1, STREAK_MAX_DAYS);
         m.streakDays = clamp(Math.round(num(m.streakDays, 0)), 0, m.streakTarget);
-        m.lastCheckIn = typeof m.lastCheckIn==='string' ? m.lastCheckIn.slice(0,10) : null;
+        m.lastCheckIn = normalizeDate(m.lastCheckIn);
       }
       m.xp = Math.max(0, num(m.xp, 0));
       m.completed = m.completed===true;
@@ -334,7 +387,7 @@
     s.quests.daily = records(s.quests.daily, function(q){
       fixQuest(q);
       fixQuestName(q);
-      q.lastDate = typeof q.lastDate==='string' ? q.lastDate.slice(0,10) : null;
+      q.lastDate = normalizeDate(q.lastDate);
     });
 
     s.inventory = records(s.inventory, function(i){
@@ -356,7 +409,7 @@
       entry.reason = text(entry.reason, 200);
     });
     s.lifetimeLogEntries = Math.max(log.length, Math.round(num(s.lifetimeLogEntries, 0)));
-    s.log = log.slice(-200);
+    s.log = log.slice(-LOG_MAX);
     return s;
   }
 
@@ -376,6 +429,7 @@
   ST.todayDisplay = todayDisplay;
   ST.commas = commas;
   ST.money = money;
+  ST.capsText = capsText;
   ST.escapeHtml = escapeHtml;
 
   ST.defaultState = defaultState;
@@ -383,9 +437,12 @@
   ST.totalHoldingsCAD = totalHoldingsCAD;
   ST.capsValue = capsValue;
   ST.logEntryCount = logEntryCount;
+  ST.addLogEntry = addLogEntry;
   ST.checkedInToday = checkedInToday;
   ST.currentStreak = currentStreak;
+  ST.streakCheckIn = streakCheckIn;
   ST.grantSkill = grantSkill;
   ST.grantStat = grantStat;
   ST.gainXp = gainXp;
+  ST.completeMain = completeMain;
 })(window.StatusTerminal = window.StatusTerminal || {});
