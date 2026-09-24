@@ -125,6 +125,9 @@
       // North up, flat.
       dragRotate: false, pitchWithRotate: false, touchPitch: false, maxPitch: 0,
       attributionControl: false,
+      // Resized by show() and on turning the phone (not while the tab is
+      // hidden: squeezed to nothing, MapLibre would keep drawing).
+      trackResize: false,
       fadeDuration: still ? 0 : 300,
       cancelPendingTileRequestsWhileZooming: true
     });
@@ -139,6 +142,7 @@
       status('');
       fog = ST.fog.createLayer(map, revealed);
       map.addLayer(fog);
+      fog.setActive(onScreen);
       if (pendingFocus){ focusPlace(pendingFocus.type, pendingFocus.place); pendingFocus = null; }
     });
     map.on('zoomend', showLabels);
@@ -163,10 +167,20 @@
     syncMarkers();
   }
   // What the fog opens: every city and pin as a circle, and every region
-  // whose shape is loaded (js/places.js loads the others, then redraws).
+  // by its shape (null until loaded: P.regionShapes() starts loading it,
+  // and the fog is drawn again once it's there). Each has its own key, so
+  // the fog can clear a new place smoothly and fog over a removed one.
   function revealed(){
     var m = app.state && app.state.map;
-    return {circles: m ? m.cities.concat(m.pins) : [], shapes: P.regionShapes ? P.regionShapes() : []};
+    if (!m) return {circles: [], regions: []};
+    P.regionShapes();
+    function circle(prefix){
+      return function(p){ return {key: prefix+p.id, lat: p.lat, lon: p.lon, radius: p.radius}; };
+    }
+    return {
+      circles: m.cities.map(circle('c:')).concat(m.pins.map(circle('p:'))),
+      regions: m.regions.map(function(r){ return {key: 'r:'+r.code, shape: P.shapeOf(r.code, r.cc)}; })
+    };
   }
   // Something revealed changed (a place added, resized, removed, a region's
   // shape loaded): the fog again, on the next frame.
@@ -303,6 +317,7 @@
       document.addEventListener(type, function(){ if (ST.tilt) ST.tilt.hold(false); });
     });
     watchScreen(box);
+    window.addEventListener('resize', function(){ if (map && onScreen) map.resize(); });
     tab.addEventListener('click', onClick);
     tab.addEventListener('input', onInput);
     tab.addEventListener('change', onChange);
@@ -762,7 +777,8 @@
     if (typeof IntersectionObserver!=='function'){ onScreen = true; return; }
     new IntersectionObserver(function(entries){
       onScreen = entries[entries.length-1].isIntersecting;
-      if (fog && fog.setActive) fog.setActive(onScreen);
+      if (onScreen && map) map.resize();
+      if (fog) fog.setActive(onScreen);
     }).observe(box);
   }
 

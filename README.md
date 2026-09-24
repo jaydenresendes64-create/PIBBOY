@@ -113,11 +113,20 @@ on your latest place (the whole world when there's none yet), **⛶** zooms to s
   top.
 - With 3D tilt on, the map holds still while your finger is on it, so drags and pinches land exactly.
 
-**Fog of war:** dark fog covers the whole world. Only the exact places you've been are cut out of
-it, with soft edges: a circle around each city and pin, the exact shape of each region. Sizes are
-real distances, so a 5 km circle stays 5 km whatever the zoom. The fog is drawn with WebGL
-(`js/fog.js`) in the same frame as the map, with the map's own camera, so it stays locked to the map
-while you drag and pinch.
+**Fog of war:** dark, smoky amber-grey clouds cover the whole world: three layers of cloud of
+different sizes, each drifting slowly its own way, a little brighter on their edges, with a fine
+grain. They're stuck to the world, so they move with the map when you drag and grow with it when you
+pinch. Only the exact places you've been are cut out of it: a circle around each city and pin, the
+exact shape of each region, with soft edges that billow gently like smoke pulling back. Sizes are
+real distances, so a 5 km circle stays 5 km whatever the zoom. A newly revealed place clears in
+over about a second and a half; a removed one fogs over again.
+
+The fog is drawn with WebGL (`js/fog.js`) in the same frame as the map, with the map's own camera, so
+it can't lag or slide while you drag and pinch. It only moves while the map is on the screen and the
+app is open (30 frames a second while the map is still, full speed while you move it), and stops
+completely in another tab, scrolled away, or in the background. If the phone can't keep up while you
+move the map, the fog lowers its own resolution (it's soft, so that barely shows) and raises it again
+later. With **Reduce Motion** on, the fog stays still and changes appear at once.
 
 **Revealing places** (under the map):
 
