@@ -53,7 +53,7 @@
  *
  * SCRIPTS — every file attaches to one namespace, window.StatusTerminal, and
  * index.html loads them in dependency order: state → storage → ai → render →
- * events → main. They are plain scripts rather than ES modules so the app
+ * mascot → events → main. They are plain scripts rather than ES modules so the app
  * still runs when index.html is opened straight from disk (file://), where
  * browsers refuse to load modules.
  */

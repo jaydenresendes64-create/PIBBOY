@@ -278,7 +278,12 @@
   function setupEvents(){
     document.body.addEventListener('click', function(e){
       var tabBtn = e.target.closest('[data-tab]');
-      if (tabBtn){ R.switchTab(tabBtn.getAttribute('data-tab')); return; }
+      if (tabBtn){
+        var tab = tabBtn.getAttribute('data-tab');
+        R.switchTab(tab);
+        if (ST.mascot) ST.mascot.onTab(tab);
+        return;
+      }
 
       var state = app.state;
       var actionBtn = e.target.closest('[data-action]');

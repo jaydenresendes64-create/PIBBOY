@@ -9,6 +9,7 @@
 
   function boot(){
     ST.storage.onSaveFailed(ST.render.showSaveWarning);
+    if (ST.mascot) ST.mascot.init('status');     // decoration: the app runs without it
 
     ST.storage.load().then(function(saved){
       ST.app.state = ST.mergeDefaults(saved);
