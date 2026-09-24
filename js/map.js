@@ -520,6 +520,7 @@
   function openPlace(type, id, fly){
     var p = P.findPlace(type, id);
     if (!p) return;
+    if (ST.sfx) ST.sfx.play('mapSelect');
     placing = null;
     showHint();
     clearHere();

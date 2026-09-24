@@ -4,3 +4,8 @@
 *-backup*.json
 .vercel
 node_modules
+
+# your own sound clips (Custom sounds panel): they stay on your devices
+pibboy-sound-pack*.json
+*.mp4
+*.mp3

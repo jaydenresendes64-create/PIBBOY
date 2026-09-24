@@ -23,6 +23,7 @@ js/mascot.js        when the mascot walks or gestures (his moves are in css/term
 js/crt.js           the screen's rare flicker (the tube look itself is in css/terminal.css)
 js/tilt.js          3D tilt: the screen's layers follow the phone's motion (or the mouse)
 js/sfx.js           sounds, all made in code (no audio files), and the power-on screen
+js/sfx-custom.js    "Custom sounds": your own clips, cut from a video or audio file, kept on the device
 js/places.js        the MAP tab's logic: positions, city and region lists, finding and revealing places
 js/fog.js           MAP: the fog of war, drawn with WebGL in the same frame as the map
 js/map.js           the MAP tab (loads MapLibre the first time it's opened)
@@ -94,11 +95,28 @@ speaker" filter so they sound mechanical and lo-fi:
 | complete | a quest, bonus objective, daily quest or streak check-in |
 | level up / quest / discover / sold | the LEVEL UP, QUEST COMPLETED, DISCOVERED and SOLD banners |
 | error | a failed save, a rejected import |
+| step / map select | a skill's − / + button / a place opened on the MAP |
 
 When the app opens, a black screen says **TAP TO POWER ON**; the tap plays the boot sound while the
 screen lights up like a tube (browsers only allow sound after a tap). Two footer links, remembered on
 each device: **Sound: on/off** and **Power-on: on/off** (with power-on off, the app opens directly and
 the boot sound plays on the first tap). The phone's own volume and silent switch apply as usual.
+
+### Custom sounds (your own clips)
+
+The footer link **Custom sounds** replaces any sound with a clip of your own (`js/sfx-custom.js`):
+
+- **Choose a video or audio file** (mp4, m4a, mp3, wav…): every separate sound in it is found and
+  listed (#1, #2…), plus **ALL** for the whole file. Play each with ▶, trim it with its start/end
+  times, and pick **Use as…**. Most sounds keep at most 6 s; **Level up** and **Main quest completed**
+  can play a whole piece of music, up to 60 s.
+- **Reset** puts a sound back to the built-in one.
+- **Export / Import sound pack** moves all your clips to another device in one file
+  (`pibboy-sound-pack.json`), for example cut on a computer and imported on the phone.
+
+Your clips stay on your devices: they're kept in the browser (IndexedDB, separate from the saved
+data), never in this public repository (`.gitignore` excludes sound packs and video files) and never
+in backups.
 
 ## MAP tab
 

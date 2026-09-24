@@ -492,7 +492,7 @@
   function showDiscovered(name){
     var placeName = document.createElement('span');
     placeName.textContent = name;
-    sound('discover');
+    sound('discover', 0.25);      // after the place's own select sound (js/map.js)
     toast('levelup-banner quest-banner', 'DISCOVERED: ', 3200).appendChild(placeName);
   }
   function showSaveWarning(){ sound('error'); toast('xp-toast save-warning', 'Not saved — storage unavailable', 2600); }

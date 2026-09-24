@@ -502,6 +502,7 @@
       else if (e.target.id==='tilt-btn'){ if (ST.tilt) ST.tilt.toggle(); }
       else if (e.target.id==='sound-btn'){ if (ST.sfx) ST.sfx.toggleSound(); }
       else if (e.target.id==='power-btn'){ if (ST.sfx) ST.sfx.togglePowerScreen(); }
+      else if (e.target.id==='sounds-btn'){ if (ST.sfxCustom) ST.sfxCustom.open(); }
       else if (e.target.id==='export-btn') exportData();
       else if (e.target.id==='import-btn') el('import-file').click();
       else if (e.target.id==='import-confirm-btn') confirmImport();

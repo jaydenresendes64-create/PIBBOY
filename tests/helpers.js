@@ -162,7 +162,7 @@ function loadApp(options) {
   shared.windows.push(win);
 
   const context = {
-    console, setImmediate, queueMicrotask,
+    console, setImmediate, queueMicrotask, btoa, atob,
     // Looked up at each call, so node:test's mock timers apply here too.
     setTimeout: (...args) => setTimeout(...args),
     clearTimeout: id => clearTimeout(id),

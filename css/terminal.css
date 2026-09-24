@@ -794,3 +794,48 @@ button{ cursor:pointer; }
   70% { transform:scale(1, 0.99);     filter:brightness(1.2); }
   100%{ transform:none;               filter:none; }
 }
+
+/* ---------- Custom sounds panel (js/sfx-custom.js) ---------- */
+html.sl-open{ overflow:hidden; }
+.sound-lab{
+  position:fixed; inset:0; z-index:1500;
+  background:rgba(8,4,1,0.88);
+  overflow-y:auto; -webkit-overflow-scrolling:touch;
+  padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px));
+}
+.sound-lab-box{
+  max-width:520px; margin:0 auto;
+  border:1px solid var(--line); border-radius:3px; background:var(--panel);
+  padding:14px;
+}
+.sl-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.sl-title{ font-family:'VT323', ui-monospace, monospace; font-size:1.5rem; letter-spacing:0.08em; color:var(--phosphor); }
+.sl-note{ font-size:0.75rem; color:var(--text-dim); margin:0 0 12px; line-height:1.4; }
+.sl-row{
+  display:grid; grid-template-columns:1fr auto 44px 56px; align-items:center; gap:8px;
+  padding:6px 0; border-bottom:1px solid var(--line); font-size:0.82rem;
+}
+.sl-row:last-child{ border-bottom:none; }
+.sl-kind{ font-size:0.7rem; color:var(--text-dim); }
+.sl-kind.sl-own{ color:var(--amber); }
+.sl-btn{
+  min-height:36px; min-width:44px; padding:6px 8px;
+  border:1px solid var(--line); border-radius:3px; background:var(--panel-alt);
+  color:var(--phosphor); font-size:0.78rem;
+}
+.sl-pick{
+  width:100%; min-height:44px; margin-top:4px;
+  border:1px solid var(--amber-dim); border-radius:3px; background:var(--panel-alt);
+  color:var(--amber); font-size:0.85rem;
+}
+.sl-status{ font-size:0.78rem; color:var(--text-dim); margin:10px 0 4px; line-height:1.4; min-height:1em; }
+.sl-seg{ grid-template-columns:auto 1fr auto 1fr 44px; }
+.sl-seg .sl-use{ grid-column:1 / -1; }
+.sl-num{ color:var(--text-dim); font-size:0.75rem; }
+.sl-dash{ color:var(--text-dim); }
+.sl-time, .sl-use{
+  min-height:36px; width:100%; min-width:0;
+  border:1px solid var(--line); border-radius:3px; background:var(--bg);
+  color:var(--phosphor); padding:4px 6px; font-size:0.8rem;
+}
+.sl-pack{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 4px; }

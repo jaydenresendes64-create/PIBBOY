@@ -15,6 +15,8 @@
  *   discover  a radar ping with an echo: a new place on the MAP
  *   sold      bottle caps clinking
  *   error     low double buzz
+ *   step      a skill's - / + button
+ *   mapSelect a place opened on the MAP (a city picked, a marker tapped)
  *
  * Browsers only allow sound after a tap: the audio starts on the first one,
  * and anything asked before that is simply skipped. While the app is in the
@@ -26,6 +28,9 @@
  * Two footer links, kept on this device only (localStorage, not in the saved
  * data): "Sound: on/off" (on by default) and "Power-on: on/off" (on by
  * default; off opens the app directly, and boot plays on the first tap).
+ *
+ * Any sound can be replaced by the player's own clip (the "Custom sounds"
+ * panel, js/sfx-custom.js). A clip plays as recorded, without the lo-fi chain.
  */
 (function(ST){
   'use strict';
@@ -110,6 +115,7 @@
   function unlock(){
     if (!start()) return;
     if (ctx.state==='suspended' && document.visibilityState!=='hidden') ctx.resume().catch(function(){});
+    loadCustom();
     if (!unlocked){
       unlocked = true;
       try{   // iOS starts the audio only once something played during a tap
@@ -236,8 +242,60 @@
     error: function(t){
       tone('square', 110, null, t, 0.1, 0.16, 0.004);
       tone('square', 104, null, t+0.14, 0.13, 0.16, 0.004);
+    },
+    step: function(t){                                                   // a skill's - / +
+      hiss(t, 0.02, 0.28, 'bandpass', vary(2100, 0.05), 1.4, 0.001);
+      tone('square', vary(1250, 0.03), null, t, 0.018, 0.05, 0.001);
+    },
+    mapSelect: function(t){                                              // a place picked on the MAP
+      hiss(t, 0.02, 0.25, 'bandpass', 1600, 1.2, 0.001);
+      tone('square', 1480, null, t+0.01, 0.06, 0.08);
     }
   };
+
+  // ---------- the player's own clips (js/sfx-custom.js) ----------
+  // A clip of the player's replaces the built-in sound of the same name. It
+  // plays as recorded: straight to the speakers, not through the lo-fi chain.
+  var CUSTOM_VOLUME = 0.9;
+  var custom = {};              // sound name → AudioBuffer
+  var customLoading = null;
+  function decode(wav){
+    return new Promise(function(resolve){
+      if (!start()) { resolve(null); return; }
+      try{
+        // decodeAudioData takes the buffer over, so it gets a copy.
+        var promise = ctx.decodeAudioData(wav.slice(0), resolve, function(){ resolve(null); });
+        if (promise && promise.catch) promise.catch(function(){ resolve(null); });
+      }catch(e){ resolve(null); }
+    });
+  }
+  // The saved clips, decoded once the audio has started.
+  function loadCustom(){
+    if (customLoading || !ctx || !ST.sfxCustom) return customLoading;
+    customLoading = ST.sfxCustom.readAll().then(function(records){
+      return Promise.all(records.map(function(record){
+        return decode(record.wav).then(function(buffer){ if (buffer) custom[record.slot] = buffer; });
+      }));
+    }).catch(function(){});
+    return customLoading;
+  }
+  // Resolves true once the clip (a WAV ArrayBuffer) is in use; null removes it.
+  function setCustom(name, wav){
+    if (!wav){ delete custom[name]; return Promise.resolve(true); }
+    return decode(wav).then(function(buffer){
+      if (buffer) custom[name] = buffer;
+      return !!buffer;
+    });
+  }
+  function playBuffer(buffer, t){
+    var src = ctx.createBufferSource();
+    src.buffer = buffer;
+    var gain = ctx.createGain();
+    gain.gain.value = CUSTOM_VOLUME;
+    src.connect(gain);
+    gain.connect(ctx.destination);
+    src.start(t);
+  }
 
   // Plays a sound now (or after `delay` seconds). Skipped when sound is off,
   // before the first tap, or while the app is in the background.
@@ -245,7 +303,23 @@
     if (!soundOn || !unlocked || !ctx || !SOUNDS[name]) return;
     if (document.visibilityState==='hidden' || ctx.state==='closed') return;
     if (ctx.state==='suspended') ctx.resume().catch(function(){});
-    try{ SOUNDS[name](ctx.currentTime + 0.01 + (delay || 0)); }catch(e){}
+    var t = ctx.currentTime + 0.01 + (delay || 0);
+    try{
+      if (custom[name]) playBuffer(custom[name], t);
+      else SOUNDS[name](t);
+    }catch(e){}
+  }
+  // For the Custom sounds panel: plays even with sound off (it's a tap on a
+  // play button). A sound name, or an AudioBuffer to try out.
+  function preview(what){
+    unlock();
+    if (!ctx) return;
+    var t = ctx.currentTime + 0.01;
+    try{
+      if (typeof what!=='string') playBuffer(what, t);
+      else if (custom[what]) playBuffer(custom[what], t);
+      else if (SOUNDS[what]) SOUNDS[what](t);
+    }catch(e){}
   }
 
   // ---------- automatic sounds ----------
@@ -258,7 +332,8 @@
     var target = e.target && e.target.closest ? e.target.closest('button, [role="button"]') : null;
     if (!target || target.disabled) return;
     if (target.closest('[data-tab]') || target.classList.contains('complete-btn') || target.id==='power-on') return;
-    play('press');
+    if (target.closest('[data-map="open"], [data-map="pick"]')) return;     // js/map.js plays mapSelect
+    play(target.classList.contains('step-btn') ? 'step' : 'press');
   }
   function onScroll(){
     var y = window.scrollY || window.pageYOffset || 0;
@@ -349,6 +424,11 @@
     play: play,
     toggleSound: toggleSound,
     togglePowerScreen: togglePowerScreen,
+    preview: preview,
+    decode: decode,
+    setCustom: setCustom,
+    hasCustom: function(name){ return !!custom[name]; },
+    NAMES: Object.keys(SOUNDS),
     makeTicker: makeTicker,
     sliderBucket: sliderBucket
   };
