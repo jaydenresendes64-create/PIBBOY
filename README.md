@@ -128,12 +128,13 @@ drawn over the tiles, redrawn at most once per frame while the map moves, and on
 - A city or region revealed for the first time shows **DISCOVERED** and gives 50 XP (city) or
   100 XP (region), once per place: removing it and adding it back gives nothing again. Pins give no XP.
 
-**Map data** (`data/`, made by `tools/build-map-data.js`, used offline once loaded):
+**Map data** (`data/`, made by `tools/build-map-data.js`):
 
 - Cities: [GeoNames](https://www.geonames.org) "cities15000", every place of 15,000 people or more,
   licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (credit: GeoNames,
-  geonames.org). `data/places.txt` is about 1.7 MB (about 0.8 MB as sent), loaded the first time you
-  search, mark a region or drop a pin.
+  geonames.org). `data/places.txt` is about 1.7 MB (about 0.8 MB as sent). It's downloaded with the
+  app when it installs (and again with each new version), so city search works offline from the first
+  open; the app only reads it the first time you search, mark a region or drop a pin.
 - Regions: [Natural Earth](https://www.naturalearthdata.com) 1:10m "Admin 1 – States, Provinces"
   (public domain), version 5.1.2, simplified to about 400 m and split into one small file per country
   (`data/regions/CA.json`...), each loaded only when a region of that country is shown or looked up.

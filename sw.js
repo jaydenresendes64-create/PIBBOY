@@ -18,13 +18,15 @@
  * The MAP tab's pictures (tiles, from CARTO) are kept in their own cache as
  * they're seen, at most TILE_MAX of them (the oldest go first), so the
  * places already looked at still show offline. Only tiles actually shown are
- * kept, never fetched ahead. The map's data (data/) is cached like the app's
- * files, the first time it's used.
+ * kept, never fetched ahead. The map's city and region list
+ * (data/places.txt) is cached at install with the app, so city search works
+ * offline from the first open; the region shapes (data/regions/) are cached
+ * like the app's files, the first time each is used.
  */
 'use strict';
 
 var CACHE_PREFIX = 'status-terminal-';
-var CACHE = CACHE_PREFIX + 'v5';
+var CACHE = CACHE_PREFIX + 'v6';
 var TILE_CACHE = CACHE_PREFIX + 'tiles';       // kept across versions
 var TILE_HOST = /(^|\.)basemaps\.cartocdn\.com$/;
 var TILE_MAX = 400;
@@ -36,6 +38,7 @@ var APP_SHELL = [
   'css/terminal.css',
   'js/state.js', 'js/storage.js', 'js/ai.js', 'js/places.js', 'js/render.js', 'js/mascot.js', 'js/crt.js', 'js/tilt.js', 'js/map.js', 'js/bulk.js', 'js/events.js', 'js/main.js',
   'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css',
+  'data/places.txt',
   'images/mascot.png', 'images/mascot-hand.svg',
   'fonts/vt323.woff2', 'fonts/ibm-plex-mono.woff2',
   'manifest.webmanifest',

@@ -61,8 +61,9 @@
 
   // ---------- the offline lists: countries, regions, cities ----------
   // data/places.txt (made by tools/build-map-data.js, which describes it):
-  // loaded the first time it's needed (a search, marking a region, a bulk
-  // list, a pin's country), then kept for the session.
+  // read the first time it's needed (a search, marking a region, a bulk
+  // list, a pin's country), then kept for the session. sw.js stores it at
+  // install, so it's there offline from the first open.
   var db = null, dbPromise = null, dbFailedAt = 0;
   function parsePlaces(text){
     var out = {countries:[], country:{}, regions:[], region:{}, cities:[]};
