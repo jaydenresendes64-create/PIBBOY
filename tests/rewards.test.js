@@ -173,3 +173,16 @@ test('sellItem: nothing happens for a wrong amount, a missing item or one not fo
   assert.deepEqual([s.xp, s.log.length, s.finances.holdings.length], [0, 0, 0]);
   assert.ok(ST.sellItem('g1', 0));                                  // given away for $0 is still a sale
 });
+
+test('moveItem: another category, nothing else changes; the asking price stays', () => {
+  const s = fresh();
+  s.inventory.push({ id: 'xs', name: 'Old bike', category: 'SELL', price: 80 });
+  assert.equal(ST.moveItem('xs', 'MISC'), true);
+  assert.deepEqual(app.plain(s.inventory.find(i => i.id === 'xs')), { id: 'xs', name: 'Old bike', category: 'MISC', price: 80 });
+  assert.equal(ST.moveItem('xs', 'SELL'), true);
+  assert.equal(s.inventory.find(i => i.id === 'xs').price, 80);
+  assert.equal(ST.moveItem('xs', 'SELL'), false);                 // already there
+  assert.equal(ST.moveItem('xs', 'WEAPONS'), false);              // not a category
+  assert.equal(ST.moveItem('nope', 'MISC'), false);
+  assert.equal(s.inventory.length, 3);
+});

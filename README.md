@@ -3,7 +3,8 @@
 A personal, Fallout-inspired life tracker: S.P.E.C.I.A.L. stats, skills, main / side / daily quests,
 inventory, a Caps wallet, and a journal that turns diary entries into XP and skill proposals you
 accept or reject. In ITEMS, **THINGS TO SELL** keeps an asking price per item; tapping **Sold** puts
-the money in the wallet's CASH row, gives 25 XP and writes the sale in the journal.
+the money in the wallet's CASH row, gives 25 XP and writes the sale in the journal. The **⇄** button on
+an item moves it to another category (its asking price is kept for if it goes back to THINGS TO SELL).
 
 Plain HTML, CSS and JavaScript: no framework, no build step.
 

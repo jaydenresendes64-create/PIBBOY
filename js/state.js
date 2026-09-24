@@ -166,6 +166,7 @@
     confirmRemoveMain: null,    // id of the main quest whose removal awaits "Yes, remove"
     confirmSell: null,          // id of the item whose sale awaits "Yes"
     confirmRemove: null,        // {kind:'side'|'daily'|'item'|'wallet', id} whose removal awaits "Yes, remove"
+    confirmMove: null,          // id of the item whose "Move to" choice is open
     confirmSpecial: null        // SPECIAL key whose level-up point awaits "Yes"
   };
 
@@ -345,6 +346,16 @@
     if (list.indexOf(key)!==-1) return null;
     list.push(key);
     return {xp:xp, leveled:gainXp(xp)};
+  }
+
+  // Moves an item to another category, keeping everything else (an asking
+  // price too: it shows again if the item goes back to THINGS TO SELL).
+  // Returns false when there's no such item or category.
+  function moveItem(id, cat){
+    var item = app.state.inventory.filter(function(i){ return i.id===id; })[0];
+    if (!item || CATS.indexOf(cat)===-1 || item.category===cat) return false;
+    item.category = cat;
+    return true;
   }
 
   // ---------- dates ----------
@@ -650,6 +661,7 @@
   ST.gainXp = gainXp;
   ST.completeMain = completeMain;
   ST.sellItem = sellItem;
+  ST.moveItem = moveItem;
   ST.foldName = foldName;
   ST.placeKey = placeKey;
   ST.discoverPlace = discoverPlace;

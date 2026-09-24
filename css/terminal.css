@@ -469,17 +469,23 @@ button{ cursor:pointer; }
   100%{ opacity:0; }
 }
 .remove-btn{ width:26px; height:26px; color:var(--danger); font-size:1rem; }
+/* An item's "Move to…" button, and the categories it offers under the row. */
+.move-btn{ width:26px; height:26px; color:var(--text-dim); font-size:1rem; line-height:1; }
+.inv-buttons{ display:flex; align-items:center; gap:8px; flex:0 0 auto; }
+.move-question{ color:var(--phosphor); }
+.move-confirm .confirm-ok{ font-size:0.72rem; }
 
 /* Bigger tap areas, same look: an invisible ::before around each small
    control counts as part of it. Each is sized to stay clear of its
    neighbours' (checked at 375px wide): 40px or more where the spacing
    allows. Inputs can't have one. */
-.step-btn, .remove-btn, .complete-btn, .tab-btn, .assign-btn, .add-row button, .add-name, .sell-btn,
+.step-btn, .remove-btn, .move-btn, .complete-btn, .tab-btn, .assign-btn, .add-row button, .add-name, .sell-btn,
 .footer-actions button, #reset-confirm-area button, .card-confirm button{ position:relative; }
-.step-btn::before, .remove-btn::before, .complete-btn::before, .tab-btn::before, .assign-btn::before,
+.step-btn::before, .remove-btn::before, .move-btn::before, .complete-btn::before, .tab-btn::before, .assign-btn::before,
 .add-row button::before, .add-name::before, .sell-btn::before, .footer-actions button::before,
 #reset-confirm-area button::before, .card-confirm button::before{ content:''; position:absolute; }
 .remove-btn::before{ inset:-7px; }                             /* 26 -> 40 */
+.move-btn::before{ inset:-7px -4px; }                          /* 26 -> 34 x 40: 8px from the remove button */
 .complete-btn::before{ inset:-5px; }                           /* 30 -> 40 */
 .bonus-item .complete-btn::before{ inset:-5px -8px; }          /* 24 -> 40 x 34: bonus rows are 34px apart */
 .step-btn::before{ inset:-6px -2px -7px; }                     /* 4px apart side by side, 39px row to row: 35 x 39 */
@@ -503,6 +509,7 @@ button{ cursor:pointer; }
 .add-row input.field-objective{ flex:1 1 120px; min-width:0; }
 .add-row input[type="number"]{ width:64px; }
 .add-row input#new-item-price{ width:84px; }
+.add-row input#new-wallet-amount{ width:96px; }                /* "Amount" shows in full at 375px */
 .add-row input[hidden]{ display:none; }
 .add-row select{ flex:0 0 auto; }
 .add-row select#new-main-type{ flex:1 1 120px; }
