@@ -117,8 +117,9 @@
     'RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM '+
     'TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS XK YE YT ZA ZM ZW').split(' ');
   // A region: its country's three letters and a number (CAN-683, GAZ-X00),
-  // or a group of regions: G and its name (FRA-G-ile-de-france).
-  var REGION_CODE = /^[A-Z]{3}-(X?\d{1,6}|G-[a-z0-9-]{1,40})$/;
+  // a group of regions: G and its name (FRA-G-ile-de-france), or, for the
+  // regions from geoBoundaries (Morocco's), its ISO 3166-2 code (MA-06).
+  var REGION_CODE = /^([A-Z]{3}-(X?\d{1,6}|G-[a-z0-9-]{1,40})|[A-Z]{2}-[A-Z0-9]{1,3})$/;
 
   var DEFAULT_STATE = {
     level:2, xp:0, xpToNext:1000,

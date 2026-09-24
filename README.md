@@ -137,13 +137,20 @@ drawn over the tiles, redrawn at most once per frame while the map moves, and on
 - Regions: [Natural Earth](https://www.naturalearthdata.com) 1:10m "Admin 1 – States, Provinces"
   (public domain), version 5.1.2, simplified to about 400 m and split into one small file per country
   (`data/regions/CA.json`...), each loaded only when a region of that country is shown or looked up.
-  Natural Earth's regions aren't always the latest: Morocco still has its 16 regions from before 2015
-  (Grand Casablanca, Chaouia - Ouardigha... rather than Casablanca-Settat).
+- Morocco's regions: its 12 current regions (since 2015: Casablanca-Settat, Marrakech-Safi,
+  Fez-Meknes...) from [geoBoundaries](https://www.geoboundaries.org) (gbOpen release, made from
+  OpenStreetMap), because Natural Earth still has the 16 from before 2015. Their licence is
+  [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/), not CC BY: it asks for the credit
+  "© OpenStreetMap contributors" (already in the map's corner) and that `data/regions/MA.json`, made
+  from it, stays under ODbL (the file says so in its `source` field). Each region's code is its
+  ISO 3166-2 code (`MA-06` for Casablanca-Settat); French spellings are found too (Fès-Meknès).
 - To rebuild them (only to update the data), download
   [ne_10m_admin_1_states_provinces.geojson](https://github.com/nvkelso/natural-earth-vector/tree/v5.1.2/geojson),
-  and `cities15000.zip` (unzipped) and `countryInfo.txt` from
-  [download.geonames.org/export/dump](https://download.geonames.org/export/dump/), then run
-  `node tools/build-map-data.js ne_10m_admin_1_states_provinces.geojson cities15000.txt countryInfo.txt`.
+  `cities15000.zip` (unzipped) and `countryInfo.txt` from
+  [download.geonames.org/export/dump](https://download.geonames.org/export/dump/), and
+  [geoBoundaries-MAR-ADM1.geojson](https://github.com/wmgeolab/geoBoundaries/tree/5c25134028196d43ce97b5071934fd0cfc92f09f/releaseData/gbOpen/MAR/ADM1)
+  (the version used), then run
+  `node tools/build-map-data.js ne_10m_admin_1_states_provinces.geojson cities15000.txt countryInfo.txt geoBoundaries-MAR-ADM1.geojson`.
   The files in this repository were made from the copy of GeoNames' cities15000 and country list
   packaged in geonamescache 3.0.2 (the same data, in JSON).
 

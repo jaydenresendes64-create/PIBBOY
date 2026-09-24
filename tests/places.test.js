@@ -142,6 +142,7 @@ test('lookup: the country, region and nearby city of a point', async () => {
   const casablanca = await P.lookup(33.59, -7.62);
   assert.equal(casablanca.cc, 'MA');
   assert.equal(casablanca.city.name, 'Casablanca');
+  assert.equal(casablanca.region.code, 'MA-06');
   const sea = await P.lookup(0, -30);
   assert.equal(sea.cc, '');
   assert.equal(sea.city, null);
@@ -182,12 +183,12 @@ test('matchLine: found, ambiguous (biggest first), close names, not found', () =
   const quebec = m('region: quebec');
   assert.equal(quebec.status, 'found');
   assert.equal(quebec.options[0].region.code, 'CAN-683');
-  // Natural Earth still has Morocco's old regions: close names to choose from, none chosen.
-  const casa = m('region: Casablanca-Settat, Morocco');
+  // Only a close name: offered to choose from, none chosen.
+  const casa = m('region: Casablanca, Morocco');
   assert.equal(casa.status, 'choose');
   assert.equal(casa.fuzzy, true);
   assert.equal(casa.pick, -1);
-  assert.ok(casa.options.some(o => o.region.name === 'Grand Casablanca'));
+  assert.deepEqual(app.plain(casa.options.map(o => o.region.code)), ['MA-06']);
   assert.equal(m('Île-de-France, France').options[0].region.code, 'FRA-G-ile-de-france');
   const marrakech = m('Marrakech, Morocco');                      // GeoNames writes Marrakesh
   assert.equal(marrakech.status, 'choose');
@@ -205,4 +206,35 @@ test('matchList + revealAll: one pass, XP once per new place, nothing twice', ()
   assert.equal(results.filter(r => r.isNew).length, 3);            // the second Montréal is already there
   assert.equal(s.xp, 2 * ST.CITY_XP + ST.REGION_XP);
   assert.equal(P.matchList('x\n'.repeat(500)).length, P.MAX_LINES);
+});
+
+test('Morocco: its 12 current regions (geoBoundaries), matched exactly', async () => {
+  const m = x => P.matchLine(P.parseLine(x));
+  const moroccan = DB.regions.filter(r => r.cc === 'MA');
+  assert.equal(moroccan.length, 12);
+  assert.ok(moroccan.every(r => /^MA-\d\d$/.test(r.code) && !r.isGroup));
+  assert.equal(DB.region['MAR-1450'], undefined);             // Natural Earth's old Grand Casablanca is gone
+  const casa = m('region: Casablanca-Settat, Morocco');
+  assert.equal(casa.status, 'found');
+  assert.equal(casa.options[0].region.code, 'MA-06');
+  assert.equal(casa.options[0].region.name, 'Casablanca-Settat');
+  assert.equal(m('region: Fès-Meknès, Maroc').options[0].region.code, 'MA-03');     // French spelling
+  assert.equal(m('region: Tanger-Tétouan-Al Hoceïma').options[0].region.code, 'MA-01');
+  // The cities are in their current regions.
+  const city = name => DB.cities.find(c => c.name === name && c.cc === 'MA');
+  assert.equal(city('Casablanca').region.code, 'MA-06');
+  assert.equal(city('Marrakesh').region.code, 'MA-07');
+  assert.equal(city('Rabat').region.code, 'MA-04');
+  // Its shapes file: the 12 regions, with the licence of their source, and a point in each.
+  const byCode = await P.loadShapes('MA');
+  assert.deepEqual(app.plain(Object.keys(byCode).sort()), app.plain(moroccan.map(r => r.code).sort()));
+  assert.ok(P.inShape(-7.611, 33.588, byCode['MA-06']));
+  assert.ok(!P.inShape(-8, 31.634, byCode['MA-06']));
+  const file = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/regions/MA.json'), 'utf8'));
+  assert.match(file.source, /OpenStreetMap.*ODbL/);
+  // Revealed, it passes the checks every save goes through, unchanged.
+  const s = fresh();
+  const result = P.revealRegion(casa.options[0].region);
+  assert.equal(result.reward.xp, ST.REGION_XP);
+  assert.deepEqual(app.plain(ST.sanitizeImported(app.plain(s)).map), app.plain(s.map));
 });

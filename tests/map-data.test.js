@@ -24,7 +24,8 @@ test('a full map comes back identical (export -> import)', () => {
   const s = withMap({
     cities: [MONTREAL, { id: 'xc2', name: 'Hand-placed', cc: '', lat: -12.5, lon: 179.99, radius: 3000, date: '2026-9-1', note: 'x' }],
     regions: [QUEBEC, { id: 'xr2', name: 'Île-de-France', cc: 'FR', code: 'FRA-G-ile-de-france', date: '2026-9-2', note: '' },
-      { id: 'xr3', name: 'Gaza', cc: 'PS', code: 'GAZ-X00', date: null, note: '' }],
+      { id: 'xr3', name: 'Gaza', cc: 'PS', code: 'GAZ-X00', date: null, note: '' },
+      { id: 'xr4', name: 'Casablanca-Settat', cc: 'MA', code: 'MA-06', date: '2026-9-3', note: '' }],
     pins: [PIN],
     discovered: ['c:6077243', 'r:CAN-683', 'c::handplaced']
   });
@@ -43,7 +44,7 @@ test('places without a usable position are dropped', () => {
 });
 
 test('unknown region codes are dropped, unknown countries become ""', () => {
-  const codes = ['', 'CAN', 'can-683', 'CAN-683"><img>', 'CAN-G-Île', 'CANADA-1', null, 42];
+  const codes = ['', 'CAN', 'can-683', 'CAN-683"><img>', 'CAN-G-Île', 'CANADA-1', 'ma-06', 'MA-', 'MA-0600', 'M-06', null, 42];
   const s = sanitize(withMap({
     regions: codes.map(code => Object.assign({}, QUEBEC, { code })).concat([Object.assign({}, QUEBEC, { cc: 'ZZ' })]),
     cities: [Object.assign({}, MONTREAL, { cc: 'ca' })],

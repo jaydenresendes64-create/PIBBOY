@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Builds the MAP tab's offline data (data/) from two free sources. Run it
- * again only to refresh the data; the app never runs it.
+ * Builds the MAP tab's offline data (data/) from free sources. Run it again
+ * only to refresh the data; the app never runs it.
  *
- *   node tools/build-map-data.js <admin1.geojson> <cities15000.txt> <countryInfo.txt>
+ *   node tools/build-map-data.js <admin1.geojson> <cities15000.txt> <countryInfo.txt> <MAR-ADM1.geojson>
  *
  * Sources (download them first, see README "Map data"):
  * - Natural Earth 1:10m "Admin 1 – States, Provinces" (public domain):
@@ -11,6 +11,9 @@
  *   repository (tag v5.1.2 was used).
  * - GeoNames (CC BY 4.0): cities15000.txt (every place of 15,000 people or
  *   more) and countryInfo.txt, from download.geonames.org/export/dump/.
+ * - geoBoundaries (ODbL 1.0, from OpenStreetMap): Morocco's 12 regions,
+ *   geoBoundaries-MAR-ADM1.geojson (gbOpen release). Natural Earth still has
+ *   Morocco's 16 regions from before 2015, so these replace them.
  *
  * Writes:
  * - data/places.txt       every country, region and city, as text: what the
@@ -40,13 +43,25 @@ const GROUP_COUNTRIES = ['BE', 'ES', 'FR', 'IT', 'PH'];
 // (or administered from), so they count for that country.
 const NO_ISO = { SOL: 'SO', CYN: 'CY', ESB: 'CY', WSB: 'CY', USG: 'CU', KAS: 'IN', KAB: 'KZ', IOA: 'AU', CSI: 'AU', CLP: 'FR' };
 
+// Countries whose regions come from geoBoundaries instead of Natural Earth
+// (the file given on the command line), with other names each region is
+// known by (French, older spellings) to find it by.
+const GEOBOUNDARIES = {
+  MA: {
+    'MA-01': ['Tanger-Tétouan-Al Hoceïma'], 'MA-03': ['Fès-Meknès'], 'MA-04': ['Rabat-Salé-Kénitra'],
+    'MA-07': ['Marrakesh-Safi'], 'MA-11': ['Laâyoune-Sakia El Hamra'], 'MA-12': ['Dakhla-Oued Eddahab']
+  }
+};
+
 function main(args) {
-  if (args.length !== 3) {
-    console.error('Usage: node tools/build-map-data.js <admin1.geojson> <cities15000.txt> <countryInfo.txt>');
+  if (args.length !== 4) {
+    console.error('Usage: node tools/build-map-data.js <admin1.geojson> <cities15000.txt> <countryInfo.txt> <MAR-ADM1.geojson>');
     process.exit(1);
   }
   const countries = readCountries(args[2]);
-  const regions = readRegions(args[0], countries);
+  const regions = readRegions(args[0], countries)
+    .filter(r => !GEOBOUNDARIES[r.cc])
+    .concat(readGeoBoundaries(args[3], 'MA'));
   const cities = readCities(args[1], countries);
   assignRegions(cities, regions);
   const groups = makeGroups(regions);
@@ -78,15 +93,7 @@ function readRegions(file, countries) {
     const code = String(p.adm1_code).replace(/^([A-Z]{3})\+(\d+)\?$/, '$1-X$2');
     if (!/^[A-Z]{3}-X?\d+$/.test(code)) throw new Error('Unexpected adm1_code ' + p.adm1_code);
     const polygons = feature.geometry.type === 'Polygon' ? [feature.geometry.coordinates] : feature.geometry.coordinates;
-    const big = ring => ring.length >= 4 && Math.abs(area(ring)) >= MIN_RING_AREA;
-    const kept = polygons.map(poly => poly.map(ring => simplify(ring)))
-      .filter(poly => big(poly[0]))
-      .map(poly => [poly[0]].concat(poly.slice(1).filter(big)));
-    // Always keep the region's biggest ring, however small it is.
-    if (!kept.length) {
-      const all = polygons.map(poly => poly[0]).sort((a, b) => Math.abs(area(b)) - Math.abs(area(a)));
-      kept.push([simplify(all[0], 0).slice()]);
-    }
+    const kept = keptPolygons(polygons);
     const alt = [p.name_en, p.gn_name, p.woe_name].concat(String(p.name_alt || '').split('|'))
       .filter(n => n && n !== p.name);
     out.push({
@@ -98,6 +105,34 @@ function readRegions(file, countries) {
   return out;
 }
 function clean(s) { return String(s).replace(/\s+/g, ' ').trim(); }
+// A shape's polygons, simplified like readRegions' (the biggest one always kept).
+function keptPolygons(polygons) {
+  const big = ring => ring.length >= 4 && Math.abs(area(ring)) >= MIN_RING_AREA;
+  const kept = polygons.map(poly => poly.map(ring => simplify(ring)))
+    .filter(poly => big(poly[0]))
+    .map(poly => [poly[0]].concat(poly.slice(1).filter(big)));
+  if (!kept.length) {
+    const all = polygons.map(poly => poly[0]).sort((a, b) => Math.abs(area(b)) - Math.abs(area(a)));
+    kept.push([simplify(all[0], 0).slice()]);
+  }
+  return kept;
+}
+
+// A geoBoundaries ADM1 file (one country): each region by its ISO 3166-2
+// code (MA-06), which is also its code in the app.
+function readGeoBoundaries(file, cc) {
+  const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const alt = GEOBOUNDARIES[cc];
+  return doc.features.map(feature => {
+    const p = feature.properties;
+    if (!/^[A-Z]{2}-[A-Z0-9]{1,3}$/.test(p.shapeISO) || p.shapeISO.slice(0, 2) !== cc) throw new Error('Unexpected shapeISO ' + p.shapeISO);
+    const polygons = feature.geometry.type === 'Polygon' ? [feature.geometry.coordinates] : feature.geometry.coordinates;
+    return {
+      cc, code: p.shapeISO, name: clean(p.shapeName), type: 'Region', group: '',
+      alt: (alt[p.shapeISO] || []).map(clean), original: polygons, polygons: keptPolygons(polygons)
+    };
+  });
+}
 
 // Douglas-Peucker on one ring, on degrees, then rounded to the grid.
 function simplify(ring, tolerance) {
@@ -205,6 +240,8 @@ function writeShapes(regions, groups, countries) {
     const own = groups.filter(g => g.cc === cc);
     const file = {
       v: 1, cc,
+      // Shapes from geoBoundaries stay under their licence (ODbL asks it of a file made from them).
+      ...(GEOBOUNDARIES[cc] ? { source: 'geoBoundaries gbOpen, © OpenStreetMap contributors, ODbL 1.0 (opendatacommons.org/licenses/odbl/1-0/)' } : {}),
       groups: own.map(g => [g.code, g.name]),
       regions: byCountry[cc].sort((a, b) => a.code.localeCompare(b.code)).map(r => [
         r.code, r.name, r.type, r.groupEntry ? own.indexOf(r.groupEntry) : -1,
@@ -272,7 +309,8 @@ function assignRegions(cities, regions) {
 //               GeoNames id (base 36). Biggest cities first.
 function writePlaces(countries, regions, groups, cities) {
   const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
-  const lines = ['#PIBBOY places 1: cities from GeoNames cities15000 (CC BY 4.0, geonames.org), regions from Natural Earth (public domain)'];
+  const lines = ['#PIBBOY places 1: cities from GeoNames cities15000 (CC BY 4.0, geonames.org), regions from Natural Earth (public domain) ' +
+    'and, for Morocco, geoBoundaries (ODbL 1.0, © OpenStreetMap contributors)'];
   lines.push('#countries');
   Object.keys(countries).sort().forEach(cc => lines.push(cc + '\t' + countries[cc]));
   lines.push('#groups');
