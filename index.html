@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- Only this site's own scripts may run, so text that ever reached the page unescaped still
-     couldn't run code. Everything, fonts included, comes from this site, except the MAP tab's
-     pictures (CARTO's tiles); style attributes set the bars' widths; file: keeps it working when
-     index.html is opened straight from disk. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; font-src 'self' file:; img-src 'self' file: data: https://*.basemaps.cartocdn.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+     couldn't run code. Everything, fonts and the map's worker included, comes from this site,
+     except the MAP tab's data (OpenFreeMap's vector tiles); style attributes set the bars' widths;
+     file: keeps it working when index.html is opened straight from disk. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; font-src 'self' file:; img-src 'self' file: data:; connect-src 'self' https://tiles.openfreemap.org; object-src 'none'; base-uri 'self'; form-action 'none'">
 <title>MALIK // Status Terminal</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230d0602'/%3E%3Ccircle cx='8' cy='8' r='4' fill='%23e8a33d'/%3E%3C/svg%3E">
 <!-- Installable on a phone (manifest + sw.js, registered in js/main.js). -->
@@ -25,6 +25,7 @@
 <script defer src="js/mascot.js"></script>
 <script defer src="js/crt.js"></script>
 <script defer src="js/tilt.js"></script>
+<script defer src="js/fog.js"></script>
 <script defer src="js/map.js"></script>
 <script defer src="js/bulk.js"></script>
 <script defer src="js/events.js"></script>
@@ -74,7 +75,7 @@
       <section class="tab-content" id="tab-status"></section>
       <section class="tab-content" id="tab-quests" style="display:none"></section>
       <section class="tab-content" id="tab-items" style="display:none"></section>
-      <!-- Built the first time it's opened (js/map.js), with Leaflet (vendor/leaflet/). -->
+      <!-- Built the first time it's opened (js/map.js), with MapLibre (vendor/maplibre/). -->
       <section class="tab-content" id="tab-map" style="display:none"></section>
       <section class="tab-content" id="tab-log" style="display:none"></section>
 

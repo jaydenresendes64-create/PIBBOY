@@ -21,6 +21,7 @@
   // (256 * 2^zoom), that's its pixel on the map.
   var MAX_LAT = 85.0511287798;
   var EARTH_M = 40075016.686;             // the equator's length, in metres
+  var EARTH_R = 6371008.8;                // the Earth's mean radius, in metres
   function mercX(lon){ return (lon+180)/360; }
   function mercY(lat){
     var s = Math.sin(clamp(lat, -MAX_LAT, MAX_LAT)*Math.PI/180);
@@ -36,7 +37,65 @@
     var r = Math.PI/180;
     var a = Math.pow(Math.sin((lat2-lat1)*r/2), 2) +
       Math.cos(lat1*r)*Math.cos(lat2*r)*Math.pow(Math.sin((lon2-lon1)*r/2), 2);
-    return 2*6371008.8*Math.asin(Math.min(1, Math.sqrt(a)));
+    return 2*EARTH_R*Math.asin(Math.min(1, Math.sqrt(a)));
+  }
+
+  // The box [[west, south], [east, north]] of a square `metres` wide
+  // around a point (what the map shows to focus on a place).
+  function boundsAround(lat, lon, metres){
+    var dLat = metres/2/EARTH_R*180/Math.PI;
+    var dLon = dLat/Math.max(0.01, Math.cos(clamp(lat, -MAX_LAT, MAX_LAT)*Math.PI/180));
+    var mid = clamp(lat, -MAX_LAT+dLat, MAX_LAT-dLat);        // slid back onto the map near a pole
+    return [[Math.max(-180, lon-dLon), Math.max(-MAX_LAT, mid-dLat)],
+      [Math.min(180, lon+dLon), Math.min(MAX_LAT, mid+dLat)]];
+  }
+  // The box around every place (each circle twice its radius, each region
+  // whose shape is loaded), or null when there's none.
+  function placesBounds(){
+    var m = app.state.map, box = null;
+    function add(b){
+      if (!box){ box = [b[0].slice(), b[1].slice()]; return; }
+      box[0][0] = Math.min(box[0][0], b[0][0]); box[0][1] = Math.min(box[0][1], b[0][1]);
+      box[1][0] = Math.max(box[1][0], b[1][0]); box[1][1] = Math.max(box[1][1], b[1][1]);
+    }
+    m.cities.concat(m.pins).forEach(function(p){ add(boundsAround(p.lat, p.lon, p.radius*2)); });
+    m.regions.forEach(function(r){
+      var shape = shapeOf(r.code, r.cc);
+      if (shape) add([[shape.lonBox[0], shape.lonBox[1]], [shape.lonBox[2], shape.lonBox[3]]]);
+    });
+    return box;
+  }
+
+  // ---------- the map's tiles ----------
+  // The map (data/map-style.json) asks for omt://planet/{z}/{x}/{y}; they
+  // come from OpenFreeMap (see README "MAP tab"). Anything else: null.
+  var TILE_SERVER = 'https://tiles.openfreemap.org/planet/latest/';
+  function tileUrl(url){
+    var m = /^omt:\/\/planet\/(\d{1,2})\/(\d{1,7})\/(\d{1,7})$/.exec(String(url));
+    if (!m) return null;
+    var z = +m[1], x = +m[2], y = +m[3], n = Math.pow(2, z);
+    return z<=14 && x<n && y<n ? TILE_SERVER+z+'/'+x+'/'+y+'.pbf' : null;
+  }
+  // The tile the map gets for one that couldn't load (offline and never
+  // seen): a vector tile holding one square a bit bigger than the tile, in
+  // a layer called "nodata", which the style draws as a faint grid.
+  function noDataTile(){
+    function varint(out, n){ while (n>127){ out.push((n & 127) | 128); n = Math.floor(n/128); } out.push(n); }
+    function zigzag(n){ return n<0 ? -2*n-1 : 2*n; }
+    function field(out, tag, bytes){ varint(out, tag); varint(out, bytes.length); bytes.forEach(function(b){ out.push(b); }); }
+    // Move to (-64, -64), three lines round a 4224-unit square, close.
+    var geometry = [];
+    [9, zigzag(-64), zigzag(-64), 26, zigzag(4224), 0, 0, zigzag(4224), zigzag(-4224), 0, 15].forEach(function(n){ varint(geometry, n); });
+    var feature = [24, 3];                      // type: polygon
+    field(feature, 34, geometry);               // geometry, packed
+    var layer = [];
+    field(layer, 10, Array.from('nodata', function(c){ return c.charCodeAt(0); }));   // name
+    field(layer, 18, feature);                  // the feature
+    layer.push(40); varint(layer, 4096);        // extent
+    layer.push(120, 2);                         // version 2
+    var tile = [];
+    field(tile, 26, layer);                     // the layer
+    return new Uint8Array(tile).buffer;
   }
 
   // Inside a ring given as a flat list [lon, lat, lon, lat, ...].
@@ -518,6 +577,10 @@
     mercY: mercY,
     pixelsPerMetre: pixelsPerMetre,
     distance: distance,
+    boundsAround: boundsAround,
+    placesBounds: placesBounds,
+    tileUrl: tileUrl,
+    noDataTile: noDataTile,
     inShape: inShape,
     parsePlaces: parsePlaces,
     loadPlaces: loadPlaces,

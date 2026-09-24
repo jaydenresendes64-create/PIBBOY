@@ -81,8 +81,9 @@
  *
  * SCRIPTS — every file attaches to one namespace, window.StatusTerminal, and
  * index.html loads them in dependency order: state → storage → ai → places →
- * render → mascot → crt → tilt → map → bulk → events → main (map.js loads Leaflet,
- * vendor/leaflet/, the first time MAP opens). They are plain scripts rather than ES modules so the app
+ * render → mascot → crt → tilt → fog → map → bulk → events → main (map.js loads
+ * MapLibre, vendor/maplibre/, the first time MAP opens: the one module, needing
+ * http(s) like the map's lists). They are plain scripts rather than ES modules so the app
  * still runs when index.html is opened straight from disk (file://), where
  * browsers refuse to load modules. The tests (tests/) load the same files in
  * Node: `node --test`.

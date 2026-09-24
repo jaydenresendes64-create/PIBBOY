@@ -15,30 +15,37 @@
  *
  * The optional AI function (api/) is never cached.
  *
- * The MAP tab's pictures (tiles, from CARTO) are kept in their own cache as
- * they're seen, at most TILE_MAX of them (the oldest go first), so the
- * places already looked at still show offline. Only tiles actually shown are
- * kept, never fetched ahead. The map's city and region list
- * (data/places.txt) is cached at install with the app, so city search works
- * offline from the first open; the region shapes (data/regions/) are cached
- * like the app's files, the first time each is used.
+ * The MAP tab: MapLibre (vendor/maplibre/), the map's style
+ * (data/map-style.json, whose labels use the app's own fonts) and the city
+ * and region list (data/places.txt) are cached at install with the app, so
+ * the map and city search work offline from the first open; the region
+ * shapes (data/regions/) are cached like the app's files, the first time
+ * each is used. The map's data (vector tiles, from OpenFreeMap) are kept in
+ * their own cache as they're seen, at most TILE_MAX of them (the oldest go
+ * first), so the places already looked at still show offline. Only tiles
+ * actually shown are kept, never fetched ahead (OpenFreeMap's terms forbid
+ * bulk downloads). A kept tile older than TILE_REFRESH_MS is shown, then
+ * fetched again in the background. Offline, a tile never seen fails, and
+ * the map draws its faint grid there (js/map.js).
  */
 'use strict';
 
 var CACHE_PREFIX = 'status-terminal-';
-var CACHE = CACHE_PREFIX + 'v6';
-var TILE_CACHE = CACHE_PREFIX + 'tiles';       // kept across versions
-var TILE_HOST = /(^|\.)basemaps\.cartocdn\.com$/;
-var TILE_MAX = 400;
+var CACHE = CACHE_PREFIX + 'v7';
+var TILE_CACHE = CACHE_PREFIX + 'vector-tiles';     // kept across versions
+var TILE_HOST = 'tiles.openfreemap.org';
+var TILE_MAX = 800;                                 // about 50 MB at most
+var TILE_REFRESH_MS = 30*864e5;                     // OpenFreeMap's data changes every week
+var KEPT_AT = 'x-kept-at';
 
 // Cached at install, so the app opens offline after the first visit.
 var APP_SHELL = [
   './',
   'index.html',
   'css/terminal.css',
-  'js/state.js', 'js/storage.js', 'js/ai.js', 'js/places.js', 'js/render.js', 'js/mascot.js', 'js/crt.js', 'js/tilt.js', 'js/map.js', 'js/bulk.js', 'js/events.js', 'js/main.js',
-  'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css',
-  'data/places.txt',
+  'js/state.js', 'js/storage.js', 'js/ai.js', 'js/places.js', 'js/render.js', 'js/mascot.js', 'js/crt.js', 'js/tilt.js', 'js/fog.js', 'js/map.js', 'js/bulk.js', 'js/events.js', 'js/main.js',
+  'vendor/maplibre/maplibre-gl.mjs', 'vendor/maplibre/maplibre-gl-shared.mjs', 'vendor/maplibre/maplibre-gl-worker.mjs', 'vendor/maplibre/maplibre-gl.css',
+  'data/map-style.json', 'data/places.txt',
   'images/mascot.png', 'images/mascot-hand.svg',
   'fonts/vt323.woff2', 'fonts/ibm-plex-mono.woff2',
   'manifest.webmanifest',
@@ -103,29 +110,34 @@ function networkFirst(event){
   });
 }
 
-// A map tile: the kept copy, else the network (then kept). Only a readable
-// (CORS) answer is kept: an opaque one would take far more room. Offline,
-// a tile never seen is an empty picture: the map's own dark grid shows
-// through, and the page gets no network error for it.
-var NO_TILE = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAXpeqz8AAAAASUVORK5CYII=';
-function emptyTile(){
-  var bytes = Uint8Array.from(atob(NO_TILE), function(c){ return c.charCodeAt(0); });
-  return new Response(bytes, {status:200, headers:{'Content-Type':'image/png'}});
-}
+// A map tile: the kept copy, else the network (then kept, with the time it
+// was kept). Only a readable (CORS) answer is kept: 200, or 204 for "nothing
+// here". Offline, a tile never seen is an empty answer marked X-Tile-Missing
+// (js/map.js draws the grid there), not a network error in the console.
 function tile(event){
   var request = event.request;
   return caches.open(TILE_CACHE).then(function(cache){
-    return cache.match(request).then(function(cached){
-      if (cached) return cached;
-      return fetch(request).then(function(response){
-        if (response.status===200 && response.type==='cors'){
-          var copy = response.clone();
-          event.waitUntil(cache.put(request, copy).then(function(){ return trim(cache); }));
+    function fresh(){
+      return fetch(request.url, {mode:'cors', credentials:'omit'}).then(function(response){
+        if ((response.status===200 || response.status===204) && response.type==='cors'){
+          event.waitUntil(response.clone().arrayBuffer().then(function(body){
+            var headers = new Headers(response.headers);
+            headers.set(KEPT_AT, String(Date.now()));
+            var copy = new Response(response.status===204 ? null : body, {status:response.status, statusText:response.statusText, headers:headers});
+            return cache.put(request.url, copy).then(function(){ return trim(cache); });
+          }).catch(function(){}));
         }
         return response;
       });
+    }
+    return cache.match(request.url).then(function(cached){
+      if (!cached) return fresh();
+      if (Date.now()-Number(cached.headers.get(KEPT_AT)||0) > TILE_REFRESH_MS) event.waitUntil(fresh().catch(function(){}));
+      return cached;
     });
-  }).catch(emptyTile);
+  }).catch(function(){
+    return new Response(null, {status:200, headers:{'X-Tile-Missing':'1'}});
+  });
 }
 function trim(cache){
   return cache.keys().then(function(keys){
@@ -140,7 +152,7 @@ self.addEventListener('fetch', function(event){
   if (url.origin===self.location.origin){
     if (request.url.indexOf(API_URL)===0) return;      // never cached
     event.respondWith(networkFirst(event));
-  } else if (url.protocol==='https:' && TILE_HOST.test(url.hostname)){
+  } else if (url.protocol==='https:' && url.hostname===TILE_HOST){
     event.respondWith(tile(event));
   }
 });
