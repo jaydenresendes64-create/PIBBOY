@@ -19,6 +19,8 @@ js/ai.js            journal analysis client + offline keyword rules
 js/render.js        builds each tab
 js/events.js        user actions
 js/main.js          startup
+sw.js               service worker: offline use (network first, so updates show right away)
+manifest.webmanifest name, colours and icons (icons/) for installing on a phone
 api/analyze.js      optional serverless AI function (not used on GitHub Pages, see below)
 .nojekyll           tells GitHub Pages to serve the files as they are, without Jekyll
 ```
@@ -32,9 +34,27 @@ https://jaydenresendes64-create.github.io/PIBBOY/ a minute or two later.
 There is no server and no API key. The journal uses the offline keyword rules in `js/ai.js`, and the
 footer shows `AI analysis: offline rules`.
 
+## Install it on your phone / use it offline
+
+Open the site once while online, then:
+
+- **iPhone (Safari):** Share → **Add to Home Screen**.
+- **Android (Chrome):** menu ⋮ → **Install app** (or **Add to Home screen**).
+
+It opens full screen like an app and keeps working without a connection. Updates still arrive
+normally: while online the app loads from GitHub Pages like any website, and the copy saved on the
+phone is only used when there's no connection. Nothing needs to change in `sw.js` when you update
+the app.
+
+Where your data lives: on Android the installed app shares it with Chrome. On iPhone the Home Screen
+app keeps its own data, separate from Safari, so use **Export backup** in Safari and **Import backup**
+in the app to bring it over.
+
 ## Run it locally
 
-Double-click `index.html`. Everything works the same as on GitHub Pages.
+Double-click `index.html`. Everything works the same as on GitHub Pages, except installing and
+offline use, which need the site to be served over http(s) (for example `npx http-server` in this
+folder, then http://localhost:8080).
 
 ## Your data
 
