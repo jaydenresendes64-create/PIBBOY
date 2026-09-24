@@ -19,6 +19,7 @@ js/ai.js            journal analysis client + offline keyword rules
 js/render.js        builds each tab
 js/mascot.js        when the mascot walks or gestures (his moves are in css/terminal.css)
 js/crt.js           the screen's rare flicker (the tube look itself is in css/terminal.css)
+js/tilt.js          3D tilt: the screen's layers follow the phone's motion (or the mouse)
 js/events.js        user actions
 js/main.js          startup
 sw.js               service worker: offline use (network first for the app, so updates show right away)
@@ -55,6 +56,15 @@ Fonts again, even on a bad connection.
 Where your data lives: on Android the installed app shares it with Chrome. On iPhone the Home Screen
 app keeps its own data, separate from Safari, so use **Export backup** in Safari and **Import backup**
 in the app to bring it over.
+
+## 3D tilt
+
+The footer link **3D tilt: off/on** makes the screen's layers follow the phone's motion (or, lightly,
+the mouse on a computer): the glass, scanlines and mascot turn a little, while everything you tap only
+shifts a few pixels, so taps land where you aim. It's off by default and remembered on each device.
+On iPhone, turning it on asks for motion access (allow it); if iOS asks again after reopening the app,
+the first tap anywhere brings the question back. It pauses in the background and never runs with
+**Reduce Motion** switched on.
 
 ## Run it locally
 

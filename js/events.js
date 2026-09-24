@@ -392,6 +392,7 @@
       else if (e.target.id==='analyze-btn') analyzeEntry();
       else if (e.target.id==='accept-proposal-btn') acceptProposal();
       else if (e.target.id==='reject-proposal-btn') rejectProposal();
+      else if (e.target.id==='tilt-btn'){ if (ST.tilt) ST.tilt.toggle(); }
       else if (e.target.id==='export-btn') exportData();
       else if (e.target.id==='import-btn') el('import-file').click();
       else if (e.target.id==='import-confirm-btn') confirmImport();

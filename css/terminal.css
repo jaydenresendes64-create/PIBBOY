@@ -38,14 +38,19 @@ button{ cursor:pointer; }
   max-width:520px;
   margin:0 auto;
   min-height:100vh;
-  border-left:1px solid var(--line);
-  border-right:1px solid var(--line);
   padding:16px 16px 32px;
   overflow:hidden;
 }
+/* Everything you tap. Above the scanlines (2) and the mascot (1). With 3D
+   tilt on (js/tilt.js) it only shifts, at most 4px, and never turns. */
+.screen{ position:relative; z-index:3; }
+/* The decorative layers (scanlines, glass, mascot) are the ones that turn with
+   3D tilt, so the scanlines stay put on the screen, like on a tube, rather
+   than scroll with the page. */
 .scan-overlay{
   pointer-events:none;
-  position:absolute; inset:0;
+  position:fixed; top:0; bottom:0; left:0; right:0;
+  max-width:520px; margin:0 auto;
   background:repeating-linear-gradient(
     to bottom, rgba(232,163,61,0.045) 0px, rgba(232,163,61,0.045) 1px,
     transparent 2px, transparent 3px
@@ -55,13 +60,16 @@ button{ cursor:pointer; }
 }
 
 /* The tube's glass, fixed over the screen (the page scrolls under it, like
-   behind a real tube): edges and corners a little darker, and a faint inner
-   shadow along the frame, so the display looks slightly bulged. Shading only,
-   no distortion. Above the page (3), under the toasts; taps go through it. */
+   behind a real tube): edges and corners a little darker, and the frame's
+   edge with a faint inner shadow, so the display looks slightly bulged.
+   Shading only, no distortion. Above the page (3), under the toasts; taps go
+   through it. */
 .crt{
   pointer-events:none;
   position:fixed; top:0; bottom:0; left:0; right:0;
   max-width:520px; margin:0 auto;
+  border-left:1px solid var(--line);
+  border-right:1px solid var(--line);
   box-shadow:inset 0 0 36px rgba(0,0,0,0.55), inset 0 0 3px rgba(232,163,61,0.12);
   z-index:4;
 }
@@ -527,8 +535,9 @@ button{ cursor:pointer; }
   font-size:0.68rem; color:var(--text-dim); letter-spacing:0.04em; position:relative; z-index:3;
   flex-wrap:wrap; gap:8px;
 }
-.footer-actions{ display:flex; gap:10px; }
-.footer-actions button{ color:var(--text-dim); text-decoration:underline; font-size:0.68rem; }
+/* Four links fit on one line at 375px; narrower, they wrap as whole links. */
+.footer-actions{ display:flex; flex-wrap:wrap; gap:20px 10px; }
+.footer-actions button{ color:var(--text-dim); text-decoration:underline; font-size:0.68rem; padding:1px 2px; white-space:nowrap; }
 .reset-warning{ color:var(--danger); }
 #reset-confirm-area button{ text-decoration:underline; font-size:0.68rem; margin-left:6px; }
 #reset-confirm-btn, #import-confirm-btn{ color:var(--danger); }

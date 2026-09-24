@@ -415,6 +415,7 @@
     questName.textContent = name;
     toast('levelup-banner quest-banner', 'QUEST COMPLETED — ', 3200).appendChild(questName);
   }
+  function showNotice(text){ toast('xp-toast', text, 2600).style.animationDuration = '2.6s'; }
   function showSaveWarning(){ toast('xp-toast save-warning', 'Not saved — storage unavailable', 2600); }
   function showConflictWarning(){
     toast('xp-toast save-warning', 'Changed in another window — your last change wasn’t saved', 4000).style.animationDuration = '4s';
@@ -468,6 +469,7 @@
     showXpToast: showXpToast,
     showLevelUp: showLevelUp,
     showQuestCompleted: showQuestCompleted,
+    showNotice: showNotice,
     showSaveWarning: showSaveWarning,
     showConflictWarning: showConflictWarning,
     showLoadError: showLoadError,
