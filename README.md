@@ -20,7 +20,7 @@ js/render.js        builds each tab
 js/mascot.js        when the mascot walks or gestures (his moves are in css/terminal.css)
 js/events.js        user actions
 js/main.js          startup
-sw.js               service worker: offline use (network first, so updates show right away)
+sw.js               service worker: offline use (network first for the app, so updates show right away)
 manifest.webmanifest name, colours and icons (icons/) for installing on a phone
 images/mascot.png   the amber mascot in the top-right corner
 api/analyze.js      optional serverless AI function (not used on GitHub Pages, see below)
@@ -45,9 +45,11 @@ Open the site once while online, then:
 - **Android (Chrome):** menu ⋮ → **Install app** (or **Add to Home screen**).
 
 It opens full screen like an app and keeps working without a connection. Updates still arrive
-normally: while online the app loads from GitHub Pages like any website, and the copy saved on the
-phone is only used when there's no connection. Nothing needs to change in `sw.js` when you update
-the app.
+normally: while online the app loads from GitHub Pages like any website (checked against the server
+on every open, so a new version shows up the next time you open it), and the copy saved on the phone
+is only used when there's no connection. Nothing needs to change in `sw.js` when you update the app.
+The terminal fonts are kept on the phone after the first visit, so the app never waits for Google
+Fonts again, even on a bad connection.
 
 Where your data lives: on Android the installed app shares it with Chrome. On iPhone the Home Screen
 app keeps its own data, separate from Safari, so use **Export backup** in Safari and **Import backup**

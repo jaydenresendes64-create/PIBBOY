@@ -14,9 +14,11 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-title" content="MALIK">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<!-- Only the weights the page uses (400). Loaded with CORS so the service worker can keep a
+     readable copy for offline use (see sw.js). -->
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono&display=swap" rel="stylesheet" crossorigin>
 <link rel="stylesheet" href="css/terminal.css">
 <!-- Plain scripts sharing window.StatusTerminal, in dependency order (see js/state.js). -->
 <script defer src="js/state.js"></script>
