@@ -8,7 +8,7 @@
  *   level: number, xp: number, xpToNext: number, lifetimeXp: number,
  *   lifetimeLogEntries: number,             // every accepted entry, even past the 200 kept in `log`
  *   unspentSpecialPoints: number,           // level-up points not yet placed
- *   stats:  { STR,END,CHA,INT,AGI: number(0-10) },   // SPECIAL — user-placed only
+ *   stats:  { STR,END,CHA,INT,AGI: number(0-10) },   // SPECIAL — see "S.P.E.C.I.A.L." below
  *   skills: { SCIENCE,SPEECH,SURVIVAL,COOKING,FINANCE,MUSIC,BUSINESS: number(0-100) },
  *   quests: {
  *     mains: [ MainQuest ],                  // older saves had one, as `main`: see migrate()
@@ -40,10 +40,15 @@
  *
  * Every reward path (quest completion, bonus objective, journal proposal)
  * should express its reward as XP plus zero or more SkillGains, and apply
- * them through grantSkill()/grantStat()/addXp() rather than touching
- * state.skills / state.stats / state.xp directly — that's what keeps the
- * bounds checks and lifetime counters in one place instead of duplicated
- * at each call site.
+ * them through grantSkill()/addXp() rather than touching state.skills /
+ * state.xp directly — that's what keeps the bounds checks and lifetime
+ * counters in one place instead of duplicated at each call site.
+ *
+ * S.P.E.C.I.A.L.: `stats` only goes up one way. Each level-up adds one
+ * unspentSpecialPoint; the player taps a stat in the STATUS tab's level-up
+ * banner and confirms "Yes", which calls grantStat(key, 1) and spends the
+ * point. No reward (quest, bonus objective, journal proposal) and no button
+ * changes `stats` otherwise, and a journal proposal is XP + SkillGains only.
  *
  * SCRIPTS — every file attaches to one namespace, window.StatusTerminal, and
  * index.html loads them in dependency order: state → storage → ai → render →
@@ -104,7 +109,8 @@
     aiAvailable: false,
     pendingProposal: null,
     finishRename: null,         // saves the quest name being edited, while its box is open
-    confirmRemoveMain: null     // id of the main quest whose removal awaits "Yes, remove"
+    confirmRemoveMain: null,    // id of the main quest whose removal awaits "Yes, remove"
+    confirmSpecial: null        // SPECIAL key whose level-up point awaits "Yes"
   };
 
   function el(id){ return document.getElementById(id); }
@@ -199,9 +205,10 @@
   }
 
   // ---------- centralized reward logic ----------
-  // Every code path that hands out a skill or SPECIAL point goes through
-  // these two functions, so the bounds and validity checks live in one
-  // place instead of being copy-pasted at each call site.
+  // Every code path that hands out a skill point goes through grantSkill(),
+  // so the bounds and validity checks live in one place instead of being
+  // copy-pasted at each call site. grantStat() has a single caller: spending
+  // a level-up point, once the player confirmed it (see S.P.E.C.I.A.L. above).
   function grantSkill(key, amount){
     var state = app.state;
     if (SKILL_KEYS.indexOf(key)===-1 || !amount) return;

@@ -27,10 +27,6 @@
       '<div class="stat-label">'+STAT_LABELS[key]+'</div>'+
       '<div class="seg-bar">'+segs+'</div>'+
       '<div class="stat-value">'+value+'</div>'+
-      '<div class="stepper">'+
-        '<button class="step-btn" data-action="stat" data-key="'+key+'" data-dir="-1" aria-label="Decrease '+STAT_LABELS[key]+'">-</button>'+
-        '<button class="step-btn" data-action="stat" data-key="'+key+'" data-dir="1" aria-label="Increase '+STAT_LABELS[key]+'">+</button>'+
-      '</div>'+
     '</div>';
   }
 
@@ -52,12 +48,24 @@
     var state = app.state;
     var pts = state.unspentSpecialPoints||0;
     var html = '';
+    // Level-up points are the only way S.P.E.C.I.A.L. goes up. Tapping a
+    // stat asks first, inside the banner; only "Yes" spends the point.
     if (pts>0){
+      var asking = app.confirmSpecial;
       html += '<div class="assign-banner">'+
         '<div class="assign-label">&#9733; '+pts+' SPECIAL point'+(pts>1?'s':'')+' to assign</div>'+
-        '<div class="assign-buttons">'+
-          STAT_KEYS.map(function(k){ return '<button class="assign-btn" data-action="special-assign" data-key="'+k+'">'+STAT_LABELS[k]+'</button>'; }).join('')+
-        '</div>'+
+        (asking ?
+          '<div class="assign-buttons">'+
+            '<span class="assign-question">Add 1 point to '+STAT_LABELS[asking]+'?</span>'+
+            '<button class="assign-btn" data-action="special-yes">Yes</button>'+
+            '<button class="assign-btn assign-cancel" data-action="special-no">Cancel</button>'+
+          '</div>' :
+          '<div class="assign-buttons">'+
+            STAT_KEYS.map(function(k){
+              var maxed = state.stats[k]>=10;
+              return '<button class="assign-btn" data-action="special-assign" data-key="'+k+'"'+(maxed?' disabled':'')+'>'+STAT_LABELS[k]+'</button>';
+            }).join('')+
+          '</div>')+
       '</div>';
     }
     html += '<div class="panel-title">S.P.E.C.I.A.L.</div>';

@@ -156,13 +156,16 @@ button{ cursor:pointer; }
 .assign-label{ font-size:0.82rem; color:var(--amber); margin-bottom:8px; }
 .assign-buttons{ display:flex; flex-wrap:wrap; gap:6px; }
 .assign-btn{ border:1px solid var(--amber-dim); border-radius:3px; background:var(--bg); color:var(--amber); padding:7px 10px; font-size:0.76rem; min-height:34px; }
+.assign-btn:disabled{ opacity:0.4; cursor:default; }
+.assign-btn.assign-cancel{ border-color:var(--line); color:var(--phosphor-dim); }
+.assign-question{ flex:1 1 100%; font-size:0.82rem; color:var(--phosphor); }
 .stats-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
 .stats-cell{ border:1px solid var(--line); border-radius:3px; padding:10px 6px; text-align:center; }
 .stats-num{ font-family:'VT323',ui-monospace,monospace; font-size:1.4rem; color:var(--amber); }
 .stats-label{ font-size:0.62rem; color:var(--phosphor-dim); margin-top:2px; line-height:1.2; }
 
 .stat-row{
-  display:grid; grid-template-columns:1fr auto 1.6em auto; align-items:center;
+  display:grid; grid-template-columns:1fr auto 1.6em; align-items:center;
   gap:8px; padding:6px 0; border-bottom:1px solid var(--line);
 }
 .stat-row:last-child{ border-bottom:none; }

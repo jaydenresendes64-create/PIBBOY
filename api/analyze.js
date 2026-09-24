@@ -25,14 +25,28 @@ const MAX_OUTPUT_TOKENS = 300;
 const UPSTREAM_TIMEOUT_MS = 9000;      // under the 10 s default limit of Vercel's Hobby plan
 const SKILL_KEY = /^[A-Z][A-Z_]{1,19}$/;
 
-// Same prompt the in-Claude version sent through sample().
+// The prompt the in-Claude version sent through sample(), plus the S.P.E.C.I.A.L. rule.
 function buildPrompt(text, skillKeys) {
   return 'You are a supportive game master converting a real personal diary entry into small role-playing game rewards for a life-tracking app.\n' +
     'Valid skill keys: ' + skillKeys.join(', ') + '.\n' +
     'Diary entry: "' + text.replace(/"/g, "'") + '"\n' +
     'Reply with ONLY JSON, no other text, in exactly this shape:\n' +
     '{"xp": <integer 5-80>, "reason": "<reason, under 10 words>", "skillGains": [{"skill": "<valid skill key>", "amount": <1-3>}]}\n' +
-    'Include at most 2 skillGains, only ones clearly supported by the entry. Empty array is fine. If the entry is vague, use xp 5-10 and an empty array.';
+    'Include at most 2 skillGains, only ones clearly supported by the entry. Empty array is fine. If the entry is vague, use xp 5-10 and an empty array.\n' +
+    'Never reward S.P.E.C.I.A.L. attributes (Strength, Perception, Endurance, Charisma, Intelligence, Agility, Luck): they only change on level-up.';
+}
+
+// Only XP, a reason and gains in the skills that were sent come back:
+// anything else the model adds (a S.P.E.C.I.A.L. stat, an extra field) is
+// dropped. The browser filters again before showing the proposal.
+function toProposal(value, skillKeys) {
+  return {
+    xp: value.xp,
+    reason: value.reason,
+    skillGains: Array.isArray(value.skillGains)
+      ? value.skillGains.filter((g) => g && typeof g === 'object' && skillKeys.includes(g.skill))
+      : [],
+  };
 }
 
 // The model is told to reply with bare JSON; tolerate a ```json fence or a
@@ -128,5 +142,5 @@ module.exports = async function handler(req, res) {
   const choice = data && Array.isArray(data.choices) ? data.choices[0] : null;
   const proposal = parseJsonObject(choice && choice.message ? choice.message.content : null);
   if (!proposal) return res.status(502).json({ error: 'bad_model_output' });
-  return res.status(200).json({ proposal });
+  return res.status(200).json({ proposal: toProposal(proposal, skills) });
 };

@@ -63,6 +63,8 @@
     return !!err && PERMANENT_ERRORS.indexOf(err.code)!==-1;
   }
 
+  // A proposal is XP plus skill gains, nothing else: only SKILL_KEYS pass,
+  // so it can never raise S.P.E.C.I.A.L. (that takes a level-up point).
   function sanitizeProposal(data){
     data = data || {};
     var xp = clamp(Math.round(Number(data.xp)||10),1,150);
