@@ -23,6 +23,7 @@ js/crt.js           the screen's rare flicker (the tube look itself is in css/te
 js/tilt.js          3D tilt: the screen's layers follow the phone's motion (or the mouse)
 js/places.js        the MAP tab's logic: positions, city and region lists, finding and revealing places
 js/map.js           the MAP tab (loads Leaflet the first time it's opened) and its fog of war
+js/bulk.js          MAP: "Add several places" (paste a list, review it, reveal it all)
 vendor/leaflet/     Leaflet 1.9.4, the map library (licence: vendor/leaflet/LICENSE)
 js/events.js        user actions
 js/main.js          startup
@@ -111,6 +112,14 @@ drawn over the tiles, redrawn at most once per frame while the map moves, and on
   Name it, add a note if you like; it reveals a 500 m circle (100 m to 5 km with the slider).
 - **I'm here:** asks for your location once (never followed afterwards) and offers to reveal the
   city you're in, your region, or a pin on the spot.
+- **Add several places:** paste a list, one place per line, like `Montréal, Canada` or
+  `region: Casablanca-Settat, Morocco` (a region or state after the city narrows it down:
+  `Springfield, Illinois, USA`). **Check the list** matches every line against the city list and the
+  regions (accents and capitals don't matter) and shows a review before anything is saved: what was
+  found (city or region, with its region and country; untick to leave one out), a choice when a
+  name is ambiguous or only close names were found (Marrakech → Marrakesh), and lines not found,
+  which you can fix and check again, skip, or place by hand with a tap on the map (a 3 km circle with
+  that name). **Reveal all** adds them all at once: one DISCOVERED banner, XP once per new place.
 - Tap a place in the lists (or its mark on the map) to go there, rename it, resize it, add a note or
   remove it (asks first).
 - The line above the map counts your places: "3 countries · 14 cities · 5 regions · 8 pins". The

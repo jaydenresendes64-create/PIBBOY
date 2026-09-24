@@ -380,6 +380,136 @@
       plural(c.regions, 'region', 'regions'), plural(c.pins, 'pin', 'pins')].join(' · ');
   }
 
+  // ---------- a pasted list (bulk add) ----------
+  // One line: "Montréal, Canada", "region: Casablanca-Settat, Morocco",
+  // "Springfield, Illinois, USA", "- Paris". Returns {raw, kind: 'city' or
+  // 'region', name, hint (a region or state, or ''), country (or null)}, or
+  // null for an empty line.
+  var REGION_PREFIX = /^(region|région|province|state|état|etat|departement|département)\s*:\s*/i;
+  var CITY_PREFIX = /^(city|ville|town)\s*:\s*/i;
+  function parseLine(raw){
+    var text = String(raw||'').replace(/^\s*(?:[-*•·]+|\d+[.)])\s+/, '').trim();
+    var kind = 'city';
+    if (REGION_PREFIX.test(text)){ kind = 'region'; text = text.replace(REGION_PREFIX, ''); }
+    else if (CITY_PREFIX.test(text)) text = text.replace(CITY_PREFIX, '');
+    var parts = text.split(',').map(function(p){ return p.trim(); }).filter(Boolean);
+    if (!parts.length) return null;
+    var country = parts.length>1 ? findCountry(parts[parts.length-1]) : null;
+    var middle = parts.slice(1, country ? -1 : parts.length);
+    return {raw:String(raw).trim(), kind:kind, name:parts[0], hint:middle.join(', '), country:country};
+  }
+  // What a line matches: {status, options, pick, fuzzy}. status: 'found'
+  // (one match), 'choose' (several: pick is the one chosen so far, the
+  // biggest; with fuzzy, only close names were found and nothing is
+  // chosen, pick -1) or 'missing'. Each option: {kind, city or region}.
+  var MAX_OPTIONS = 6;
+  function matchLine(line){
+    var key = foldName(line.name), cc = line.country ? line.country.cc : null;
+    var options = [], fuzzy = false;
+    if (line.kind==='city'){
+      options = cityMatches(key, cc, line.hint);
+      if (!options.length) options = regionMatches(key, cc);        // "Île-de-France, France"
+    } else {
+      options = regionMatches(key, cc);
+    }
+    if (!options.length){
+      fuzzy = true;
+      options = line.kind==='city' ? closeSpellings(key, cc).concat(cityStarts(key, cc)) : [];
+      if (!options.length) options = closeRegions(line.name, cc);
+    }
+    options = options.slice(0, MAX_OPTIONS);
+    if (!options.length) return {status:'missing', options:[], pick:-1, fuzzy:false};
+    if (options.length===1 && !fuzzy) return {status:'found', options:options, pick:0, fuzzy:false};
+    return {status:'choose', options:options, pick:fuzzy ? -1 : 0, fuzzy:fuzzy};
+  }
+  function asCity(c){ return {kind:'city', city:c}; }
+  function asRegion(r){ return {kind:'region', region:r}; }
+  function cityMatches(key, cc, hint){
+    if (!key) return [];
+    var found = db.cities.filter(function(c){ return c.key===key && (!cc || c.cc===cc); });
+    var hintKey = foldName(hint);
+    if (hintKey){
+      var narrowed = found.filter(function(c){ return c.region && inRegionNamed(c, hintKey); });
+      if (narrowed.length) found = narrowed;
+    }
+    return found.map(asCity);
+  }
+  function cityStarts(key, cc){
+    if (key.length<3) return [];
+    var out = [];
+    for (var i=0;i<db.cities.length && out.length<MAX_OPTIONS;i++){
+      var c = db.cities[i];
+      if (c.key.indexOf(key)===0 && (!cc || c.cc===cc)) out.push(asCity(c));
+    }
+    return out;
+  }
+  // Cities spelled almost the same ("Marrakech" for GeoNames' "Marrakesh"):
+  // one letter different per 5, the closest first, then the biggest.
+  function closeSpellings(key, cc){
+    if (key.length<4) return [];
+    var most = Math.max(1, Math.floor(key.length/5)), found = [];
+    db.cities.forEach(function(c){
+      if ((cc && c.cc!==cc) || Math.abs(c.key.length-key.length)>most) return;
+      var d = editDistance(key, c.key, most);
+      if (d<=most) found.push({c:c, d:d});
+    });
+    return found.sort(function(a, b){ return a.d-b.d; }).map(function(f){ return asCity(f.c); });
+  }
+  // Letters to change, add or remove to go from a to b (stops early past `most`).
+  function editDistance(a, b, most){
+    var prev = [], cur, i, j;
+    for (j=0;j<=b.length;j++) prev.push(j);
+    for (i=1;i<=a.length;i++){
+      cur = [i];
+      var low = i;
+      for (j=1;j<=b.length;j++){
+        cur.push(Math.min(prev[j]+1, cur[j-1]+1, prev[j-1]+(a.charAt(i-1)===b.charAt(j-1) ? 0 : 1)));
+        low = Math.min(low, cur[j]);
+      }
+      if (low>most) return most+1;
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+  function regionMatches(key, cc){
+    if (!key) return [];
+    return db.regions.filter(function(r){ return r.keys.indexOf(key)!==-1 && (!cc || r.cc===cc); })
+      .sort(function(a, b){ return b.isGroup-a.isGroup; }).map(asRegion);
+  }
+  // Regions sharing a word of 4 letters or more with the name typed:
+  // "Casablanca-Settat" finds "Grand Casablanca".
+  function words(name){
+    return String(name).split(/[^\p{L}\p{N}]+/u).map(foldName).filter(function(w){ return w.length>=4; });
+  }
+  function closeRegions(name, cc){
+    var typed = words(name);
+    if (!typed.length) return [];
+    return db.regions.filter(function(r){
+      if (cc && r.cc!==cc) return false;
+      var own = words(r.name);
+      return typed.some(function(w){ return own.indexOf(w)!==-1; });
+    }).map(asRegion);
+  }
+  // "Montréal — Québec, Canada", "Grand Casablanca — Region, Morocco".
+  function optionWhere(option){
+    if (option.kind==='city') return cityWhere(option.city);
+    var r = option.region;
+    return [r.type || 'Region', countryName(r.cc)].filter(Boolean).join(', ');
+  }
+  function optionName(option){ return option.kind==='city' ? option.city.name : option.region.name; }
+  // Every line of a pasted list, matched: [{line, match}] (at most MAX_LINES).
+  var MAX_LINES = 200;
+  function matchList(text){
+    return String(text||'').split(/\r?\n/).map(parseLine).filter(Boolean).slice(0, MAX_LINES).map(function(line){
+      return {line:line, match:matchLine(line)};
+    });
+  }
+  // Reveals every chosen option at once: [{kind, city or region}]. Returns
+  // the results (revealCity/revealRegion), for one banner and the XP.
+  function revealAll(options){
+    return options.map(function(o){ return o.kind==='city' ? revealCity(o.city) : revealRegion(o.region); });
+  }
+
   ST.places = {
     MAX_LAT: MAX_LAT,
     PIN_RADIUS: PIN_RADIUS,
@@ -411,6 +541,13 @@
     addPin: addPin,
     removePlace: removePlace,
     counts: counts,
-    countsText: countsText
+    countsText: countsText,
+    MAX_LINES: MAX_LINES,
+    parseLine: parseLine,
+    matchLine: matchLine,
+    matchList: matchList,
+    optionName: optionName,
+    optionWhere: optionWhere,
+    revealAll: revealAll
   };
 })(window.StatusTerminal);

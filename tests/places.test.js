@@ -147,3 +147,62 @@ test('lookup: the country, region and nearby city of a point', async () => {
   assert.equal(sea.city, null);
   assert.equal(sea.region, null);
 });
+
+// ---------- bulk add ----------
+test('parseLine: kinds, countries, hints, bullets', () => {
+  const l = x => app.plain(P.parseLine(x));
+  assert.deepEqual(Object.assign(l('Montréal, Canada'), { country: undefined }),
+    { raw: 'Montréal, Canada', kind: 'city', name: 'Montréal', hint: '', country: undefined });
+  assert.equal(l('Montréal, Canada').country.cc, 'CA');
+  const r = l('region: Casablanca-Settat, Morocco');
+  assert.deepEqual([r.kind, r.name, r.country.cc], ['region', 'Casablanca-Settat', 'MA']);
+  assert.equal(l('Région : Québec').kind, 'region');
+  const s = l('Springfield, Illinois, USA');
+  assert.deepEqual([s.name, s.hint, s.country.cc], ['Springfield', 'Illinois', 'US']);
+  assert.deepEqual([l('Springfield, Illinois').hint, l('Springfield, Illinois').country], ['Illinois', null]);
+  assert.equal(l('- Paris').name, 'Paris');
+  assert.equal(l('3. Lyon').name, 'Lyon');
+  assert.equal(l('   '), null);
+  assert.equal(l(', ,'), null);
+});
+
+test('matchLine: found, ambiguous (biggest first), close names, not found', () => {
+  const m = x => P.matchLine(P.parseLine(x));
+  const montreal = m('Montréal, Canada');
+  assert.equal(montreal.status, 'found');
+  assert.equal(montreal.options[0].city.gid, 6077243);
+  const paris = m('Paris');
+  assert.equal(paris.status, 'choose');
+  assert.equal(paris.pick, 0);
+  assert.equal(paris.options[0].city.cc, 'FR');
+  assert.equal(m('Paris, France').status, 'found');
+  const springfield = m('Springfield, Illinois');
+  assert.equal(springfield.status, 'found');
+  assert.equal(P.cityWhere(springfield.options[0].city), 'Illinois, United States');
+  const quebec = m('region: quebec');
+  assert.equal(quebec.status, 'found');
+  assert.equal(quebec.options[0].region.code, 'CAN-683');
+  // Natural Earth still has Morocco's old regions: close names to choose from, none chosen.
+  const casa = m('region: Casablanca-Settat, Morocco');
+  assert.equal(casa.status, 'choose');
+  assert.equal(casa.fuzzy, true);
+  assert.equal(casa.pick, -1);
+  assert.ok(casa.options.some(o => o.region.name === 'Grand Casablanca'));
+  assert.equal(m('Île-de-France, France').options[0].region.code, 'FRA-G-ile-de-france');
+  const marrakech = m('Marrakech, Morocco');                      // GeoNames writes Marrakesh
+  assert.equal(marrakech.status, 'choose');
+  assert.equal(marrakech.options[0].city.name, 'Marrakesh');
+  assert.equal(m('Atlantis, Greece').status, 'missing');
+  assert.equal(m('Qqqqzzz').status, 'missing');
+});
+
+test('matchList + revealAll: one pass, XP once per new place, nothing twice', () => {
+  const s = fresh();
+  const list = P.matchList('Montréal, Canada\n\nregion: Québec, Canada\nLaval, Canada\nMontréal\n');
+  assert.equal(list.length, 4);
+  const chosen = list.filter(x => x.match.pick >= 0).map(x => x.match.options[x.match.pick]);
+  const results = P.revealAll(chosen);
+  assert.equal(results.filter(r => r.isNew).length, 3);            // the second Montréal is already there
+  assert.equal(s.xp, 2 * ST.CITY_XP + ST.REGION_XP);
+  assert.equal(P.matchList('x\n'.repeat(500)).length, P.MAX_LINES);
+});

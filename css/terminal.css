@@ -685,6 +685,34 @@ button{ cursor:pointer; }
 .place-buttons .place-remove{ color:var(--danger); border-color:var(--danger); flex:0 0 auto; }
 .here-done{ font-size:0.82rem; color:var(--text-dim); padding:4px 0; }
 
+/* "Add several places": the list, then the review, a line each. */
+.bulk-text{ min-height:150px; font-size:0.85rem; }
+.bulk-lines{ margin-top:8px; max-height:60vh; overflow-y:auto; border-top:1px solid var(--line); }
+.bulk-line{
+  display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; padding:8px 0;
+  border-bottom:1px solid var(--line); font-size:0.82rem; min-height:44px;
+}
+.bulk-line input[type="checkbox"]{ width:22px; height:22px; accent-color:var(--phosphor); flex:0 0 auto; }
+.bulk-mark{ width:22px; text-align:center; color:var(--amber); }
+.bulk-name{ color:var(--amber); min-width:0; overflow-wrap:anywhere; }
+.bulk-where{ flex:1 1 100%; padding-left:30px; font-size:0.72rem; color:var(--text-dim); overflow-wrap:anywhere; }
+.bulk-kind{ border:1px solid var(--line); border-radius:3px; padding:0 4px; margin-right:2px; font-size:0.62rem; text-transform:uppercase; }
+.bulk-raw{ color:var(--phosphor); overflow-wrap:anywhere; min-width:0; }
+.bulk-note{ font-size:0.72rem; color:var(--text-dim); }
+.bulk-line.skipped .bulk-raw{ color:var(--text-dim); text-decoration:line-through; }
+.bulk-line select, .bulk-fix{
+  flex:1 1 100%; min-height:44px; border:1px solid var(--line); border-radius:3px; background:var(--bg);
+  padding:6px 8px; font-size:0.8rem; margin-top:0;
+}
+.bulk-actions{ display:flex; flex-wrap:wrap; gap:6px; flex:1 1 100%; }
+.bulk-actions button{
+  flex:1 1 auto; min-height:40px; padding:6px 8px; border:1px solid var(--line); border-radius:3px;
+  background:var(--bg); color:var(--phosphor); font-size:0.76rem;
+}
+.bulk-link{ position:relative; margin-left:auto; color:var(--text-dim); text-decoration:underline; font-size:0.74rem; padding:4px 2px; }
+.bulk-link::before{ content:''; position:absolute; inset:-10px -8px; }
+.place-buttons button:disabled{ opacity:0.5; cursor:default; }
+
 .map-search{ margin-top:14px; }
 .map-search input{
   width:100%; border:1px solid var(--line); border-radius:3px; background:var(--panel-alt);
@@ -697,6 +725,7 @@ button{ cursor:pointer; }
   background:var(--panel-alt); color:var(--phosphor); font-size:0.8rem;
 }
 .panel-count{ color:var(--amber); margin-left:4px; }
+#map-lists{ margin-top:18px; }
 .place-list{ display:flex; flex-direction:column; }
 .place-row, .map-result{
   display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%;

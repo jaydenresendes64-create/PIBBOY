@@ -403,6 +403,7 @@
         '<button data-map="here">I’m here</button>'+
         '<button data-map="drop-pin">Drop pin</button>'+
         '<button data-map="region">Mark a region</button>'+
+        '<button data-map="bulk">Add several places</button>'+
       '</div>'+
       '<div id="map-lists"></div>';
   }
@@ -849,11 +850,13 @@
     if (t.id==='place-name' && p) t.value = p.name;          // emptied: the name stays as it was
     else if (t.id==='place-radius' && p) renderLists();
     else if (t.id==='region-country' && panel && panel.kind==='region'){ panel.cc = t.value; renderPanel(); focusIn('#region-pick'); }
+    else if (ST.bulk) ST.bulk.onChange(t);
   }
   function onKeyDown(e){
     if (e.key!=='Enter') return;
     if (e.target.id==='map-search'){ e.preventDefault(); if (results[0]) pickCity(results[0]); }
     else if (e.target.id==='place-name'){ e.preventDefault(); e.target.blur(); }
+    else if (ST.bulk && ST.bulk.onEnter(e.target)) e.preventDefault();
   }
 
   // ---------- opening the tab ----------
@@ -886,6 +889,6 @@
     show: show, render: render, redrawFog: redrawFog,
     // for js/bulk.js
     renderPanel: renderPanel, openPanel: openPanel, closePanel: closePanel, currentPanel: currentPanel,
-    placeOnMap: placeOnMap, changed: changed, celebrate: celebrate, openPlace: openPlace
+    placeOnMap: placeOnMap, changed: changed, celebrate: celebrate, fitAll: fitAll
   };
 })(window.StatusTerminal);
