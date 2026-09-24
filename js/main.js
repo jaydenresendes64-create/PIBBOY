@@ -32,4 +32,12 @@
   }
 
   document.addEventListener('DOMContentLoaded', boot);
+
+  // Offline use and installing on a phone (see sw.js). Service workers need
+  // http(s), so there is none when index.html is opened straight from disk.
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+    });
+  }
 })(window.StatusTerminal);

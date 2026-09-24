@@ -6,6 +6,7 @@
  *
  * State {
  *   level: number, xp: number, xpToNext: number, lifetimeXp: number,
+ *   lifetimeLogEntries: number,             // every accepted entry, even past the 200 kept in `log`
  *   unspentSpecialPoints: number,           // level-up points not yet placed
  *   stats:  { STR,END,CHA,INT,AGI: number(0-10) },   // SPECIAL — user-placed only
  *   skills: { SCIENCE,SPEECH,SURVIVAL,COOKING,FINANCE,MUSIC,BUSINESS: number(0-100) },
@@ -46,6 +47,7 @@
   var DEFAULT_STATE = {
     level:2, xp:0, xpToNext:1000,
     lifetimeXp:0,
+    lifetimeLogEntries:0,
     unspentSpecialPoints:0,
     stats:{STR:4,END:3,CHA:4,INT:5,AGI:2},
     skills:{SCIENCE:21,SPEECH:42,SURVIVAL:23,COOKING:8,FINANCE:17,MUSIC:35,BUSINESS:5},
@@ -55,7 +57,7 @@
         {id:'b2',name:'Launch a project',xp:500,done:false}
       ]},
       side:[
-        {id:'s1',name:'Pass the PSSAC / CIZR certification',xp:150,done:false},
+        {id:'s1',name:'Earn a certification',xp:150,done:false},
         {id:'s2',name:'Build up savings',xp:100,done:false},
         {id:'s3',name:'Get back into consistent training',xp:100,done:false},
         {id:'s4',name:'Push the music project forward',xp:100,done:false}
@@ -70,12 +72,7 @@
       {id:'i1',name:'Phone',category:'MISC'},
       {id:'i2',name:'Keys',category:'IMPORTANT'}
     ],
-    finances:{
-      holdings:[
-        {id:'f1',label:'USDT',amount:855.8,rateToCAD:1.406},
-        {id:'f2',label:'CASH',amount:160,rateToCAD:1}
-      ]
-    },
+    finances:{ holdings:[] },   // starts empty: add your own in ITEMS → wallet
     log:[]
   };
 
@@ -132,6 +129,11 @@
   }
   function capsValue(){
     return totalHoldingsCAD() / CAD_PER_CAP;
+  }
+  // `log` only keeps the latest 200 entries. Saves made before
+  // lifetimeLogEntries existed start from the entries they still have.
+  function logEntryCount(){
+    return Math.max(app.state.lifetimeLogEntries||0, app.state.log.length);
   }
 
   // ---------- centralized reward logic ----------
@@ -230,12 +232,14 @@
       var rate = num(h.rateToCAD, 1);
       h.rateToCAD = rate>0 ? rate : 1;
     });
-    s.log = records(s.log, function(entry){
+    var log = records(s.log, function(entry){
       entry.date = text(entry.date, 40);
       entry.text = text(entry.text, 10000);
       entry.xp = num(entry.xp, 0);
       entry.reason = text(entry.reason, 200);
-    }).slice(-200);
+    });
+    s.lifetimeLogEntries = Math.max(log.length, Math.round(num(s.lifetimeLogEntries, 0)));
+    s.log = log.slice(-200);
     return s;
   }
 
@@ -260,6 +264,7 @@
   ST.sanitizeImported = sanitizeImported;
   ST.totalHoldingsCAD = totalHoldingsCAD;
   ST.capsValue = capsValue;
+  ST.logEntryCount = logEntryCount;
   ST.grantSkill = grantSkill;
   ST.grantStat = grantStat;
   ST.gainXp = gainXp;

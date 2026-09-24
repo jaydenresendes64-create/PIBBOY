@@ -73,27 +73,124 @@
     return {xp:xp, reason:reason, skillGains:skillGains};
   }
 
+  // ---------- offline rules ----------
+  // A keyword is a whole word or a phrase of whole words, never a fragment:
+  // 'ami' matches "j'ai vu mon ami" but not "examined". Case and accents are
+  // ignored ('étudié' also matches "Etudie"), so list each word form you want
+  // matched (run, ran, running). When two keywords start at the same word the
+  // longer one wins: "worked out" is exercise, not work.
+  var RULES = [
+    {skill:'SURVIVAL', xp:20, reason:'Physical activity', kws:[
+      'gym','workout','workouts','work out','worked out','working out','exercise','exercised','exercising',
+      'training','run','ran','running','jog','jogged','jogging','walk','walked','walking','hike','hiked',
+      'hiking','swim','swam','swimming','bike ride','biking','cycling','yoga','stretching','cardio',
+      'lifted weights','lifting','push ups','pushups','pull ups','pullups','squats','sport','sports',
+      'soccer','football','basketball','tennis','boxing','climbing',
+      'salle de sport','salle de gym','allé à la salle','allée à la salle','aller à la salle',
+      'entraînement','entraînements','entraîné','entraîner','muscu','musculation','courir','couru',
+      'je cours','course à pied','footing','marcher','une marche','de la marche','ai marché','a marché',
+      'avons marché','promenade','balade','randonnée','rando','vélo','natation','nager','nagé',
+      'étirements','boxe','escalade','basket','abdos','pompes'
+    ]},
+    {skill:'SCIENCE', xp:25, reason:'Learning / studying', kws:[
+      'study','studied','studying','read','reading','book','course','class','classes','lecture','lectures',
+      'lesson','lessons','homework','exam','exams','quiz','learn','learned','learnt','learning','research',
+      'tutorial','school','university','college','library','revised','revising','revision',
+      'certification','certificate','documentary',
+      'étudier','étudié','étude','études','lire','ai lu','livre','livres','cours','classe','leçon','leçons',
+      'examen','examens','partiel','partiels','apprendre','appris','réviser','révisé','révisions','devoirs',
+      'bibliothèque','école','université','fac','formation','certificat','documentaire'
+    ]},
+    {skill:'SPEECH', xp:15, reason:'Social connection', kws:[
+      'friend','friends','social','socialized','socializing','call','called','facetime','facetimed',
+      'meeting','meetings','met up','met with','meet up','meetup','hung out','hang out','hanging out',
+      'caught up with','catch up with','party','parties','conversation','chatted','talked','visited',
+      'family','girlfriend','boyfriend','date night','dinner with','lunch with','coffee with','drinks',
+      'networking','presentation','presented','public speaking','speech',
+      'ami','amie','amis','amies','pote','potes','copain','copine','copains','copines','rencontré',
+      'rencontrer','appel','appelé','appeler','parlé','parler','discuté','discussion','soirée','soirées',
+      'fête','sortie','famille','réunion','visite','rendu visite','dîner avec','déjeuner avec',
+      'café avec','apéro','exposé'
+    ]},
+    {skill:'COOKING', xp:15, reason:'Cooking', kws:[
+      'cook','cooked','cooking','recipe','recipes','meal','meals','meal prep','bake','baked','baking',
+      'made dinner','made lunch','made breakfast','kitchen','groceries','grocery','homemade',
+      'cuisine','cuisiner','recette','recettes','repas','fait à manger','préparé à manger','pâtisserie',
+      'gâteau','fait les courses','faire les courses'
+    ]},
+    {skill:'MUSIC', xp:15, reason:'Music practice', kws:[
+      'music','musical','guitar','piano','bass','drums','drum','song','songs','sing','singing','compose',
+      'composed','composing','lyrics','melody','chords','jammed','jam session','rehearsal','rehearsed',
+      'concert','gig','band','violin','ukulele','instrument','instruments',
+      'musique','guitare','chanson','chansons','chanté','chanter','chant','mélodie','solfège'
+    ]},
+    {skill:'FINANCE', xp:15, reason:'Financial progress', kws:[
+      'budget','budgeted','budgeting','save','saved','saving','savings','money','finance','finances',
+      'financial','invest','invested','investing','investment','investments','paid off','debt','bank',
+      'expenses','income','salary','paycheck','taxes','crypto','stocks','bills',
+      'épargne','économisé','économies','économiser','argent','investi','investir','investissement',
+      'placement','dette','dettes','banque','dépenses','impôts','salaire','facture','factures'
+    ]},
+    {skill:'BUSINESS', xp:20, reason:'Work progress', kws:[
+      'work','worked','working','job','jobs','application','applications','applied','interview',
+      'interviews','project','projects','deadline','deadlines','business','client','clients','office',
+      'boss','career','resume','hired','promotion','side hustle','startup',
+      'travail','travaillé','travailler','boulot','emploi','candidature','candidatures','postulé',
+      'postuler','entretien','projet','projets','bureau','entreprise','patron','carrière','embauché','cv'
+    ]}
+  ];
+  // Phrases that contain a keyword without being that activity: they're
+  // matched like keywords, then ignored.
+  var NOT_ACTIVITIES = [
+    'ran out','run out','running out','runs out','so called','call it a day','called it a day',
+    'call it a night','called it a night','it worked out','all worked out','things worked out'
+  ];
+
+  // "J'ai étudié l'œuvre" → ['j','ai','etudie','l','oeuvre']
+  function toWords(text){
+    return String(text).toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/œ/g, 'oe').replace(/æ/g, 'ae')
+      .split(/[^a-z0-9]+/)
+      .filter(Boolean);
+  }
+
+  // First word → every keyword starting with it, longest first.
+  var KEYWORDS = Object.create(null);
+  function addKeyword(phrase, rule){
+    var words = toWords(phrase);
+    (KEYWORDS[words[0]] = KEYWORDS[words[0]] || []).push({words:words, rule:rule});
+  }
+  RULES.forEach(function(r, i){ r.kws.forEach(function(kw){ addKeyword(kw, i); }); });
+  NOT_ACTIVITIES.forEach(function(kw){ addKeyword(kw, -1); });
+  Object.keys(KEYWORDS).forEach(function(w){
+    KEYWORDS[w].sort(function(a, b){ return b.words.length - a.words.length; });
+  });
+
+  // The keyword that starts at words[i], or null.
+  function keywordAt(words, i){
+    var candidates = KEYWORDS[words[i]] || [];
+    for (var c=0; c<candidates.length; c++){
+      var kw = candidates[c].words, j = 1;
+      while (j<kw.length && words[i+j]===kw[j]) j++;
+      if (j===kw.length) return candidates[c];
+    }
+    return null;
+  }
+
   function localHeuristic(text){
-    var t = text.toLowerCase();
-    var rules = [
-      {kws:['gym','workout','run','walk','marche','sport','entra','training','exercise'], skill:'SURVIVAL', xp:20, reason:'Physical activity'},
-      {kws:['study','read','course','class','exam','learn','tudier','livre','cours','apprendre','cizr','pssac','certificat'], skill:'SCIENCE', xp:25, reason:'Learning / studying'},
-      {kws:['friend','social','call','met','meeting','ami','rencontre','appel','parl','party','soir'], skill:'SPEECH', xp:15, reason:'Social connection'},
-      {kws:['cook','recipe','meal','cuisine','recette','repas'], skill:'COOKING', xp:15, reason:'Cooking'},
-      {kws:['music','guitar','song','musique','guitare','chanson','compose'], skill:'MUSIC', xp:15, reason:'Music practice'},
-      {kws:['budget','save','money','finance','pargne','argent'], skill:'FINANCE', xp:15, reason:'Financial progress'},
-      {kws:['work','job','application','projet','travail','bureau','deadline','business'], skill:'BUSINESS', xp:20, reason:'Work progress'}
-    ];
+    var words = toWords(text), matched = {};
+    for (var i=0; i<words.length; ){
+      var kw = keywordAt(words, i);
+      if (kw) matched[kw.rule] = true;
+      i += kw ? kw.words.length : 1;
+    }
     var totalXp = 8, reasons=[], skillGains=[];
-    rules.forEach(function(r){
-      for (var i=0;i<r.kws.length;i++){
-        if (t.indexOf(r.kws[i])!==-1){
-          totalXp += r.xp;
-          reasons.push(r.reason);
-          if (r.skill && skillGains.length<2 && !skillGains.some(function(g){return g.skill===r.skill;})) skillGains.push({skill:r.skill,amount:2});
-          break;
-        }
-      }
+    RULES.forEach(function(r, i){
+      if (!matched[i]) return;
+      totalXp += r.xp;
+      reasons.push(r.reason);
+      if (skillGains.length<2) skillGains.push({skill:r.skill, amount:2});
     });
     totalXp = Math.min(100,totalXp);
     return {xp:totalXp, reason: reasons.length? reasons.slice(0,2).join(' + ') : 'Logged your day', skillGains:skillGains};

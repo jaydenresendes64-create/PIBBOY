@@ -50,9 +50,12 @@
     var amountInput = el('new-wallet-amount');
     var rateInput = el('new-wallet-rate');
     var label = labelInput.value.trim();
-    var amount = Number(amountInput.value);
+    var amountText = amountInput.value.trim();
+    var amount = Number(amountText);
     var rate = Number(rateInput.value);
-    if (!label || !isFinite(amount)) return;
+    if (!label) return;
+    // Number('') is 0, so an empty amount used to add a row worth nothing.
+    if (!amountText || !isFinite(amount)){ amountInput.focus(); return; }
     if (!isFinite(rate) || rate<=0) rate = 1;
     app.state.finances.holdings.push({id:genId(), label:label, amount:amount, rateToCAD:rate});
     renderInventory(); scheduleSave();
@@ -64,6 +67,7 @@
     var p = app.pendingProposal;
     addXp(p.xp);
     p.skillGains.forEach(function(g){ grantSkill(g.skill, g.amount); });
+    app.state.lifetimeLogEntries = ST.logEntryCount() + 1;
     app.state.log.push({date:todayDisplay(), text:p.text, xp:p.xp, reason:p.reason});
     if (app.state.log.length>200) app.state.log = app.state.log.slice(-200);
     app.pendingProposal = null;
