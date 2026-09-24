@@ -9,7 +9,8 @@
  *   lifetimeLogEntries: number,             // every accepted entry, even past the 200 kept in `log`
  *   unspentSpecialPoints: number,           // level-up points not yet placed
  *   stats:  { STR,END,CHA,INT,AGI: number(0-10) },   // SPECIAL — see "S.P.E.C.I.A.L." below
- *   skills: { SCIENCE,SPEECH,SURVIVAL,COOKING,FINANCE,MUSIC,BUSINESS: number(0-100) },
+ *   skills: { CONCENTRATION,KNOWLEDGE,SPEECH,SURVIVAL,COOKING,FINANCE,MUSIC,BUSINESS: number(0-100) },
+ *                                           // CONCENTRATION was SCIENCE: see migrate()
  *   quests: {
  *     mains: [ MainQuest ],                  // older saves had one, as `main`: see migrate()
  *     side:  [ { id, questName, name, xp, done } ],
@@ -61,7 +62,7 @@
 
   var STAT_KEYS = ['STR','END','CHA','INT','AGI'];
   var STAT_LABELS = {STR:'Strength',END:'Endurance',CHA:'Charisma',INT:'Intelligence',AGI:'Agility'};
-  var SKILL_KEYS = ['SCIENCE','SPEECH','SURVIVAL','COOKING','FINANCE','MUSIC','BUSINESS'];
+  var SKILL_KEYS = ['CONCENTRATION','KNOWLEDGE','SPEECH','SURVIVAL','COOKING','FINANCE','MUSIC','BUSINESS'];
   var CATS = ['WEAPONS','APPAREL','AID','MISC','IMPORTANT'];
   var CAD_PER_CAP = 1000;
   var QUEST_NAME_MAX = 60;
@@ -73,7 +74,7 @@
     lifetimeLogEntries:0,
     unspentSpecialPoints:0,
     stats:{STR:4,END:3,CHA:4,INT:5,AGI:2},
-    skills:{SCIENCE:21,SPEECH:42,SURVIVAL:23,COOKING:8,FINANCE:17,MUSIC:35,BUSINESS:5},
+    skills:{CONCENTRATION:21,KNOWLEDGE:10,SPEECH:42,SURVIVAL:23,COOKING:8,FINANCE:17,MUSIC:35,BUSINESS:5},
     quests:{
       mains:[
         {id:'m1', questName:'Caps on the Line', title:'Obtain 5 Caps', progressType:'percent', progress:0, xp:1000, completed:false, skillGains:[{skill:'FINANCE',amount:8},{skill:'BUSINESS',amount:2}], bonus:[
@@ -149,11 +150,16 @@
   // before the defaults are merged in. Saves and imported backups both pass
   // through here (via mergeDefaults). Edits `doc` in place and returns it.
   function migrate(doc){
-    var quests = doc && doc.quests;
-    if (!quests || typeof quests!=='object') return doc;
-    // Older saves have a single main quest, the object quests.main. It
-    // becomes the first of the list with every field it had (progress,
-    // completion, bonus objectives...), and no name unless it had one.
+    if (!doc || typeof doc!=='object') return doc;
+    migrateMainQuests(doc.quests);
+    migrateSkills(doc);
+    return doc;
+  }
+  // Older saves have a single main quest, the object quests.main. It
+  // becomes the first of the list with every field it had (progress,
+  // completion, bonus objectives...), and no name unless it had one.
+  function migrateMainQuests(quests){
+    if (!quests || typeof quests!=='object') return;
     var main = quests.main;
     if (!Array.isArray(quests.mains) && main && typeof main==='object' && !Array.isArray(main)){
       var first = {id:'m1', questName:'', progressType:'percent'};
@@ -161,8 +167,31 @@
       quests.mains = [first];
     }
     delete quests.main;
-    return doc;
   }
+  // The SCIENCE skill became CONCENTRATION, and KNOWLEDGE was added. An
+  // older save keeps its SCIENCE value as CONCENTRATION (quests' skill gains
+  // included) and starts KNOWLEDGE at 0; only a new player gets the default.
+  function migrateSkills(doc){
+    var skills = doc.skills;
+    if (skills && typeof skills==='object' && !Array.isArray(skills)){
+      if (has(skills, 'SCIENCE')){
+        if (!has(skills, 'CONCENTRATION')) skills.CONCENTRATION = skills.SCIENCE;
+        delete skills.SCIENCE;
+      }
+      if (!has(skills, 'KNOWLEDGE')) skills.KNOWLEDGE = 0;
+    }
+    var quests = doc.quests;
+    if (!quests || typeof quests!=='object') return;
+    ['mains','side','daily'].forEach(function(list){
+      (Array.isArray(quests[list]) ? quests[list] : []).forEach(function(q){
+        if (!q || !Array.isArray(q.skillGains)) return;
+        q.skillGains.forEach(function(g){
+          if (g && g.skill==='SCIENCE') g.skill = 'CONCENTRATION';
+        });
+      });
+    });
+  }
+  function has(obj, key){ return Object.prototype.hasOwnProperty.call(obj, key); }
   function mergeDefaults(loaded){
     return deepMergeDefaults(DEFAULT_STATE, migrate(loaded||{}));
   }
