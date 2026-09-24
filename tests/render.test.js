@@ -59,6 +59,8 @@ test('hostile ids and numbers that skipped sanitizeImported stay inert', () => {
     s.quests.daily[0].id = EVIL; s.quests.daily[0].xp = EVIL;
     s.inventory[0].id = EVIL;
     s.inventory.push({ id: EVIL, name: 'n', category: 'SELL', price: EVIL });
+    ST.app.confirmSell = EVIL;                            // the questions under a row, open
+    ST.app.confirmRemove = { kind: 'item', id: EVIL };
     s.finances.holdings = [{ id: EVIL, label: 'L', amount: EVIL, rateToCAD: EVIL }];
     s.log = [{ date: 'd', text: 't', xp: EVIL, reason: 'r' }];
     return s;

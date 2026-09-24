@@ -14,7 +14,7 @@
  *   quests: {
  *     mains: [ MainQuest ],                  // older saves had one, as `main`: see migrate()
  *     side:  [ { id, questName, name, xp, done } ],  // done ones stay, hidden, for the Lifetime count
- *     daily: [ { id, questName, name, xp, lastDate:'YYYY-M-D'|null } ]  // done = lastDate===todayStr()
+ *     daily: [ { id, questName, name, xp, lastDate:'YYYY-M-D'|null } ]  // done today: dailyDoneToday()
  *   },
  *   inventory: [ { id, name, category: one of CATS,     // WEAPONS is gone: see migrate()
  *                  price?: number>=0 } ],    // THINGS TO SELL (SELL) only: asking price in CAD, optional
@@ -131,6 +131,7 @@
     finishRename: null,         // saves the quest name being edited, while its box is open
     confirmRemoveMain: null,    // id of the main quest whose removal awaits "Yes, remove"
     confirmSell: null,          // id of the item whose sale awaits "Yes"
+    confirmRemove: null,        // {kind:'side'|'daily'|'item'|'wallet', id} whose removal awaits "Yes, remove"
     confirmSpecial: null        // SPECIAL key whose level-up point awaits "Yes"
   };
 
@@ -299,15 +300,22 @@
       Date.UTC(+m[1], +m[2]-1, +m[3])) / 864e5);
   }
 
-  // ---------- streak main quests ----------
-  // A check-in dated tomorrow still counts as today's: after flying west,
-  // the calendar can be a day behind the check-in. One dated later than
-  // that can only come from a clock that was wrong: it doesn't lock the
-  // quest until that date, the next check-in simply continues the streak.
-  function checkedInToday(q){
-    var d = daysSince(q.lastCheckIn);
+  // ---------- once a day: daily quests and streak check-ins ----------
+  // Done today, for a date saved when it was done. A date of tomorrow still
+  // counts as today: after flying west, the calendar can be a day behind
+  // it, and the same day must not be ticked twice. One dated later than
+  // that can only come from a clock that was wrong: it doesn't lock
+  // anything until that date.
+  function doneToday(date){
+    var d = daysSince(date);
     return d!==null && d<=0 && d>=-1;
   }
+  function dailyDoneToday(q){ return doneToday(q.lastDate); }
+
+  // ---------- streak main quests ----------
+  // A check-in follows doneToday(): one dated far ahead simply lets the
+  // next check-in continue the streak.
+  function checkedInToday(q){ return doneToday(q.lastCheckIn); }
   // The streak as it stands today: a missed day resets it to 0 (as soon as
   // the app is opened, not only at the next check-in). A completed quest
   // keeps the streak it finished with.
@@ -501,6 +509,7 @@
   ST.totalHoldingsCAD = totalHoldingsCAD;
   ST.logEntryCount = logEntryCount;
   ST.addLogEntry = addLogEntry;
+  ST.dailyDoneToday = dailyDoneToday;
   ST.checkedInToday = checkedInToday;
   ST.currentStreak = currentStreak;
   ST.streakCheckIn = streakCheckIn;

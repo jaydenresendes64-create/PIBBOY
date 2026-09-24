@@ -129,3 +129,17 @@ test('daily quests: a date loaded as YYYY-MM-DD matches today', () => {
   const loaded = ST.sanitizeImported(s);
   assert.equal(loaded.quests.daily[0].lastDate, ST.todayStr());
 });
+
+test('daily quests: done once a day, and the date going back (flying west) does not open them again', () => {
+  at(2026, 9, 24, 23);
+  const q = { id: 'd1', xp: 20, lastDate: null };
+  assert.equal(ST.dailyDoneToday(q), false);
+  q.lastDate = ST.todayStr();
+  assert.equal(ST.dailyDoneToday(q), true);
+  at(2026, 9, 23, 21);                                  // landed west: the calendar is a day behind
+  assert.equal(ST.dailyDoneToday(q), true);
+  at(2026, 9, 25, 0, 1);                                // the next day opens it again
+  assert.equal(ST.dailyDoneToday(q), false);
+  at(2026, 9, 24);
+  assert.equal(ST.dailyDoneToday({ lastDate: '2027-9-24' }), false);   // a clock that was a year ahead locks nothing
+});

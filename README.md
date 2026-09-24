@@ -26,8 +26,10 @@ js/main.js          startup
 sw.js               service worker: offline use (network first for the app, so updates show right away)
 manifest.webmanifest name, colours and icons (icons/) for installing on a phone
 images/mascot.png   the amber mascot in the top-right corner
+fonts/              the two terminal fonts, VT323 and IBM Plex Mono (licence: fonts/OFL.txt)
 api/analyze.js      optional serverless AI function (not used on GitHub Pages, see below)
 tests/              automated tests (see "Run the tests")
+.github/workflows/  runs the tests on GitHub after every push
 .nojekyll           tells GitHub Pages to serve the files as they are, without Jekyll
 ```
 
@@ -51,8 +53,8 @@ It opens full screen like an app and keeps working without a connection. Updates
 normally: while online the app loads from GitHub Pages like any website (checked against the server
 on every open, so a new version shows up the next time you open it), and the copy saved on the phone
 is only used when there's no connection. Nothing needs to change in `sw.js` when you update the app.
-The terminal fonts are kept on the phone after the first visit, so the app never waits for Google
-Fonts again, even on a bad connection.
+The terminal fonts are part of the app (`fonts/`), so they work offline from the very first open and
+nothing is loaded from Google.
 
 Where your data lives: on Android the installed app shares it with Chrome. On iPhone the Home Screen
 app keeps its own data, separate from Safari, so use **Export backup** in Safari and **Import backup**
@@ -88,12 +90,15 @@ save format, checking backup files (including hostile ones), XP and level-ups, s
 S.P.E.C.I.A.L. limits, selling items, streaks across days, the offline journal rules in English and French, safe
 HTML output, and saving (both copies, damaged copies, two tabs).
 
+GitHub also runs them after every push (the **Actions** tab, `.github/workflows/test.yml`): a red ✗
+next to a commit means a test failed.
+
 ## Your data
 
 - Saved in the browser you use, twice (IndexedDB and localStorage): if one copy is damaged, the
   other is used. If neither can be read, the app says so and changes nothing rather than starting
   empty. Another browser or device starts empty. Use **Export backup / Import backup** in the footer
-  to move it. An imported file is checked (and brought up to date if it comes from an older
+  to move it (a backup is saved as `status-terminal-backup-YYYY-MM-DD.json`, dated the day you made it). An imported file is checked (and brought up to date if it comes from an older
   version) before you confirm; a file that isn't a backup is refused and nothing changes.
 - The app asks the browser to keep its storage even when space runs low (on a phone this is silent).
 - With the app open in two tabs, each follows the other's changes. A change can never overwrite a

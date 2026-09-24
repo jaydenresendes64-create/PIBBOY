@@ -1,6 +1,6 @@
 .env
 .env.local
 .env*.local
-*-backup.json
+*-backup*.json
 .vercel
 node_modules

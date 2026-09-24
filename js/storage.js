@@ -252,12 +252,19 @@
   }
 
   // ---------- backup files ----------
+  // status-terminal-backup-YYYY-MM-DD.json, dated today, so backups sort by
+  // date and a new one doesn't replace an older one.
+  function backupName(){
+    var d = new Date();
+    function two(n){ return (n<10 ? '0' : '')+n; }
+    return 'status-terminal-backup-'+d.getFullYear()+'-'+two(d.getMonth()+1)+'-'+two(d.getDate())+'.json';
+  }
   function exportFile(state){
     var blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
-    a.download = 'status-terminal-backup.json';
+    a.download = backupName();
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -281,6 +288,7 @@
     scheduleSave: scheduleSave,
     flush: flush,
     requestPersistence: requestPersistence,
+    backupName: backupName,
     exportFile: exportFile,
     readJsonFile: readJsonFile,
     onSaveFailed: function(fn){ onSaveFailed = fn; },

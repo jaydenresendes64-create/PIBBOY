@@ -57,10 +57,16 @@
     if (!objective){ objectiveInput.focus(); return null; }
     return {questName:questName, objective:objective};
   }
+  // A whole number typed in a box, kept within min-max: an empty box (or
+  // one that isn't a number) gives `fallback`, 0 gives the minimum.
+  function readWhole(id, fallback, min, max){
+    var n = parseInt(el(id).value, 10);
+    return clamp(isNaN(n) ? fallback : n, min, max);
+  }
   function addSideQuest(){
     var q = readNewQuest('new-quest');
     if (!q) return;
-    var xp = clamp(parseInt(el('new-quest-xp').value,10)||100,5,500);
+    var xp = readWhole('new-quest-xp', 100, 5, 500);
     app.state.quests.side.push({id:genId(),questName:q.questName,name:q.objective,xp:xp,done:false});
     R.clearTyped('new-quest-');
     renderQuests(); scheduleSave();
@@ -68,7 +74,7 @@
   function addDailyQuest(){
     var q = readNewQuest('new-daily');
     if (!q) return;
-    var xp = clamp(parseInt(el('new-daily-xp').value,10)||15,5,100);
+    var xp = readWhole('new-daily-xp', 15, 5, 100);
     app.state.quests.daily.push({id:genId(),questName:q.questName,name:q.objective,xp:xp,lastDate:null});
     R.clearTyped('new-daily-');
     renderQuests(); scheduleSave();
@@ -76,12 +82,12 @@
   function addMainQuest(){
     var q = readNewQuest('new-main');
     if (!q) return;
-    var xp = clamp(parseInt(el('new-main-xp').value,10)||1000,10,5000);
+    var xp = readWhole('new-main-xp', 1000, 10, 5000);
     var quest = {id:genId(), questName:q.questName, title:q.objective.slice(0,60),
       progressType:'percent', progress:0, xp:xp, completed:false, skillGains:[], bonus:[]};
     if (el('new-main-type').value==='streak'){
       quest.progressType = 'streak';
-      quest.streakTarget = clamp(parseInt(el('new-main-days').value,10)||7, 1, ST.STREAK_MAX_DAYS);
+      quest.streakTarget = readWhole('new-main-days', 7, 1, ST.STREAK_MAX_DAYS);
       quest.streakDays = 0;
       quest.lastCheckIn = null;
     }
@@ -164,6 +170,32 @@
     app.state.finances.holdings.push({id:genId(), label:label, amount:amount, rateToCAD:rate});
     R.clearTyped('new-wallet-');
     renderInventory(); scheduleSave();
+  }
+
+  // ---------- removing, after "Yes, remove" ----------
+  var REMOVE_REDRAW = {side:'quests', daily:'quests', item:'items', wallet:'items'};
+  function redraw(kind){
+    if (REMOVE_REDRAW[kind]==='quests') renderQuests(); else renderInventory();
+  }
+  // Asks "Remove this ...?" under the row (render.js), with the focus on
+  // Cancel. One row question at a time (a sale's included).
+  function askRemove(kind, id){
+    app.confirmRemove = {kind:kind, id:id};
+    app.confirmSell = null;
+    redraw(kind);
+    var cancel = document.querySelector('[data-action="remove-no"]');
+    if (cancel) cancel.focus();
+  }
+  function remove(kind, id){
+    var state = app.state;
+    var keep = function(x){ return x.id!==id; };
+    if (kind==='side') state.quests.side = state.quests.side.filter(keep);
+    else if (kind==='daily') state.quests.daily = state.quests.daily.filter(keep);
+    else if (kind==='item') state.inventory = state.inventory.filter(keep);
+    else if (kind==='wallet') state.finances.holdings = state.finances.holdings.filter(keep);
+    else return;
+    app.confirmRemove = null;
+    redraw(kind); scheduleSave();
   }
 
   // ---------- quest names ----------
@@ -288,6 +320,7 @@
     app.pendingProposal = null;
     app.confirmRemoveMain = null;
     app.confirmSell = null;
+    app.confirmRemove = null;
     app.confirmSpecial = null;
     pendingImport = null;
     el('reset-confirm-area').innerHTML = '';
@@ -310,6 +343,7 @@
     app.pendingProposal = null;
     app.confirmRemoveMain = null;
     app.confirmSell = null;
+    app.confirmRemove = null;
     app.confirmSpecial = null;
     el('reset-confirm-area').innerHTML = '';
     renderAll();
@@ -323,6 +357,7 @@
     app.state = state;
     app.confirmRemoveMain = null;
     app.confirmSell = null;
+    app.confirmRemove = null;
     app.confirmSpecial = null;
     renderAll();
     if (lost) R.showConflictWarning();
@@ -381,19 +416,22 @@
           var q = findQuest('side', id);
           if (q && !q.done){ q.done=true; addXp(q.xp); afterCheck(actionBtn); }
         } else if (action==='quest-remove'){
-          state.quests.side = state.quests.side.filter(function(x){return x.id!==id;});
-          renderQuests(); scheduleSave();
+          askRemove('side', id);
         } else if (action==='daily-toggle'){
           var d = findQuest('daily', id);
-          if (d && d.lastDate!==todayStr()){ d.lastDate=todayStr(); addXp(d.xp); afterCheck(actionBtn); }
+          if (d && !ST.dailyDoneToday(d)){ d.lastDate=todayStr(); addXp(d.xp); afterCheck(actionBtn); }
         } else if (action==='daily-remove'){
-          state.quests.daily = state.quests.daily.filter(function(x){return x.id!==id;});
-          renderQuests(); scheduleSave();
+          askRemove('daily', id);
         } else if (action==='inv-remove'){
-          state.inventory = state.inventory.filter(function(x){return x.id!==id;});
-          renderInventory(); scheduleSave();
+          askRemove('item', id);
+        } else if (action==='remove-yes'){
+          remove(actionBtn.getAttribute('data-kind'), id);
+        } else if (action==='remove-no'){
+          app.confirmRemove = null;
+          redraw(actionBtn.getAttribute('data-kind'));
         } else if (action==='sell'){
           app.confirmSell = id;
+          app.confirmRemove = null;
           renderInventory();
           var amountBox = el('sell-amount-'+id);
           if (amountBox) amountBox.focus();
@@ -403,8 +441,7 @@
           app.confirmSell = null;
           renderInventory();
         } else if (action==='wallet-remove'){
-          state.finances.holdings = state.finances.holdings.filter(function(x){return x.id!==id;});
-          renderInventory(); scheduleSave();
+          askRemove('wallet', id);
         } else if (action==='bonus-toggle'){
           var owner = findMain(actionBtn.getAttribute('data-quest'));
           var b = owner && (owner.bonus||[]).filter(function(x){return x.id===id;})[0];
@@ -496,6 +533,8 @@
       } else if (e.target.classList.contains('main-progress-input')){
         var m = findMain(e.target.getAttribute('data-id'));
         if (!m) return;
+        // A completed quest's slider is locked (render.js disables it).
+        if (m.completed){ e.target.value = m.progress; return; }
         m.progress = parseInt(e.target.value,10);
         if (m.progress>=100 && !m.completed){
           completeMainQuest(m);
@@ -515,7 +554,7 @@
       else if (targetId.indexOf('new-daily-')===0) addDailyQuest();
       else if (e.target.id==='new-item-name' || e.target.id==='new-item-price') addInventoryItem();
       else if (e.target.classList.contains('sell-amount')) confirmSale(e.target.getAttribute('data-id'));
-      else if (e.target.id==='new-wallet-label' || e.target.id==='new-wallet-amount') addHolding();
+      else if (/^new-wallet-(label|amount|rate)$/.test(e.target.id)) addHolding();
     });
   }
 

@@ -139,6 +139,18 @@
     return btn;
   }
 
+  // Removing a side or daily quest, an item or a wallet row asks first,
+  // under its row, like Reset: kind is 'side', 'daily', 'item' or 'wallet'.
+  function removeConfirmHtml(kind, id, question){
+    var asking = app.confirmRemove;
+    if (!asking || asking.kind!==kind || asking.id!==id) return '';
+    return '<div class="card-confirm row-confirm">'+
+      '<span class="reset-warning">'+question+'</span>'+
+      '<button class="confirm-yes" data-action="remove-yes" data-kind="'+kind+'" data-id="'+attr(id)+'">Yes, remove</button>'+
+      '<button data-action="remove-no" data-kind="'+kind+'">Cancel</button>'+
+    '</div>';
+  }
+
   // A streak quest's progress: "Day 3 / 7", and a check-in button usable once a day.
   function streakRowHtml(m){
     var days = num(ST.currentStreak(m)), target = num(m.streakTarget);
@@ -167,7 +179,7 @@
       '<input type="text" class="main-title-input" data-id="'+attr(m.id)+'" maxlength="60" value="'+escapeHtml(m.title)+'" aria-label="Objective">'+
       (streak ? streakRowHtml(m) :
         '<div class="progress-row">'+
-          '<input type="range" min="0" max="100" value="'+num(m.progress)+'" class="main-progress-input" data-id="'+attr(m.id)+'" aria-label="Progress">'+
+          '<input type="range" min="0" max="100" value="'+num(m.progress)+'" class="main-progress-input" data-id="'+attr(m.id)+'" aria-label="Progress"'+(m.completed?' disabled':'')+'>'+
           '<span class="progress-pct">'+num(m.progress)+'%</span>'+
         '</div>')+
       '<div class="main-xp-note">'+(streak && !m.completed ? '<span>'+streakNote(m)+' ·</span> ' : '')+
@@ -231,7 +243,8 @@
           questTextHtml('side', q)+
           '<span class="quest-xp">+'+num(q.xp)+' XP</span>'+
           '<button class="remove-btn" data-action="quest-remove" data-id="'+attr(q.id)+'" aria-label="Remove: '+about(q.questName, q.name)+'">&times;</button>'+
-        '</div>';
+        '</div>'+
+        removeConfirmHtml('side', q.id, 'Remove this quest?');
       });
       html += '</div>';
     }
@@ -243,15 +256,15 @@
     '</div>';
 
     html += '<div class="panel-title">Daily Quests</div><div class="quest-list">';
-    var today = todayStr();
     state.quests.daily.forEach(function(q){
-      var doneToday = q.lastDate===today;
+      var doneToday = ST.dailyDoneToday(q);
       html += '<div class="quest-item">'+
         '<button class="complete-btn'+(doneToday?' done':'')+'" data-action="daily-toggle" data-id="'+attr(q.id)+'" '+(doneToday?'disabled':'')+' aria-label="Mark done today: '+about(q.questName, q.name)+'">'+(doneToday?'&#10003;':'&#9675;')+'</button>'+
         questTextHtml('daily', q)+
         '<span class="quest-xp">+'+num(q.xp)+' XP</span>'+
         '<button class="remove-btn" data-action="daily-remove" data-id="'+attr(q.id)+'" aria-label="Remove: '+about(q.questName, q.name)+'">&times;</button>'+
-      '</div>';
+      '</div>'+
+      removeConfirmHtml('daily', q.id, 'Remove this quest?');
     });
     html += '</div><div class="add-row">'+
       '<input type="text" class="field-full" id="new-daily-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
@@ -287,7 +300,8 @@
               '<button class="remove-btn" data-action="wallet-remove" data-id="'+attr(h.id)+'" aria-label="Remove: '+about(h.label)+'">&times;</button>'+
             '</div>'+
             '<div class="wallet-row-sub">'+money(h.amount)+' &times; <input type="number" class="rate-input" data-id="'+attr(h.id)+'" value="'+rate+'" step="0.001" aria-label="Rate to CAD: '+about(h.label)+'"> CAD</div>'+
-          '</div>';
+          '</div>'+
+          removeConfirmHtml('wallet', h.id, 'Remove this row?');
         });
         html += '<div class="wallet-total-row"><span>Total</span><span>$'+money(ST.totalHoldingsCAD())+'</span></div>';
       }
@@ -315,6 +329,7 @@
       '<label class="price-field">$<input type="number" class="price-input" data-id="'+attr(i.id)+'" value="'+priceValue(i.price)+'" min="0" step="0.01" inputmode="decimal" placeholder="price" aria-label="Asking price in CAD: '+about(i.name)+'"></label>'+
       '<button class="sell-btn" data-action="sell" data-id="'+attr(i.id)+'" aria-label="Sold: '+about(i.name)+'">Sold</button>'+
       '<button class="remove-btn" data-action="inv-remove" data-id="'+attr(i.id)+'" aria-label="Remove: '+about(i.name)+'">&times;</button></div>';
+    html += removeConfirmHtml('item', i.id, 'Remove this item?');
     if (app.confirmSell===i.id){
       html += '<div class="card-confirm row-confirm sell-confirm">'+
         '<label class="sell-question">Sold for $<input type="number" class="sell-amount" id="sell-amount-'+attr(i.id)+'" data-id="'+attr(i.id)+'" value="'+priceValue(i.price)+'" min="0" step="0.01" inputmode="decimal" aria-label="Sold for, in CAD">?</label>'+
@@ -338,7 +353,8 @@
         items.forEach(function(i){
           if (cat==='SELL'){ html += sellItemHtml(i); return; }
           html += '<div class="inv-item"><span>'+escapeHtml(i.name)+'</span>'+
-            '<button class="remove-btn" data-action="inv-remove" data-id="'+attr(i.id)+'" aria-label="Remove: '+about(i.name)+'">&times;</button></div>';
+            '<button class="remove-btn" data-action="inv-remove" data-id="'+attr(i.id)+'" aria-label="Remove: '+about(i.name)+'">&times;</button></div>'+
+            removeConfirmHtml('item', i.id, 'Remove this item?');
         });
         html += '</div>';
       }

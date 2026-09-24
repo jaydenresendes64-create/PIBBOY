@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- Only this site's own scripts may run, so text that ever reached the page unescaped still
-     couldn't run code. Fonts come from Google Fonts; style attributes set the bars' widths;
-     file: keeps it working when index.html is opened straight from disk. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file:; style-src 'self' file: 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' file: data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+     couldn't run code. Everything, fonts included, comes from this site; style attributes set
+     the bars' widths; file: keeps it working when index.html is opened straight from disk. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; font-src 'self' file:; img-src 'self' file: data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <title>MALIK // Status Terminal</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230d0602'/%3E%3Ccircle cx='8' cy='8' r='4' fill='%23e8a33d'/%3E%3C/svg%3E">
 <!-- Installable on a phone (manifest + sw.js, registered in js/main.js). -->
@@ -14,11 +14,6 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-title" content="MALIK">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<!-- Only the weights the page uses (400). Loaded with CORS so the service worker can keep a
-     readable copy for offline use (see sw.js). -->
-<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono&display=swap" rel="stylesheet" crossorigin>
 <link rel="stylesheet" href="css/terminal.css">
 <!-- Plain scripts sharing window.StatusTerminal, in dependency order (see js/state.js). -->
 <script defer src="js/state.js"></script>
