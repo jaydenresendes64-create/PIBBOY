@@ -24,6 +24,7 @@ sw.js               service worker: offline use (network first, so updates show 
 manifest.webmanifest name, colours and icons (icons/) for installing on a phone
 images/mascot.png   the amber mascot in the top-right corner
 api/analyze.js      optional serverless AI function (not used on GitHub Pages, see below)
+tests/              automated tests (see "Run the tests")
 .nojekyll           tells GitHub Pages to serve the files as they are, without Jekyll
 ```
 
@@ -57,6 +58,20 @@ in the app to bring it over.
 Double-click `index.html`. Everything works the same as on GitHub Pages, except installing and
 offline use, which need the site to be served over http(s) (for example `npx http-server` in this
 folder, then http://localhost:8080).
+
+## Run the tests
+
+With [Node.js](https://nodejs.org) 20 or newer installed, run this in the project folder:
+
+```
+node --test
+```
+
+No install step and no dependencies: the tests use Node's built-in test runner and load the app's own
+scripts from `js/` with a small fake browser (`tests/helpers.js`). They cover migrating every earlier
+save format, checking backup files (including hostile ones), XP and level-ups, skill and
+S.P.E.C.I.A.L. limits, streaks across days, the offline journal rules in English and French, and
+saving (both copies, damaged copies, two tabs).
 
 ## Your data
 

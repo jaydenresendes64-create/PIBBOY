@@ -432,6 +432,7 @@
   ST.capsText = capsText;
   ST.escapeHtml = escapeHtml;
 
+  ST.migrate = migrate;
   ST.defaultState = defaultState;
   ST.sanitizeImported = sanitizeImported;
   ST.totalHoldingsCAD = totalHoldingsCAD;
