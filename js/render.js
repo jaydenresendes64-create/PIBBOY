@@ -466,19 +466,25 @@
     setTimeout(function(){ t.remove(); }, ms);
     return t;
   }
+  // Sounds (js/sfx.js) are decoration: the app runs without them.
+  function sound(name, delay){ if (ST.sfx) ST.sfx.play(name, delay); }
+
   function showXpToast(amount){ toast('xp-toast', '+'+amount+' XP', 1400); }
-  function showLevelUp(){ toast('levelup-banner', 'LEVEL UP — '+app.state.level, 2200); }
+  // After the check's blip, so the two don't sound on top of each other.
+  function showLevelUp(){ sound('levelUp', 0.2); toast('levelup-banner', 'LEVEL UP — '+app.state.level, 2200); }
   // The name in its own box: when the banner needs two lines, it breaks
   // after the dash rather than inside the name.
   function showQuestCompleted(name){
     var questName = document.createElement('span');
     questName.textContent = name;
+    sound('quest', 0.25);
     toast('levelup-banner quest-banner', 'QUEST COMPLETED — ', 3200).appendChild(questName);
   }
   function showNotice(text){ toast('xp-toast', text, 2600).style.animationDuration = '2.6s'; }
   function showSold(name){
     var itemName = document.createElement('span');
     itemName.textContent = name;
+    sound('sold');
     toast('levelup-banner quest-banner', 'SOLD: ', 3200).appendChild(itemName);
   }
   // A city or region revealed for the first time (js/map.js), or several at
@@ -486,10 +492,12 @@
   function showDiscovered(name){
     var placeName = document.createElement('span');
     placeName.textContent = name;
+    sound('discover');
     toast('levelup-banner quest-banner', 'DISCOVERED: ', 3200).appendChild(placeName);
   }
-  function showSaveWarning(){ toast('xp-toast save-warning', 'Not saved — storage unavailable', 2600); }
+  function showSaveWarning(){ sound('error'); toast('xp-toast save-warning', 'Not saved — storage unavailable', 2600); }
   function showConflictWarning(){
+    sound('error');
     toast('xp-toast save-warning', 'Changed in another window — your last change wasn’t saved', 4000).style.animationDuration = '4s';
   }
   // The saved data exists but couldn't be read (storage.js). Nothing is
@@ -509,6 +517,7 @@
   // flashes like a terminal redraw; `then` runs once that is over. With
   // reduced motion there is no animation and `then` runs right away.
   function playCheck(btn, then){
+    sound('complete');
     if (reducedMotion()){ then(); return; }
     var row = btn.closest('.quest-item, .bonus-item, .streak-row');
     btn.innerHTML = '&#10003;';
@@ -524,6 +533,7 @@
   var shownTab = null;
   function switchTab(name){
     var swing = shownTab!==null && name!==shownTab;
+    if (swing) sound('tab');
     shownTab = name;
     ['status','quests','items','map','log'].forEach(function(t){
       var panel = el('tab-'+t);

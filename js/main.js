@@ -14,6 +14,7 @@
     if (ST.mascot) ST.mascot.init('status');     // decoration: the app runs without it
     if (ST.crt) ST.crt.init();                    // decoration too
     if (ST.tilt) ST.tilt.init();
+    if (ST.sfx) ST.sfx.init();                    // sounds: decoration as well
 
     ST.storage.load().then(function(saved){
       ST.app.state = saved || ST.defaultState();

@@ -313,6 +313,7 @@
         '<button id="import-cancel-btn">Cancel</button>';
     }).catch(function(){
       pendingImport = null;
+      if (ST.sfx) ST.sfx.play('error');
       el('reset-confirm-area').innerHTML = '<span class="reset-warning">That file isn’t a Status Terminal backup.</span>';
     });
   }
@@ -499,6 +500,8 @@
       else if (e.target.id==='accept-proposal-btn') acceptProposal();
       else if (e.target.id==='reject-proposal-btn') rejectProposal();
       else if (e.target.id==='tilt-btn'){ if (ST.tilt) ST.tilt.toggle(); }
+      else if (e.target.id==='sound-btn'){ if (ST.sfx) ST.sfx.toggleSound(); }
+      else if (e.target.id==='power-btn'){ if (ST.sfx) ST.sfx.togglePowerScreen(); }
       else if (e.target.id==='export-btn') exportData();
       else if (e.target.id==='import-btn') el('import-file').click();
       else if (e.target.id==='import-confirm-btn') confirmImport();

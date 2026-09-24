@@ -22,6 +22,7 @@ js/render.js        builds each tab
 js/mascot.js        when the mascot walks or gestures (his moves are in css/terminal.css)
 js/crt.js           the screen's rare flicker (the tube look itself is in css/terminal.css)
 js/tilt.js          3D tilt: the screen's layers follow the phone's motion (or the mouse)
+js/sfx.js           sounds, all made in code (no audio files), and the power-on screen
 js/places.js        the MAP tab's logic: positions, city and region lists, finding and revealing places
 js/fog.js           MAP: the fog of war, drawn with WebGL in the same frame as the map
 js/map.js           the MAP tab (loads MapLibre the first time it's opened)
@@ -78,6 +79,26 @@ shifts a few pixels, so taps land where you aim. It's off by default and remembe
 On iPhone, turning it on asks for motion access (allow it); if iOS asks again after reopening the app,
 the first tap anywhere brings the question back. It pauses in the background and never runs with
 **Reduce Motion** switched on.
+
+## Sounds
+
+Original sound effects in the spirit of the Fallout Pip-Boy, all made in code with the Web Audio API
+(`js/sfx.js`): there are no audio files and nothing is copied from a game. They go through an "old
+speaker" filter so they sound mechanical and lo-fi:
+
+| Sound | When |
+|---|---|
+| boot: relay click, rising whine, tube thunk, crackle into a hum | tapping the power-on screen |
+| tick: a dry knob detent | scrolling a list (one per row), moving the progress slider (every 10%) |
+| press / tab | any button / switching tabs |
+| complete | a quest, bonus objective, daily quest or streak check-in |
+| level up / quest / discover / sold | the LEVEL UP, QUEST COMPLETED, DISCOVERED and SOLD banners |
+| error | a failed save, a rejected import |
+
+When the app opens, a black screen says **TAP TO POWER ON**; the tap plays the boot sound while the
+screen lights up like a tube (browsers only allow sound after a tap). Two footer links, remembered on
+each device: **Sound: on/off** and **Power-on: on/off** (with power-on off, the app opens directly and
+the boot sound plays on the first tap). The phone's own volume and silent switch apply as usual.
 
 ## MAP tab
 
