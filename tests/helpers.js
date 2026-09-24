@@ -5,6 +5,7 @@
  *
  *   const app = loadApp();                         // state.js + ai.js
  *   const app = loadApp({files: FILES.storage});   // + storage.js
+ *   const app = loadApp({files: FILES.places});    // state.js + places.js (the MAP tab's logic)
  *   app.ST          the window.StatusTerminal namespace
  *   app.setNow(d)   moves the clock (new Date(), Date.now()) to date `d`
  *
@@ -21,6 +22,7 @@ const vm = require('vm');
 const ROOT = path.join(__dirname, '..');
 const FILES = {
   logic: ['js/state.js', 'js/ai.js'],
+  places: ['js/state.js', 'js/places.js'],
   storage: ['js/state.js', 'js/storage.js'],
   render: ['js/state.js', 'js/storage.js', 'js/ai.js', 'js/render.js']
 };

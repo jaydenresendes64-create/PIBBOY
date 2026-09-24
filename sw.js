@@ -34,7 +34,7 @@ var APP_SHELL = [
   './',
   'index.html',
   'css/terminal.css',
-  'js/state.js', 'js/storage.js', 'js/ai.js', 'js/render.js', 'js/mascot.js', 'js/crt.js', 'js/tilt.js', 'js/map.js', 'js/events.js', 'js/main.js',
+  'js/state.js', 'js/storage.js', 'js/ai.js', 'js/places.js', 'js/render.js', 'js/mascot.js', 'js/crt.js', 'js/tilt.js', 'js/map.js', 'js/events.js', 'js/main.js',
   'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css',
   'images/mascot.png',
   'fonts/vt323.woff2', 'fonts/ibm-plex-mono.woff2',
@@ -101,7 +101,14 @@ function networkFirst(event){
 }
 
 // A map tile: the kept copy, else the network (then kept). Only a readable
-// (CORS) answer is kept: an opaque one would take far more room.
+// (CORS) answer is kept: an opaque one would take far more room. Offline,
+// a tile never seen is an empty picture: the map's own dark grid shows
+// through, and the page gets no network error for it.
+var NO_TILE = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAXpeqz8AAAAASUVORK5CYII=';
+function emptyTile(){
+  var bytes = Uint8Array.from(atob(NO_TILE), function(c){ return c.charCodeAt(0); });
+  return new Response(bytes, {status:200, headers:{'Content-Type':'image/png'}});
+}
 function tile(event){
   var request = event.request;
   return caches.open(TILE_CACHE).then(function(cache){
@@ -115,7 +122,7 @@ function tile(event){
         return response;
       });
     });
-  }).catch(function(){ return Response.error(); });
+  }).catch(emptyTile);
 }
 function trim(cache){
   return cache.keys().then(function(keys){

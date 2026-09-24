@@ -21,7 +21,8 @@ js/render.js        builds each tab
 js/mascot.js        when the mascot walks or gestures (his moves are in css/terminal.css)
 js/crt.js           the screen's rare flicker (the tube look itself is in css/terminal.css)
 js/tilt.js          3D tilt: the screen's layers follow the phone's motion (or the mouse)
-js/map.js           the MAP tab (loads Leaflet the first time it's opened)
+js/places.js        the MAP tab's logic: positions, city and region lists, finding and revealing places
+js/map.js           the MAP tab (loads Leaflet the first time it's opened) and its fog of war
 vendor/leaflet/     Leaflet 1.9.4, the map library (licence: vendor/leaflet/LICENSE)
 js/events.js        user actions
 js/main.js          startup
@@ -89,6 +90,11 @@ place (the whole world when there's none yet), **⛶** zooms to show all your pl
   ahead), so places you've seen still show offline. With no tile at all, the map shows a plain dark
   background and everything else still works.
 - With 3D tilt on, the map holds still while your finger is on it, so drags and pinches land exactly.
+
+**Fog of war:** dark, grainy fog covers the whole world. Only the exact places you've been are cut
+out of it, with soft smoky edges: a circle around each city and pin, the exact shape of each region.
+Sizes are real distances, so a 5 km circle stays 5 km whatever the zoom. The fog is one canvas
+drawn over the tiles, redrawn at most once per frame while the map moves, and only then.
 
 ## Run it locally
 

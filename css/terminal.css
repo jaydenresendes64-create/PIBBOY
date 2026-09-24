@@ -599,6 +599,7 @@ button{ cursor:pointer; }
   background:rgba(13,6,2,0.85); color:var(--amber); font-size:1.25rem; line-height:1;
 }
 .map-tool::before{ content:''; position:absolute; inset:-3px; }  /* 40 -> 46 */
+.map-fog{ pointer-events:none; }
 .map-view .leaflet-control-attribution{
   background:rgba(13,6,2,0.75); color:var(--text-dim); font-size:9px; line-height:1.4; padding:0 4px;
 }
