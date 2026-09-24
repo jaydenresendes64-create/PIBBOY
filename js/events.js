@@ -49,6 +49,24 @@
     app.state.quests.daily.push({id:genId(),questName:q.questName,name:q.objective,xp:xp,lastDate:null});
     renderQuests(); scheduleSave();
   }
+  function addMainQuest(){
+    var q = readNewQuest('new-main');
+    if (!q) return;
+    var xp = clamp(parseInt(el('new-main-xp').value,10)||1000,10,5000);
+    app.state.quests.mains.push({id:genId(), questName:q.questName, title:q.objective.slice(0,60),
+      progress:0, xp:xp, completed:false, skillGains:[], bonus:[]});
+    renderQuests(); scheduleSave();
+  }
+  function findMain(id){
+    return app.state.quests.mains.filter(function(x){ return x.id===id; })[0] || null;
+  }
+  // Grants a main quest's XP and skill gains, once.
+  function completeMainQuest(m){
+    m.completed = true;
+    addXp(m.xp||0);
+    (m.skillGains||[]).forEach(function(g){ grantSkill(g.skill, g.amount); });
+    renderStatus();
+  }
   function addInventoryItem(){
     var name = el('new-item-name').value.trim();
     if (!name) return;
@@ -75,7 +93,7 @@
   // ---------- quest names ----------
   function findQuest(kind, id){
     var quests = app.state.quests;
-    if (kind==='main') return quests.main;
+    if (kind==='main') return findMain(id);
     var list = kind==='side' ? quests.side : kind==='daily' ? quests.daily : [];
     return list.filter(function(x){ return x.id===id; })[0] || null;
   }
@@ -192,6 +210,7 @@
     if (!pendingImport) return;
     app.state = pendingImport;
     app.pendingProposal = null;
+    app.confirmRemoveMain = null;
     pendingImport = null;
     el('reset-confirm-area').innerHTML = '';
     renderAll();
@@ -210,6 +229,7 @@
   }
   function doReset(){
     app.state = ST.defaultState();
+    app.confirmRemoveMain = null;
     el('reset-confirm-area').innerHTML = '';
     renderAll();
     scheduleSave();
@@ -259,8 +279,21 @@
           state.finances.holdings = state.finances.holdings.filter(function(x){return x.id!==id;});
           renderInventory(); scheduleSave();
         } else if (action==='bonus-toggle'){
-          var b = (state.quests.main.bonus||[]).filter(function(x){return x.id===id;})[0];
+          var owner = findMain(actionBtn.getAttribute('data-quest'));
+          var b = owner && (owner.bonus||[]).filter(function(x){return x.id===id;})[0];
           if (b && !b.done){ b.done = true; addXp(b.xp||0); renderQuests(); scheduleSave(); }
+        } else if (action==='main-remove'){
+          app.confirmRemoveMain = id;
+          renderQuests();
+          var cancel = document.querySelector('[data-action="main-remove-no"]');
+          if (cancel) cancel.focus();
+        } else if (action==='main-remove-yes'){
+          state.quests.mains = state.quests.mains.filter(function(x){return x.id!==id;});
+          app.confirmRemoveMain = null;
+          renderQuests(); scheduleSave();
+        } else if (action==='main-remove-no'){
+          app.confirmRemoveMain = null;
+          renderQuests();
         } else if (action==='rename'){
           startRename(actionBtn);
         }
@@ -269,7 +302,8 @@
 
       if (e.target.closest('#wallet-toggle-btn')){ app.walletExpanded = !app.walletExpanded; renderInventory(); return; }
 
-      if (e.target.id==='add-quest-btn') addSideQuest();
+      if (e.target.id==='add-main-btn') addMainQuest();
+      else if (e.target.id==='add-quest-btn') addSideQuest();
       else if (e.target.id==='add-daily-btn') addDailyQuest();
       else if (e.target.id==='add-item-btn') addInventoryItem();
       else if (e.target.id==='add-wallet-btn') addHolding();
@@ -287,9 +321,11 @@
 
     document.body.addEventListener('change', function(e){
       var state = app.state;
-      if (e.target.id==='main-title-input'){
-        state.quests.main.title = e.target.value.slice(0,60) || 'BUILD THE LIFE I WANT';
-        scheduleSave();
+      if (e.target.classList.contains('main-title-input')){
+        var mq = findMain(e.target.getAttribute('data-id'));
+        var title = e.target.value.trim().slice(0,60);
+        if (mq && title){ mq.title = title; scheduleSave(); }
+        else if (mq) e.target.value = mq.title;       // emptied: the objective stays as it was
       } else if (e.target.classList.contains('rate-input')){
         var hid = e.target.getAttribute('data-id');
         var h = state.finances.holdings.filter(function(x){return x.id===hid;})[0];
@@ -305,17 +341,15 @@
       }
     });
     document.body.addEventListener('input', function(e){
-      if (e.target.id==='main-progress-input'){
-        var m = app.state.quests.main;
+      if (e.target.classList.contains('main-progress-input')){
+        var m = findMain(e.target.getAttribute('data-id'));
+        if (!m) return;
         m.progress = parseInt(e.target.value,10);
         if (m.progress>=100 && !m.completed){
-          m.completed = true;
-          addXp(m.xp||0);
-          (m.skillGains||[]).forEach(function(g){ grantSkill(g.skill, g.amount); });
-          renderStatus();
+          completeMainQuest(m);
           renderQuests();
         } else {
-          var pctEl = document.querySelector('.progress-pct');
+          var pctEl = e.target.parentNode.querySelector('.progress-pct');
           if (pctEl) pctEl.textContent = m.progress+'%';
         }
         scheduleSave();
@@ -324,7 +358,8 @@
     document.body.addEventListener('keydown', function(e){
       if (e.key!=='Enter') return;
       var targetId = e.target.id || '';
-      if (targetId.indexOf('new-quest-')===0) addSideQuest();
+      if (targetId.indexOf('new-main-')===0) addMainQuest();
+      else if (targetId.indexOf('new-quest-')===0) addSideQuest();
       else if (targetId.indexOf('new-daily-')===0) addDailyQuest();
       else if (e.target.id==='new-item-name') addInventoryItem();
       else if (e.target.id==='new-wallet-label' || e.target.id==='new-wallet-amount') addHolding();

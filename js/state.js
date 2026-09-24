@@ -11,14 +11,18 @@
  *   stats:  { STR,END,CHA,INT,AGI: number(0-10) },   // SPECIAL — user-placed only
  *   skills: { SCIENCE,SPEECH,SURVIVAL,COOKING,FINANCE,MUSIC,BUSINESS: number(0-100) },
  *   quests: {
- *     main: { questName, title, progress(0-100), xp, completed, skillGains:[SkillGain],
- *             bonus: [ { id, name, xp, done } ] },
- *     side: [ { id, questName, name, xp, done } ],
- *     daily:[ { id, questName, name, xp, lastDate:'YYYY-M-D'|null } ]  // done = lastDate===today
+ *     mains: [ MainQuest ],                  // older saves had one, as `main`: see migrate()
+ *     side:  [ { id, questName, name, xp, done } ],
+ *     daily: [ { id, questName, name, xp, lastDate:'YYYY-M-D'|null } ]  // done = lastDate===today
  *   },
  *   inventory: [ { id, name, category: one of CATS } ],
  *   finances: { holdings: [ { id, label, amount, rateToCAD } ] },
  *   log: [ { date, text, xp, reason } ]
+ * }
+ * MainQuest {
+ *   id, questName, title, progress(0-100), xp, completed,   // completed ones stay in the list
+ *   skillGains: [SkillGain],
+ *   bonus: [ { id, name, xp, done } ]                        // bonus objectives
  * }
  * SkillGain { skill: one of SKILL_KEYS, amount: number }
  *
@@ -59,10 +63,12 @@
     stats:{STR:4,END:3,CHA:4,INT:5,AGI:2},
     skills:{SCIENCE:21,SPEECH:42,SURVIVAL:23,COOKING:8,FINANCE:17,MUSIC:35,BUSINESS:5},
     quests:{
-      main:{questName:'Caps on the Line', title:'Obtain 5 Caps', progress:0, xp:1000, completed:false, skillGains:[{skill:'FINANCE',amount:8},{skill:'BUSINESS',amount:2}], bonus:[
-        {id:'b1',name:'Find a job',xp:500,done:false},
-        {id:'b2',name:'Launch a project',xp:500,done:false}
-      ]},
+      mains:[
+        {id:'m1', questName:'Caps on the Line', title:'Obtain 5 Caps', progress:0, xp:1000, completed:false, skillGains:[{skill:'FINANCE',amount:8},{skill:'BUSINESS',amount:2}], bonus:[
+          {id:'b1',name:'Find a job',xp:500,done:false},
+          {id:'b2',name:'Launch a project',xp:500,done:false}
+        ]}
+      ],
       side:[
         {id:'s1',questName:'Paper Trail',name:'Earn a certification',xp:150,done:false},
         {id:'s2',questName:'Pennies from Heaven',name:'Build up savings',xp:100,done:false},
@@ -90,7 +96,8 @@
     walletExpanded: false,
     aiAvailable: false,
     pendingProposal: null,
-    finishRename: null          // saves the quest name being edited, while its box is open
+    finishRename: null,         // saves the quest name being edited, while its box is open
+    confirmRemoveMain: null     // id of the main quest whose removal awaits "Yes, remove"
   };
 
   function el(id){ return document.getElementById(id); }
@@ -131,10 +138,16 @@
   function migrate(doc){
     var quests = doc && doc.quests;
     if (!quests || typeof quests!=='object') return doc;
-    // Quest names came later: without this, deepMergeDefaults would give an
-    // old main quest the default quest's name.
+    // Older saves have a single main quest, the object quests.main. It
+    // becomes the first of the list with every field it had (progress,
+    // completion, bonus objectives...), and no name unless it had one.
     var main = quests.main;
-    if (main && typeof main==='object' && !Array.isArray(main) && !('questName' in main)) main.questName = '';
+    if (!Array.isArray(quests.mains) && main && typeof main==='object' && !Array.isArray(main)){
+      var first = {id:'m1', questName:''};
+      Object.keys(main).forEach(function(k){ first[k] = main[k]; });
+      quests.mains = [first];
+    }
+    delete quests.main;
     return doc;
   }
   function mergeDefaults(loaded){
@@ -227,15 +240,17 @@
     STAT_KEYS.forEach(function(k){ s.stats[k] = clamp(Math.round(num(s.stats[k], 0)), 0, 10); });
     SKILL_KEYS.forEach(function(k){ s.skills[k] = clamp(Math.round(num(s.skills[k], 0)), 0, 100); });
 
-    var m = s.quests.main;
-    fixQuestName(m);
-    m.title = text(m.title, 60);
-    m.progress = clamp(Math.round(num(m.progress, 0)), 0, 100);
-    m.xp = Math.max(0, num(m.xp, 0));
-    m.completed = m.completed===true;
-    m.skillGains = records(m.skillGains, function(g){ g.amount = num(g.amount, 0); })
-      .filter(function(g){ return SKILL_KEYS.indexOf(g.skill)!==-1; });
-    m.bonus = records(m.bonus, fixDoneQuest);
+    s.quests.mains = records(s.quests.mains, function(m){
+      m.id = safeId(m.id);
+      fixQuestName(m);
+      m.title = text(m.title, 60);
+      m.progress = clamp(Math.round(num(m.progress, 0)), 0, 100);
+      m.xp = Math.max(0, num(m.xp, 0));
+      m.completed = m.completed===true;
+      m.skillGains = records(m.skillGains, function(g){ g.amount = num(g.amount, 0); })
+        .filter(function(g){ return SKILL_KEYS.indexOf(g.skill)!==-1; });
+      m.bonus = records(m.bonus, fixDoneQuest);
+    });
     s.quests.side = records(s.quests.side, function(q){ fixDoneQuest(q); fixQuestName(q); });
     s.quests.daily = records(s.quests.daily, function(q){
       fixQuest(q);

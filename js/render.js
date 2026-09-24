@@ -101,33 +101,57 @@
     return btn;
   }
 
-  function renderQuests(){
-    // Rebuilding the list would drop a rename still in progress: save it first.
-    if (app.finishRename) app.finishRename();
-    var state = app.state;
-    var m = state.quests.main;
+  function mainQuestHtml(m){
     var bonus = m.bonus || [];
-    var html = '<div class="panel-title">Main Quest</div>'+
-      '<div class="main-quest-card'+(m.questName?' has-name':'')+'">'+
+    var html = '<div class="main-quest-card'+(m.questName?' has-name':'')+(m.completed?' completed':'')+'">'+
+      '<div class="main-quest-head">'+
         questTitleHtml('main', m)+
-        '<input type="text" class="main-title-input" id="main-title-input" maxlength="60" value="'+escapeHtml(m.title)+'" aria-label="Objective">'+
-        '<div class="progress-row">'+
-          '<input type="range" min="0" max="100" value="'+m.progress+'" id="main-progress-input">'+
-          '<span class="progress-pct">'+m.progress+'%</span>'+
-        '</div>'+
-        '<div class="main-xp-note">'+(m.completed?'Completed — ':'On completion: ')+'+'+(m.xp||0)+' XP</div>';
+        (m.completed ? '<span class="badge">Completed</span>' : '')+
+        '<button class="remove-btn" data-action="main-remove" data-id="'+m.id+'" aria-label="Remove main quest">&times;</button>'+
+      '</div>'+
+      '<input type="text" class="main-title-input" data-id="'+m.id+'" maxlength="60" value="'+escapeHtml(m.title)+'" aria-label="Objective">'+
+      '<div class="progress-row">'+
+        '<input type="range" min="0" max="100" value="'+m.progress+'" class="main-progress-input" data-id="'+m.id+'" aria-label="Progress">'+
+        '<span class="progress-pct">'+m.progress+'%</span>'+
+      '</div>'+
+      '<div class="main-xp-note">'+(m.completed?'Completed — ':'On completion: ')+'+'+(m.xp||0)+' XP</div>';
     if (bonus.length){
       html += '<div class="bonus-label">Bonus objectives</div><div class="bonus-list">';
       bonus.forEach(function(b){
         html += '<div class="bonus-item'+(b.done?' done':'')+'">'+
-          '<button class="complete-btn'+(b.done?' done':'')+'" data-action="bonus-toggle" data-id="'+b.id+'" '+(b.done?'disabled':'')+' aria-label="Toggle">'+(b.done?'&#10003;':'&#9675;')+'</button>'+
+          '<button class="complete-btn'+(b.done?' done':'')+'" data-action="bonus-toggle" data-quest="'+m.id+'" data-id="'+b.id+'" '+(b.done?'disabled':'')+' aria-label="Toggle">'+(b.done?'&#10003;':'&#9675;')+'</button>'+
           '<span class="quest-name">'+escapeHtml(b.name)+'</span>'+
           '<span class="quest-xp">+'+(b.xp||0)+' XP</span>'+
         '</div>';
       });
       html += '</div>';
     }
-    html += '</div>';
+    // Removing a main quest asks first, like Reset.
+    if (app.confirmRemoveMain===m.id){
+      html += '<div class="card-confirm">'+
+        '<span class="reset-warning">Remove this quest?</span>'+
+        '<button class="confirm-yes" data-action="main-remove-yes" data-id="'+m.id+'">Yes, remove</button>'+
+        '<button data-action="main-remove-no">Cancel</button>'+
+      '</div>';
+    }
+    return html+'</div>';
+  }
+
+  function renderQuests(){
+    // Rebuilding the list would drop a rename still in progress: save it first.
+    if (app.finishRename) app.finishRename();
+    var state = app.state;
+    var html = '<div class="panel-title">Main Quests</div>';
+    if (state.quests.mains.length===0){
+      html += '<div class="empty-note">No main quests yet — add one below.</div>';
+    }
+    state.quests.mains.forEach(function(m){ html += mainQuestHtml(m); });
+    html += '<div class="add-row">'+
+      '<input type="text" class="field-full" id="new-main-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
+      '<input type="text" class="field-objective" id="new-main-objective" placeholder="Objective..." maxlength="60" required aria-label="Objective">'+
+      '<input type="number" id="new-main-xp" value="1000" min="10" max="5000" aria-label="XP reward">'+
+      '<button id="add-main-btn">Add</button>'+
+    '</div>';
 
     html += '<div class="panel-title">Side Quests</div>';
     var active = state.quests.side.filter(function(q){ return !q.done; });
