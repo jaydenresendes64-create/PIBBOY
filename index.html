@@ -26,6 +26,7 @@
 <script defer src="js/ai.js"></script>
 <script defer src="js/render.js"></script>
 <script defer src="js/mascot.js"></script>
+<script defer src="js/crt.js"></script>
 <script defer src="js/events.js"></script>
 <script defer src="js/main.js"></script>
 </head>
@@ -33,6 +34,9 @@
   <div class="toast-layer" id="toast-layer" role="status" aria-live="polite"></div>
   <main class="frame">
     <div class="scan-overlay"></div>
+    <!-- The tube's glass: darker edges and corners, a faint inner shadow and the rare flicker
+         (css/terminal.css, js/crt.js). Above the page, but taps go through it. -->
+    <div class="crt" id="crt" aria-hidden="true"></div>
     <!-- The mascot: under the scanlines, taps go through him (css/terminal.css, js/mascot.js). -->
     <div class="mascot" id="mascot" aria-hidden="true">
       <div class="mascot-move"><img class="mascot-img" src="images/mascot.png" alt="" width="144" height="204" draggable="false"></div>

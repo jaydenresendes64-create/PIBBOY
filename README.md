@@ -18,6 +18,7 @@ js/storage.js       saving: two copies (IndexedDB and localStorage), backup file
 js/ai.js            journal analysis client + offline keyword rules
 js/render.js        builds each tab
 js/mascot.js        when the mascot walks or gestures (his moves are in css/terminal.css)
+js/crt.js           the screen's rare flicker (the tube look itself is in css/terminal.css)
 js/events.js        user actions
 js/main.js          startup
 sw.js               service worker: offline use (network first for the app, so updates show right away)

@@ -19,14 +19,14 @@
 'use strict';
 
 var CACHE_PREFIX = 'status-terminal-';
-var CACHE = CACHE_PREFIX + 'v3';
+var CACHE = CACHE_PREFIX + 'v4';
 
 // Cached at install, so the app opens offline after the first visit.
 var APP_SHELL = [
   './',
   'index.html',
   'css/terminal.css',
-  'js/state.js', 'js/storage.js', 'js/ai.js', 'js/render.js', 'js/mascot.js', 'js/events.js', 'js/main.js',
+  'js/state.js', 'js/storage.js', 'js/ai.js', 'js/render.js', 'js/mascot.js', 'js/crt.js', 'js/events.js', 'js/main.js',
   'images/mascot.png',
   'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png'
