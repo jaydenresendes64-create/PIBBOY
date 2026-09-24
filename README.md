@@ -23,14 +23,16 @@ js/mascot.js        when the mascot walks or gestures (his moves are in css/term
 js/crt.js           the screen's rare flicker (the tube look itself is in css/terminal.css)
 js/tilt.js          3D tilt: the screen's layers follow the phone's motion (or the mouse)
 js/places.js        the MAP tab's logic: positions, city and region lists, finding and revealing places
-js/map.js           the MAP tab (loads Leaflet the first time it's opened) and its fog of war
+js/fog.js           MAP: the fog of war, drawn with WebGL in the same frame as the map
+js/map.js           the MAP tab (loads MapLibre the first time it's opened)
 js/bulk.js          MAP: "Add several places" (paste a list, review it, reveal it all)
-vendor/leaflet/     Leaflet 1.9.4, the map library (licence: vendor/leaflet/LICENSE)
+vendor/maplibre/    MapLibre GL JS 6.11.2, the map library (licence: vendor/maplibre/LICENSE.txt)
 js/events.js        user actions
 js/main.js          startup
 sw.js               service worker: offline use (network first for the app, so updates show right away)
 manifest.webmanifest name, colours and icons (icons/) for installing on a phone
 images/mascot.png   the amber mascot in the top-right corner (mascot-hand.svg: his raised hand on MAP)
+data/map-style.json MAP: the map's own amber Pip-Boy style (colours, line widths, labels, by zoom)
 data/places.txt     MAP: every country, region and city (15,000 people or more), for searching
 data/regions/       MAP: one file per country with the shapes of its regions
 tools/              build-map-data.js, which makes data/ (see "Map data")
@@ -79,27 +81,52 @@ the first tap anywhere brings the question back. It pauses in the background and
 
 ## MAP tab
 
-A world map at city level, tinted amber like the rest of the screen. Drag and pinch on the phone
-(drag and the mouse wheel on a computer). The round buttons on the map: **⌖** recenters on your latest
-place (the whole world when there's none yet), **⛶** zooms to show all your places.
+A crisp vector map of the whole world, down to street level (street names, buildings, shops and
+places, train and metro lines and stations), drawn in the app's own amber Pip-Boy style. Drag and
+pinch on the phone (drag and the mouse wheel on a computer); the map always stays north up and flat,
+and goes from the whole world to zoom 19 (a few houses). The round buttons on the map: **⌖** recenters
+on your latest place (the whole world when there's none yet), **⛶** zooms to show all your places.
 
-- **Map library:** [Leaflet](https://leafletjs.com) 1.9.4, kept in `vendor/leaflet/` (no CDN). It's
-  only loaded the first time you open MAP, so the app starts as fast as before.
-- **Map pictures (tiles):** CARTO's dark basemap ("Dark Matter", made from OpenStreetMap data), chosen
-  because its dark greys turn into a clean amber with a CSS filter, it has street-level detail and
-  labels, and CARTO allows free use for a personal, non-commercial app (up to 75,000 map views a
-  month, far more than one person uses) as long as the credit shows: the small
-  "© OpenStreetMap © CARTO" in the map's corner. OpenStreetMap's own tiles would work too, but their
-  usage policy asks apps not to lean on their servers, and their bright colours tint poorly.
-- Tiles you've looked at are kept on the phone (at most 400, the oldest go first; never downloaded
-  ahead), so places you've seen still show offline. With no tile at all, the map shows a plain dark
-  background and everything else still works.
+- **Map library:** [MapLibre GL JS](https://maplibre.org) 6.11.2, kept in `vendor/maplibre/` (no CDN;
+  the files are the package's, with only the source-map comment line removed). It draws the map with
+  the phone's graphics chip, sharp on retina screens. It's only loaded the first time you open MAP, so
+  the app starts as fast as before. It's a JavaScript module, so the map needs the app opened from its
+  web address (like the city list); opened straight from disk, MAP says so.
+- **Map data (vector tiles):** [OpenFreeMap](https://openfreemap.org), chosen because it's free with
+  no key, no account and no limit on map views, it's made from OpenStreetMap (the most detailed map
+  there is), and it uses the common OpenMapTiles layout, so the style is ours to write. Its terms:
+  free for any use, the credit must show ("OpenFreeMap © OpenMapTiles Data from OpenStreetMap", in
+  the map's corner, which also covers geoBoundaries' "© OpenStreetMap contributors" below), and no
+  bulk or automated downloading, so the app only keeps tiles you've actually looked at.
+- **The style** (`data/map-style.json`) is a real MapLibre style, not a colour filter: near-black
+  ground; amber roads, brighter and thicker as they get bigger, with a soft glow on motorways and main
+  roads; darker amber water with lit shores; dim amber building outlines from street level; parks and
+  woods barely tinted; dashed borders, railways with ties, metro lines in tunnels; place names in
+  VT323 and street, shop and station names in IBM Plex Mono, with a faint warm glow. The labels use the
+  app's own font files (`fonts/`), so they work offline; letters those files don't have (Polish,
+  Arabic, Chinese...) come from the phone's own fonts. Names are shown in Latin letters when the map
+  has them.
+- **Offline:** tiles you've looked at are kept on the phone (at most 800, about 50 MB, the oldest go
+  first; never downloaded ahead) and refreshed in the background once a month, so places you've seen
+  still show offline. MapLibre, the style and the fonts are saved with the app when it installs. A
+  piece of map never seen shows the old faint grid instead, and the fog and your places still work on
+  top.
 - With 3D tilt on, the map holds still while your finger is on it, so drags and pinches land exactly.
 
-**Fog of war:** dark, grainy fog covers the whole world. Only the exact places you've been are cut
-out of it, with soft smoky edges: a circle around each city and pin, the exact shape of each region.
-Sizes are real distances, so a 5 km circle stays 5 km whatever the zoom. The fog is one canvas
-drawn over the tiles, redrawn at most once per frame while the map moves, and only then.
+**Fog of war:** dark, smoky amber-grey clouds cover the whole world: three layers of cloud of
+different sizes, each drifting slowly its own way, a little brighter on their edges, with a fine
+grain. They're stuck to the world, so they move with the map when you drag and grow with it when you
+pinch. Only the exact places you've been are cut out of it: a circle around each city and pin, the
+exact shape of each region, with soft edges that billow gently like smoke pulling back. Sizes are
+real distances, so a 5 km circle stays 5 km whatever the zoom. A newly revealed place clears in
+over about a second and a half; a removed one fogs over again.
+
+The fog is drawn with WebGL (`js/fog.js`) in the same frame as the map, with the map's own camera, so
+it can't lag or slide while you drag and pinch. It only moves while the map is on the screen and the
+app is open (30 frames a second while the map is still, full speed while you move it), and stops
+completely in another tab, scrolled away, or in the background. If the phone can't keep up while you
+move the map, the fog lowers its own resolution (it's soft, so that barely shows) and raises it again
+later. With **Reduce Motion** on, the fog stays still and changes appear at once.
 
 **Revealing places** (under the map):
 

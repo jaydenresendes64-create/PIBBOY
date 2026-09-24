@@ -592,16 +592,16 @@ button{ cursor:pointer; }
 #reject-proposal-btn{ color:var(--danger); border-color:var(--danger); }
 
 /* ---------- MAP (js/map.js) ---------- */
-/* The map box: Leaflet's view, the scanlines and a faint inner shadow over
-   it (taps go through them), and the two round buttons. */
+/* The map box: MapLibre's view, the scanlines and a faint inner shadow over
+   it (taps go through them), and the two round buttons. The map's own
+   colours are its style (data/map-style.json), not a filter. */
 .map-box{
   position:relative; height:min(62vh, 520px); min-height:300px;
   border:1px solid var(--line); border-radius:3px; overflow:hidden; background:var(--bg);
 }
 .map-view{ position:absolute; inset:0; z-index:0; background:var(--bg); }
-.map-view.leaflet-container{ font-family:inherit; background:var(--bg); outline:none; }
-/* CARTO's dark tiles, turned amber like the rest of the screen. */
-.map-view .leaflet-tile-pane{ filter:sepia(1) saturate(2.6) hue-rotate(-12deg) brightness(1.15) contrast(1.15); }
+.map-view.maplibregl-map{ font-family:inherit; background:var(--bg); }
+.map-view .maplibregl-canvas{ outline:none; }
 .map-scan{
   pointer-events:none; position:absolute; inset:0; z-index:1;
   background:repeating-linear-gradient(
@@ -622,7 +622,6 @@ button{ cursor:pointer; }
   background:rgba(13,6,2,0.85); color:var(--amber); font-size:1.25rem; line-height:1;
 }
 .map-tool::before{ content:''; position:absolute; inset:-3px; }  /* 40 -> 46 */
-.map-fog{ pointer-events:none; }
 .map-view{ -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
 .map-counts{
   font-family:'VT323',ui-monospace,monospace; font-size:1.05rem; letter-spacing:0;
@@ -641,7 +640,8 @@ button{ cursor:pointer; }
 
 /* The marks: a 44px tap area around a small dot, with the name beside it
    once zoomed in (labels-cities, labels-pins on the map, js/map.js). */
-.map-marker{ background:none; border:none; }
+.map-marker{ width:44px; height:44px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.map-marker:focus-visible{ outline:1px dashed var(--amber); outline-offset:-6px; }
 .mk-dot{
   position:absolute; left:50%; top:50%; width:10px; height:10px; margin:-5px 0 0 -5px;
   background:var(--amber); border:1px solid var(--bg); transform:rotate(45deg);
@@ -656,7 +656,7 @@ button{ cursor:pointer; }
   text-shadow:0 0 3px #000, 0 0 6px #000; pointer-events:none;
 }
 .labels-cities .map-marker-city .mk-label, .labels-pins .map-marker-pin .mk-label, .map-marker.selected .mk-label{ display:block; }
-.map-here{ fill:var(--amber); fill-opacity:0.9; stroke:var(--bg); stroke-width:2; }
+.map-here{ width:14px; height:14px; border-radius:50%; background:rgba(255,154,46,0.9); border:2px solid var(--bg); pointer-events:none; }
 
 /* Under the map: the open place, "I'm here", "Mark a region". */
 .place-card{
@@ -742,10 +742,11 @@ button{ cursor:pointer; }
 .place-row.selected .place-row-name{ color:var(--amber); }
 .place-row-name{ min-width:0; overflow-wrap:anywhere; }
 .place-row-meta{ flex:0 0 auto; max-width:55%; font-size:0.72rem; color:var(--text-dim); text-align:right; }
-.map-view .leaflet-control-attribution{
-  background:rgba(13,6,2,0.75); color:var(--text-dim); font-size:9px; line-height:1.4; padding:0 4px;
+.map-view .maplibregl-ctrl-attrib{
+  background:rgba(13,6,2,0.75); color:var(--text-dim); font-size:9px; line-height:1.4; padding:0 4px; margin:0;
 }
-.map-view .leaflet-control-attribution a{ color:var(--phosphor-dim); }
+.map-view .maplibregl-ctrl-attrib a{ color:var(--phosphor-dim); }
+.map-view .maplibregl-ctrl-bottom-right{ z-index:1; }
 
 .log-history{ display:flex; flex-direction:column; }
 .log-entry{ padding:9px 0; border-bottom:1px solid var(--line); }

@@ -1,20 +1,19 @@
 /**
- * MAP tab — a world map at city level (Leaflet, vendor/leaflet/), tinted
- * amber like the rest of the screen.
+ * MAP tab — a crisp vector map of the world down to street level
+ * (MapLibre GL JS, vendor/maplibre/), in its own amber Pip-Boy style
+ * (data/map-style.json), under the fog of war (js/fog.js).
  *
- * Leaflet is only loaded the first time the tab is opened, so the app starts
- * as fast as before. The map's pictures (tiles) come from CARTO's dark
- * basemap (see README "MAP tab"); when they can't load (offline, never
- * seen) the map stays on a plain dark background and everything else works.
+ * MapLibre is only loaded the first time the tab is opened, so the app
+ * starts as fast as before. The map's data (vector tiles) come from
+ * OpenFreeMap (see README "MAP tab"); sw.js keeps the ones already seen for
+ * offline use. A tile that can't load (offline, never seen) shows the faint
+ * grid instead (places.noDataTile), and everything else still works.
  *
- * Gestures: drag and pinch on a phone, drag and the wheel on a computer.
- * While a finger is on the map, 3D tilt holds still (ST.tilt.hold), so the
- * map stays under it. Nothing runs while the map isn't being moved.
- *
- * The fog of war is one canvas over the tiles (makeFogLayer): dark grainy fog
- * everywhere, with the revealed places cut out of it with soft, smoky
- * edges, sized in real metres. It's redrawn (once per frame at most) while
- * the map moves or zooms, at no more than twice the screen's pixels.
+ * Gestures: drag and pinch on a phone, drag and the wheel on a computer;
+ * always north up and flat (no rotating, no tilting). A long press (or a
+ * right click) drops a pin. While a finger is on the map, 3D tilt holds
+ * still (ST.tilt.hold), so the map stays under it. Nothing is drawn while
+ * the map is still, hidden, or the app is in the background.
  *
  * Under the map: the place that's open (rename, resize, note, remove), the
  * city search, "I'm here", pins, marking a region, and the lists. Revealing
@@ -24,324 +23,218 @@
 (function(ST){
   'use strict';
 
-  var el = ST.el, clamp = ST.clamp, escapeHtml = ST.escapeHtml, attr = ST.escapeHtml;
+  var el = ST.el, escapeHtml = ST.escapeHtml, attr = ST.escapeHtml;
   var app = ST.app;
 
-  var TILES = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-  var ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
-  var WORLD = [[-60, -170], [75, 175]];
-  var MAX_PIXEL_RATIO = 2;
-  var MIN_HOLE_PX = 3;          // a place still shows as a spark when zoomed far out
-  var REGION_EDGE_M = 2500;     // how far a region's smoky edge reaches
+  var MAPLIBRE = 'vendor/maplibre/';
+  var STYLE_URL = 'data/map-style.json';
+  var WORLD = [[-170, -60], [175, 75]];         // [[west, south], [east, north]]
+  var MAX_ZOOM = 19;
+  var LONG_PRESS_MS = 550, LONG_PRESS_SLOP_PX = 10;
 
-  var L = null;                 // Leaflet, once loaded
+  var ml = null;                // MapLibre, once loaded
   var map = null;
-  var fog = null;               // the fog layer
-  var markers = null;           // the cities' and pins' marks
+  var fog = null;               // the fog layer (js/fog.js)
+  var markers = [];             // the cities' and pins' marks
   var P = ST.places, R = ST.render;
   var panel = null;             // what's open under the map: {kind:'place', type, id, confirm},
                                 // {kind:'region', cc}, {kind:'here', status, lat, lon, info}, or a bulk list
   var placing = null;           // waiting for a tap on the map: {pin:true} or {onPlace}, and its hint text
   var lastPlace = null;         // {type, id}: the place opened or added last (Recenter)
   var pendingFocus = null;      // a place to show once the map exists
-  var leafletPromise = null;
+  var loading = null;           // the promise of MapLibre and the style
   var built = false;            // the tab's frame (map box, buttons) is in the page
+  var onScreen = false;         // the map box is on the screen (the tab open, not scrolled away)
   var motion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
 
   function stayStill(){ return !!(motion && motion.matches); }
 
-  // ---------- loading Leaflet (once) ----------
-  // Its stylesheet goes before the app's, so the app's own map styles win.
-  function loadLeaflet(){
-    if (window.L) return Promise.resolve(window.L);
-    if (!leafletPromise){
-      leafletPromise = new Promise(function(resolve, reject){
-        var css = document.createElement('link');
-        css.rel = 'stylesheet';
-        css.href = 'vendor/leaflet/leaflet.css';
-        var ours = document.querySelector('link[href="css/terminal.css"]');
-        document.head.insertBefore(css, ours || null);
-        var script = document.createElement('script');
-        script.src = 'vendor/leaflet/leaflet.js';
-        script.onload = function(){ if (window.L) resolve(window.L); else reject(new Error('Leaflet missing')); };
-        script.onerror = function(){ script.remove(); reject(new Error('Leaflet did not load')); };
-        document.head.appendChild(script);
+  // ---------- loading MapLibre and the style (once) ----------
+  // MapLibre's stylesheet goes before the app's, so the app's own map styles
+  // win. MapLibre is a module (import()), so the map needs the app served
+  // over http(s), like the city list; its worker is the file next to it.
+  function load(){
+    if (!loading){
+      var css = document.createElement('link');
+      css.rel = 'stylesheet';
+      css.href = MAPLIBRE+'maplibre-gl.css';
+      document.head.insertBefore(css, document.querySelector('link[href="css/terminal.css"]'));
+      loading = Promise.all([
+        import(new URL(MAPLIBRE+'maplibre-gl.mjs', document.baseURI).href),
+        fetch(STYLE_URL).then(function(response){
+          if (!response.ok) throw new Error('HTTP '+response.status);
+          return response.json();
+        })
+      ]).then(function(parts){
+        ml = parts[0];
+        ml.addProtocol('omt', loadTile);
+        return parts[1];
       });
-      leafletPromise.catch(function(){ leafletPromise = null; });
+      loading.catch(function(){ loading = null; css.remove(); });
     }
-    return leafletPromise;
+    return loading;
   }
-
-  // ---------- the fog ----------
-  // A small random number generator, so a place's smoky edge is the same
-  // every time it's drawn.
-  function seeded(text){
-    var h = 2166136261;
-    for (var i=0;i<text.length;i++){ h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
-    return function(){
-      h = (h + 0x6D2B79F5) | 0;
-      var t = Math.imul(h ^ (h>>>15), 1 | h);
-      t = (t + Math.imul(t ^ (t>>>7), 61 | t)) ^ t;
-      return ((t ^ (t>>>14)) >>> 0) / 4294967296;
-    };
+  // The style's font files are the app's own (fonts/), so labels work
+  // offline and look like the rest of the screen.
+  function withFonts(style){
+    var faces = style['font-faces'] || {};
+    Object.keys(faces).forEach(function(name){
+      faces[name].forEach(function(face){ face.url = new URL(face.url, document.baseURI).href; });
+    });
+    return style;
   }
-  // The fog's texture, 256 pixels square, repeated: dark smoke (two sizes
-  // of soft noise) with fine grain. It wraps around at its edges.
-  var FOG_TILE = 256;
-  var fogTexture = null;
-  function makeFogTexture(){
-    var c = document.createElement('canvas');
-    c.width = c.height = FOG_TILE;
-    var g = c.getContext('2d');
-    var img = g.createImageData(FOG_TILE, FOG_TILE);
-    var rand = seeded('fog');
-    function lattice(n){
-      var v = [];
-      for (var i=0;i<n*n;i++) v.push(rand());
-      return function(x, y){                    // smooth noise, wrapping at n cells
-        var fx = x/FOG_TILE*n, fy = y/FOG_TILE*n;
-        var x0 = Math.floor(fx), y0 = Math.floor(fy);
-        var tx = fx-x0, ty = fy-y0;
-        tx = tx*tx*(3-2*tx); ty = ty*ty*(3-2*ty);
-        function at(i, j){ return v[((j%n+n)%n)*n + ((i%n+n)%n)]; }
-        var a = at(x0,y0)+(at(x0+1,y0)-at(x0,y0))*tx;
-        var b = at(x0,y0+1)+(at(x0+1,y0+1)-at(x0,y0+1))*tx;
-        return a+(b-a)*ty;
-      };
-    }
-    var big = lattice(4), small = lattice(16);
-    for (var y=0;y<FOG_TILE;y++){
-      for (var x=0;x<FOG_TILE;x++){
-        var smoke = big(x,y)*0.65 + small(x,y)*0.35;
-        var grain = rand();
-        var i = (y*FOG_TILE+x)*4;
-        img.data[i] = 10 + smoke*26 + grain*14;
-        img.data[i+1] = 5 + smoke*13 + grain*7;
-        img.data[i+2] = 2 + smoke*4 + grain*3;
-        img.data[i+3] = 255*(0.86 + smoke*0.1 + grain*0.04);
+  // A tile the style asks for (omt://...): from OpenFreeMap (through sw.js,
+  // which keeps a copy). Nothing there: an empty tile. Can't be reached
+  // (offline, never seen; sw.js says so with an empty tile marked
+  // X-Tile-Missing rather than a network error): the "nodata" tile, drawn
+  // as the faint grid.
+  function loadTile(params, abort){
+    var url = P.tileUrl(params.url);
+    if (!url) return Promise.resolve({data: new ArrayBuffer(0)});
+    return fetch(url, {signal: abort.signal}).then(function(response){
+      if (response.headers.get('X-Tile-Missing')) return {data: P.noDataTile()};
+      if (response.status!==200) return {data: new ArrayBuffer(0)};
+      return response.arrayBuffer().then(function(data){ return {data: data}; });
+    }, function(err){
+      if (abort.signal.aborted) throw err;
+      return {data: P.noDataTile()};
+    });
+  }
+  // The grid of a tile that couldn't load: 64 CSS pixels a square, drawn
+  // at twice the resolution so its lines stay sharp.
+  function gridImage(){
+    var n = 128, data = new Uint8Array(n*n*4);
+    for (var y=0;y<n;y++){
+      for (var x=0;x<n;x++){
+        var line = x<2 || y<2, i = (y*n+x)*4;
+        data[i] = line ? 45 : 23; data[i+1] = line ? 37 : 13; data[i+2] = line ? 14 : 5; data[i+3] = 255;
       }
     }
-    g.putImageData(img, 0, 0);
-    return c;
+    return {width: n, height: n, data: data};
   }
-
-  // A soft round hole: fully clear in the middle, fading out to its edge.
-  function hole(ctx, x, y, r, strength){
-    var g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, 'rgba(0,0,0,'+strength+')');
-    g.addColorStop(0.55, 'rgba(0,0,0,'+strength+')');
-    g.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, 2*Math.PI);
-    ctx.fill();
-  }
-  // A revealed circle, `r` pixels: a big soft hole with smaller puffs
-  // around its rim, so the edge looks like smoke rather than a ring.
-  function smokyCircle(ctx, x, y, r, id){
-    hole(ctx, x, y, r*1.08, 1);
-    if (r<8) return;
-    var rand = seeded(id);
-    for (var k=0;k<7;k++){
-      var angle = (k + rand()*0.8)/7*2*Math.PI;
-      var d = r*(0.6 + rand()*0.3);
-      hole(ctx, x+Math.cos(angle)*d, y+Math.sin(angle)*d, r*(0.3 + rand()*0.2), 0.85);
-    }
-  }
-  // A revealed region: its shape filled, and its edge softened by two wide
-  // faint strokes along it. Points closer than a pixel are skipped.
-  function regionPath(ctx, rings, W, ox, oy){
-    ctx.beginPath();
-    rings.forEach(function(ring){
-      var lastX = null, lastY = null;
-      for (var i=0;i<ring.length;i+=2){
-        var px = ring[i]*W-ox, py = ring[i+1]*W-oy;
-        if (lastX!==null && Math.abs(px-lastX)<0.7 && Math.abs(py-lastY)<0.7 && i<ring.length-2) continue;
-        if (lastX===null) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-        lastX = px; lastY = py;
-      }
-      ctx.closePath();
-    });
-  }
-  function drawRegion(ctx, shape, W, ox, oy, size){
-    var b = shape.box;                     // [x0, y0, x1, y1] on the 0-1 world
-    var edge = clamp(REGION_EDGE_M*P.pixelsPerMetre((shape.lat||0), W), 2, 28);
-    if (b[2]*W-ox < -edge || b[0]*W-ox > size.x+edge || b[3]*W-oy < -edge || b[1]*W-oy > size.y+edge) return;
-    ctx.lineJoin = 'round';
-    shape.polygons.forEach(function(rings){
-      regionPath(ctx, rings, W, ox, oy);
-      ctx.fillStyle = '#000';
-      ctx.fill('evenodd');
-      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
-      ctx.lineWidth = edge*2;
-      ctx.stroke();
-      ctx.lineWidth = edge;
-      ctx.stroke();
-    });
-  }
-  // The whole fog, for a canvas `size` wide whose top-left corner is at
-  // (ox, oy) on a world W pixels wide.
-  function drawFog(ctx, ratio, size, ox, oy, W){
-    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-    ctx.globalCompositeOperation = 'copy';
-    if (!fogTexture) fogTexture = makeFogTexture();
-    ctx.fillStyle = ctx.createPattern(fogTexture, 'repeat');
-    // The texture sticks to the world, so the fog moves with the map.
-    var tx = ((ox%FOG_TILE)+FOG_TILE)%FOG_TILE, ty = ((oy%FOG_TILE)+FOG_TILE)%FOG_TILE;
-    ctx.translate(-tx, -ty);
-    ctx.fillRect(0, 0, size.x+FOG_TILE, size.y+FOG_TILE);
-    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-    ctx.globalCompositeOperation = 'destination-out';
-    revealedShapes().forEach(function(shape){ drawRegion(ctx, shape, W, ox, oy, size); });
-    revealedCircles().forEach(function(c){
-      var x = P.mercX(c.lon)*W-ox, y = P.mercY(c.lat)*W-oy;
-      var r = Math.max(MIN_HOLE_PX, c.radius*P.pixelsPerMetre(c.lat, W));
-      if (x < -r*1.4 || y < -r*1.4 || x > size.x+r*1.4 || y > size.y+r*1.4) return;
-      smokyCircle(ctx, x, y, r, c.id);
-    });
-    ctx.globalCompositeOperation = 'source-over';
-  }
-  // What the fog opens: every city and pin as a circle...
-  function revealedCircles(){
-    var m = ST.app.state && ST.app.state.map;
-    return m ? m.cities.concat(m.pins) : [];
-  }
-  // ...and every region whose shape is loaded (js/places.js).
-  function revealedShapes(){
-    return P.regionShapes ? P.regionShapes() : [];
-  }
-
-  // The fog layer: a Leaflet renderer, so the canvas moves and zooms with
-  // the map between redraws (and during the zoom animation), with a margin
-  // around the view so a drag doesn't show its edge.
-  function makeFogLayer(){
-    var Fog = L.Renderer.extend({
-      options: {padding: 0.2},
-      _initContainer: function(){
-        this._container = document.createElement('canvas');
-        this._container.className = 'map-fog';
-        this._ctx = this._container.getContext('2d');
-      },
-      _destroyContainer: function(){
-        if (this._frame) cancelAnimationFrame(this._frame);
-        this._frame = null;
-        L.DomUtil.remove(this._container);
-        this._ctx = null;
-      },
-      _updatePaths: function(){},
-      getEvents: function(){
-        var events = L.Renderer.prototype.getEvents.call(this);
-        events.move = this.redraw;
-        return events;
-      },
-      // At most once per frame.
-      redraw: function(){
-        if (this._frame || !this._map) return;
-        var self = this;
-        this._frame = requestAnimationFrame(function(){
-          self._frame = null;
-          if (self._map) self._update();
-        });
-      },
-      _update: function(){
-        if (this._map._animatingZoom && this._bounds) return;
-        L.Renderer.prototype._update.call(this);
-        var b = this._bounds, size = b.getSize(), canvas = this._container;
-        var ratio = Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO);
-        L.DomUtil.setPosition(canvas, b.min);
-        var w = Math.round(size.x*ratio), h = Math.round(size.y*ratio);
-        if (canvas.width!==w || canvas.height!==h){
-          canvas.width = w; canvas.height = h;
-          canvas.style.width = size.x+'px'; canvas.style.height = size.y+'px';
-        }
-        var origin = this._map.getPixelOrigin().add(b.min);
-        var W = 256*Math.pow(2, this._map.getZoom());
-        drawFog(this._ctx, ratio, size, origin.x, origin.y, W);
-      }
-    });
-    return new Fog({pane: 'fogPane'});
-  }
-  // Under the tiles: a faint grid that moves with the map, so the fog and
-  // the places still read on a plain dark background when there are no
-  // tiles (offline, never seen).
-  function makeGridLayer(){
-    var Grid = L.GridLayer.extend({
-      createTile: function(){
-        var tile = document.createElement('canvas');
-        tile.width = tile.height = 256;
-        var g = tile.getContext('2d');
-        g.fillStyle = '#170d05';
-        g.fillRect(0, 0, 256, 256);
-        g.strokeStyle = 'rgba(232,163,61,0.16)';
-        g.lineWidth = 1;
-        g.beginPath();
-        for (var i=0.5;i<256;i+=64){ g.moveTo(i, 0); g.lineTo(i, 256); g.moveTo(0, i); g.lineTo(256, i); }
-        g.stroke();
-        return tile;
-      }
-    });
-    return new Grid({pane: 'gridPane', noWrap: true});
-  }
-
 
   // ---------- the map ----------
-  function createMap(){
+  function createMap(style){
     var still = stayStill();
-    map = L.map('map-view', {
-      zoomControl: false,
+    map = new ml.Map({
+      container: 'map-view',
+      style: withFonts(style),
+      bounds: WORLD,
+      minZoom: 0, maxZoom: MAX_ZOOM,
+      renderWorldCopies: false,
+      // North up, flat.
+      dragRotate: false, pitchWithRotate: false, touchPitch: false, maxPitch: 0,
       attributionControl: false,
-      minZoom: 2, maxZoom: 18,
-      worldCopyJump: false,
-      maxBounds: [[-85.05, -200], [85.05, 200]], maxBoundsViscosity: 1,
-      zoomAnimation: !still, fadeAnimation: !still, markerZoomAnimation: !still, inertia: !still,
-      zoomSnap: 0.25, wheelPxPerZoomLevel: 90
+      // Resized by show() and on turning the phone (not while the tab is
+      // hidden: squeezed to nothing, MapLibre would keep drawing).
+      trackResize: false,
+      fadeDuration: still ? 0 : 300,
+      cancelPendingTileRequestsWhileZooming: true
     });
-    L.control.attribution({prefix: false, position: 'bottomright'}).addAttribution(ATTRIBUTION).addTo(map);
-    map.createPane('gridPane').style.zIndex = 150;      // under the tiles (200)
-    map.createPane('fogPane').style.zIndex = 350;       // over the tiles, under the places (600)
-    makeGridLayer().addTo(map);
-    L.tileLayer(TILES, {
-      subdomains: 'abcd', maxZoom: 20, maxNativeZoom: 20, noWrap: true,
-      crossOrigin: true,            // so sw.js can keep a copy for offline use
-      detectRetina: false
-    }).addTo(map);
-    fog = makeFogLayer().addTo(map);
-    markers = L.layerGroup().addTo(map);
+    map.touchZoomRotate.disableRotation();
+    map.keyboard.disableRotation();
+    if (still) map.dragPan.enable({maxSpeed: 0.001});
+    map.addControl(new ml.AttributionControl({compact: false}), 'bottom-right');
+    map.setMissingStyleImageResolver(function(id){
+      if (id==='pipboy-grid' && !map.hasImage(id)) map.addImage(id, gridImage(), {pixelRatio: 2});
+    });
+    map.on('load', function(){
+      status('');
+      fog = ST.fog.createLayer(map, revealed);
+      map.addLayer(fog);
+      fog.setActive(onScreen);
+      if (pendingFocus){ focusPlace(pendingFocus.type, pendingFocus.place); pendingFocus = null; }
+    });
     map.on('zoomend', showLabels);
-    // A long press (or a right click) drops a pin; so does a tap after
-    // "Drop pin". A tap while placing a bulk-list line places it.
-    map.on('contextmenu', function(e){ dropPin(e.latlng.lat, e.latlng.lng); });
+    // A right click (or a long press, which some phones send as one) drops
+    // a pin; so does a tap after "Drop pin". A tap while placing a bulk-list
+    // line places it.
+    map.on('contextmenu', function(e){
+      cancelPress();
+      pinAt(e.lngLat.lat, e.lngLat.lng);
+    });
     map.on('click', function(e){
-      if (!placing) return;
+      var target = e.originalEvent && e.originalEvent.target;
+      if (!placing || (target && target.closest && target.closest('.map-marker'))) return;
       var what = placing;
       placing = null;
       showHint();
-      if (what.pin) dropPin(e.latlng.lat, e.latlng.lng);
-      else if (what.onPlace) what.onPlace(e.latlng.lat, e.latlng.lng);
+      if (what.pin) dropPin(e.lngLat.lat, e.lngLat.lng);
+      else if (what.onPlace) what.onPlace(e.lngLat.lat, e.lngLat.lng);
     });
-    map.fitBounds(WORLD);
+    listenLongPress(map.getCanvasContainer());
     showLabels();
     syncMarkers();
+  }
+  // What the fog opens: every city and pin as a circle, and every region
+  // by its shape (null until loaded: P.regionShapes() starts loading it,
+  // and the fog is drawn again once it's there). Each has its own key, so
+  // the fog can clear a new place smoothly and fog over a removed one.
+  function revealed(){
+    var m = app.state && app.state.map;
+    if (!m) return {circles: [], regions: []};
+    P.regionShapes();
+    function circle(prefix){
+      return function(p){ return {key: prefix+p.id, lat: p.lat, lon: p.lon, radius: p.radius}; };
+    }
+    return {
+      circles: m.cities.map(circle('c:')).concat(m.pins.map(circle('p:'))),
+      regions: m.regions.map(function(r){ return {key: 'r:'+r.code, shape: P.shapeOf(r.code, r.cc)}; })
+    };
   }
   // Something revealed changed (a place added, resized, removed, a region's
   // shape loaded): the fog again, on the next frame.
   function redrawFog(){
-    if (fog) fog.redraw();
+    if (map && fog) map.triggerRepaint();
   }
   function animate(){ return !stayStill(); }
   function round5(v){ return Math.round(v*1e5)/1e5; }
 
+  // A long press drops a pin (iPhones don't send it as a right click). A
+  // move, a second finger or lifting the finger first cancels it.
+  var press = null, lastPinAt = 0;
+  function listenLongPress(box){
+    box.addEventListener('touchstart', function(e){
+      cancelPress();
+      if (e.touches.length!==1 || (e.target.closest && e.target.closest('.map-marker'))) return;
+      var t = e.touches[0];
+      press = {x: t.clientX, y: t.clientY, timer: setTimeout(function(){
+        var rect = box.getBoundingClientRect(), at = map.unproject([press.x-rect.left, press.y-rect.top]);
+        press = null;
+        pinAt(at.lat, at.lng);
+      }, LONG_PRESS_MS)};
+    }, {passive: true});
+    box.addEventListener('touchmove', function(e){
+      var t = e.touches[0];
+      if (press && (e.touches.length!==1 || Math.abs(t.clientX-press.x)>LONG_PRESS_SLOP_PX || Math.abs(t.clientY-press.y)>LONG_PRESS_SLOP_PX)) cancelPress();
+    }, {passive: true});
+    box.addEventListener('touchend', cancelPress);
+    box.addEventListener('touchcancel', cancelPress);
+    // No browser menu over the map.
+    box.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  }
+  function cancelPress(){
+    if (press){ clearTimeout(press.timer); press = null; }
+  }
+  // Both a long press and the right click it may also send: one pin.
+  function pinAt(lat, lon){
+    if (Date.now()-lastPinAt < 1000) return;
+    lastPinAt = Date.now();
+    dropPin(lat, lon);
+  }
+
   // Place names show beside their marks once zoomed in enough.
   function showLabels(){
     var z = map.getZoom(), box = map.getContainer();
-    box.classList.toggle('labels-cities', z>=6);
-    box.classList.toggle('labels-pins', z>=11);
+    box.classList.toggle('labels-cities', z>=5);
+    box.classList.toggle('labels-pins', z>=10);
   }
   // The marks for the cities and pins (regions show by their shape). A tap
   // on one opens it. 44px to tap, a small dot to see.
   function syncMarkers(){
-    if (!markers) return;
-    markers.clearLayers();
+    if (!map) return;
+    markers.forEach(function(mk){ mk.remove(); });
+    markers = [];
     var m = app.state && app.state.map;
     if (!m) return;
     [['city', m.cities], ['pin', m.pins]].forEach(function(pair){
@@ -350,30 +243,35 @@
   }
   function addMarker(type, p){
     var selected = isOpen(type, p.id);
-    var icon = L.divIcon({
-      className: 'map-marker map-marker-'+type+(selected ? ' selected' : ''),
-      iconSize: [44, 44], iconAnchor: [22, 22],
-      html: '<span class="mk-dot"></span><span class="mk-label">'+escapeHtml(p.name)+'</span>'
+    var mark = document.createElement('div');
+    mark.className = 'map-marker map-marker-'+type+(selected ? ' selected' : '');
+    mark.setAttribute('role', 'button');
+    mark.setAttribute('tabindex', '0');
+    mark.setAttribute('aria-label', p.name);
+    mark.title = p.name;
+    mark.innerHTML = '<span class="mk-dot"></span><span class="mk-label">'+escapeHtml(p.name)+'</span>';
+    if (selected) mark.style.zIndex = '1';
+    mark.addEventListener('click', function(e){ e.stopPropagation(); openPlace(type, p.id, false); });
+    mark.addEventListener('keydown', function(e){
+      if (e.key==='Enter' || e.key===' '){ e.preventDefault(); openPlace(type, p.id, false); }
     });
-    L.marker([p.lat, p.lon], {icon: icon, title: p.name, alt: p.name, zIndexOffset: selected ? 1000 : 0})
-      .on('click', function(){ openPlace(type, p.id, false); })
-      .addTo(markers);
+    markers.push(new ml.Marker({element: mark, anchor: 'center'}).setLngLat([p.lon, p.lat]).addTo(map));
   }
 
   // The map shows a place: its circle (or its region's shape) fills the view.
   function focusPlace(type, p){
-    if (!map){ pendingFocus = {type:type, place:p}; return; }
+    if (!map || !fog){ pendingFocus = {type:type, place:p}; return; }
     if (type==='region'){
       P.loadShapes(p.cc).then(function(){
         var shape = P.shapeOf(p.code, p.cc);
-        if (shape && map) fitBox(shape.lonBox, 13);
+        if (shape && map) fitBox([[shape.lonBox[0], shape.lonBox[1]], [shape.lonBox[2], shape.lonBox[3]]], 12);
       }, function(){});
       return;
     }
-    map.flyToBounds(L.latLng(p.lat, p.lon).toBounds(p.radius*2.6), {maxZoom: 16, animate: animate(), duration: 0.8});
+    fitBox(P.boundsAround(p.lat, p.lon, p.radius*2.6), 15, 0);
   }
-  function fitBox(b, maxZoom){
-    map.flyToBounds([[b[1], b[0]], [b[3], b[2]]], {maxZoom: maxZoom, padding: [16, 16], animate: animate(), duration: 0.8});
+  function fitBox(box, maxZoom, padding){
+    map.fitBounds(box, {maxZoom: maxZoom, padding: padding===undefined ? 16 : padding, animate: animate(), duration: 800});
   }
   function scrollToMap(){
     var box = el('map-box');
@@ -418,6 +316,8 @@
     ['pointerup', 'pointercancel'].forEach(function(type){
       document.addEventListener(type, function(){ if (ST.tilt) ST.tilt.hold(false); });
     });
+    watchScreen(box);
+    window.addEventListener('resize', function(){ if (map && onScreen) map.resize(); });
     tab.addEventListener('click', onClick);
     tab.addEventListener('input', onInput);
     tab.addEventListener('change', onChange);
@@ -716,8 +616,10 @@
       renderPanel();
       if (map){
         clearHere();
-        hereMark = L.circleMarker([asked.lat, asked.lon], {radius: 7, className: 'map-here', interactive: false}).addTo(map);
-        map.flyTo([asked.lat, asked.lon], 12, {animate: animate(), duration: 0.8});
+        var dot = document.createElement('div');
+        dot.className = 'map-here';
+        hereMark = new ml.Marker({element: dot, anchor: 'center'}).setLngLat([asked.lon, asked.lat]).addTo(map);
+        map.flyTo({center: [asked.lon, asked.lat], zoom: 11, animate: animate(), duration: 800});
       }
       P.lookup(asked.lat, asked.lon).then(function(info){
         if (panel!==asked) return;
@@ -783,20 +685,14 @@
     if (!map) return;
     var newest = newestPlace();
     if (newest) focusPlace(newest.type, P.findPlace(newest.type, newest.id));
-    else map.flyToBounds(WORLD, {animate: animate()});
+    else fitBox(WORLD, MAX_ZOOM, 0);
   }
   // All my places: every circle, and every region whose shape is loaded.
   function fitAll(){
     if (!map) return;
-    var m = app.state.map, bounds = null;
-    function add(b){ bounds = bounds ? bounds.extend(b) : L.latLngBounds(b.getSouthWest(), b.getNorthEast()); }
-    m.cities.concat(m.pins).forEach(function(p){ add(L.latLng(p.lat, p.lon).toBounds(p.radius*2)); });
-    m.regions.forEach(function(r){
-      var shape = P.shapeOf(r.code, r.cc);
-      if (shape) add(L.latLngBounds([shape.lonBox[1], shape.lonBox[0]], [shape.lonBox[3], shape.lonBox[2]]));
-    });
-    if (bounds) map.flyToBounds(bounds, {maxZoom: 13, padding: [20, 20], animate: animate(), duration: 0.8});
-    else map.flyToBounds(WORLD, {animate: animate()});
+    var box = P.placesBounds();
+    if (box) fitBox(box, 12, 20);
+    else fitBox(WORLD, MAX_ZOOM, 0);
   }
 
   // ---------- taps and typing in the tab ----------
@@ -860,20 +756,30 @@
   }
 
   // ---------- opening the tab ----------
-  // Loads Leaflet the first time, then makes the map fit its box (it had no
-  // size while the tab was hidden).
+  // Loads MapLibre and the style the first time, then makes the map fit its
+  // box (it had no size while the tab was hidden).
   function show(){
     build();
-    if (map){ map.invalidateSize(); return; }
+    if (map){ map.resize(); return; }
     status('LOADING MAP…');
-    loadLeaflet().then(function(leaflet){
-      L = leaflet;
-      if (!map) createMap();
-      status('');
-      if (pendingFocus){ focusPlace(pendingFocus.type, pendingFocus.place); pendingFocus = null; }
+    load().then(function(style){
+      if (map) return;
+      try{ createMap(style); }
+      catch(e){ status('MAP UNAVAILABLE — this browser can’t draw it'); }
     }, function(){
-      status('MAP UNAVAILABLE — open it once while online');
+      status(location.protocol==='file:' ? 'MAP UNAVAILABLE — open the app from its web address'
+        : 'MAP UNAVAILABLE — open it once while online');
     });
+  }
+  // The fog only moves while the map is on the screen (the tab open, not
+  // scrolled away) and the app in front.
+  function watchScreen(box){
+    if (typeof IntersectionObserver!=='function'){ onScreen = true; return; }
+    new IntersectionObserver(function(entries){
+      onScreen = entries[entries.length-1].isIntersecting;
+      if (onScreen && map) map.resize();
+      if (fog) fog.setActive(onScreen);
+    }).observe(box);
   }
 
   // For js/bulk.js, the "Add several places" list.
