@@ -340,13 +340,13 @@
           grantSkill(key, dir);
           renderStatus(); scheduleSave();
         } else if (action==='quest-complete'){
-          var q = state.quests.side.filter(function(x){return x.id===id;})[0];
+          var q = findQuest('side', id);
           if (q && !q.done){ q.done=true; addXp(q.xp); afterCheck(actionBtn); }
         } else if (action==='quest-remove'){
           state.quests.side = state.quests.side.filter(function(x){return x.id!==id;});
           renderQuests(); scheduleSave();
         } else if (action==='daily-toggle'){
-          var d = state.quests.daily.filter(function(x){return x.id===id;})[0];
+          var d = findQuest('daily', id);
           if (d && d.lastDate!==todayStr()){ d.lastDate=todayStr(); addXp(d.xp); afterCheck(actionBtn); }
         } else if (action==='daily-remove'){
           state.quests.daily = state.quests.daily.filter(function(x){return x.id!==id;});

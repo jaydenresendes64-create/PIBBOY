@@ -6,25 +6,27 @@
  *
  * State {
  *   level: number, xp: number, xpToNext: number, lifetimeXp: number,
- *   lifetimeLogEntries: number,             // every accepted entry, even past the 200 kept in `log`
+ *   lifetimeLogEntries: number,             // every accepted entry, even past the LOG_MAX (200) kept in `log`
  *   unspentSpecialPoints: number,           // level-up points not yet placed
  *   stats:  { STR,END,CHA,INT,AGI: number(0-10) },   // SPECIAL — see "S.P.E.C.I.A.L." below
  *   skills: { CONCENTRATION,KNOWLEDGE,SPEECH,SURVIVAL,COOKING,FINANCE,MUSIC,BUSINESS: number(0-100) },
  *                                           // CONCENTRATION was SCIENCE: see migrate()
  *   quests: {
  *     mains: [ MainQuest ],                  // older saves had one, as `main`: see migrate()
- *     side:  [ { id, questName, name, xp, done } ],
- *     daily: [ { id, questName, name, xp, lastDate:'YYYY-M-D'|null } ]  // done = lastDate===today
+ *     side:  [ { id, questName, name, xp, done } ],  // done ones stay, hidden, for the Lifetime count
+ *     daily: [ { id, questName, name, xp, lastDate:'YYYY-M-D'|null } ]  // done = lastDate===todayStr()
  *   },
  *   inventory: [ { id, name, category: one of CATS } ],
- *   finances: { holdings: [ { id, label, amount, rateToCAD } ] },
- *   log: [ { date, text, xp, reason } ]
+ *   finances: { holdings: [ { id, label, amount, rateToCAD: number>0 } ] },  // Caps = total CAD / CAD_PER_CAP
+ *   log: [ { date, text, xp, reason } ]      // date as shown ('Sep 24, 2026'); the latest LOG_MAX only
  * }
+ * Every `id` is a short string of letters, digits, _ and - (SAFE_ID): genId()
+ * for anything the player adds.
  * MainQuest {
  *   id, questName, title, xp, completed,          // completed ones stay in the list
  *   skillGains: [SkillGain],
  *   bonus: [ { id, name, xp, done } ],             // bonus objectives
- *   progressType: 'percent'|'streak',              // missing = 'percent'
+ *   progressType: 'percent'|'streak',              // saves from before streaks: 'percent'
  *   progress: number(0-100),                       // percent: the slider, 100 completes it
  *   // streak quests only: a check-in a day; reaching streakTarget completes it
  *   streakTarget: number(1-STREAK_MAX_DAYS),
@@ -41,9 +43,16 @@
  *
  * Every reward path (quest completion, bonus objective, journal proposal)
  * should express its reward as XP plus zero or more SkillGains, and apply
- * them through grantSkill()/addXp() rather than touching state.skills /
- * state.xp directly — that's what keeps the bounds checks and lifetime
- * counters in one place instead of duplicated at each call site.
+ * them through grantSkill()/gainXp() (completeMain() does both for a main
+ * quest) rather than touching state.skills / state.xp directly — that's
+ * what keeps the bounds checks and lifetime counters in one place instead
+ * of duplicated at each call site. events.js adds the toasts (addXp()).
+ *
+ * LOADING — every document the app takes in (a saved copy, a backup file,
+ * another window's save) goes through sanitizeImported(), which runs
+ * migrate() first. A change to the shape above goes in migrate(), so it
+ * reaches saves in the browser and old backups alike; tests/migrate.test.js
+ * keeps every earlier format.
  *
  * S.P.E.C.I.A.L.: `stats` only goes up one way. Each level-up adds one
  * unspentSpecialPoint; the player taps a stat in the STATUS tab's level-up
@@ -55,7 +64,8 @@
  * index.html loads them in dependency order: state → storage → ai → render →
  * mascot → events → main. They are plain scripts rather than ES modules so the app
  * still runs when index.html is opened straight from disk (file://), where
- * browsers refuse to load modules.
+ * browsers refuse to load modules. The tests (tests/) load the same files in
+ * Node: `node --test`.
  */
 (function(ST){
   'use strict';
@@ -156,8 +166,9 @@
     return loaded;
   }
   // Brings a document written by an older version up to the current shape,
-  // before the defaults are merged in. Saves and imported backups both pass
-  // through here (via mergeDefaults). Edits `doc` in place and returns it.
+  // before the defaults are merged in. Saved copies, backups and other
+  // windows' saves all pass through here (sanitizeImported → mergeDefaults).
+  // Edits `doc` in place and returns it.
   function migrate(doc){
     if (!doc || typeof doc!=='object') return doc;
     migrateMainQuests(doc.quests);
@@ -439,7 +450,6 @@
   ST.defaultState = defaultState;
   ST.sanitizeImported = sanitizeImported;
   ST.totalHoldingsCAD = totalHoldingsCAD;
-  ST.capsValue = capsValue;
   ST.logEntryCount = logEntryCount;
   ST.addLogEntry = addLogEntry;
   ST.checkedInToday = checkedInToday;

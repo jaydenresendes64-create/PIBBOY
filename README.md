@@ -13,8 +13,8 @@ Plain HTML, CSS and JavaScript: no framework, no build step.
 ```
 index.html          markup
 css/terminal.css    styles
-js/state.js         data model, defaults, reward rules, backup validation
-js/storage.js       saving: IndexedDB with a localStorage fallback, backup files
+js/state.js         data model, defaults, reward rules, migrating and checking saves and backups
+js/storage.js       saving: two copies (IndexedDB and localStorage), backup files
 js/ai.js            journal analysis client + offline keyword rules
 js/render.js        builds each tab
 js/mascot.js        when the mascot walks or gestures (his moves are in css/terminal.css)
@@ -59,7 +59,8 @@ in the app to bring it over.
 
 Double-click `index.html`. Everything works the same as on GitHub Pages, except installing and
 offline use, which need the site to be served over http(s) (for example `npx http-server` in this
-folder, then http://localhost:8080).
+folder, then http://localhost:8080). Served that way, the browser console shows one harmless 404: the
+app checking whether the optional AI function exists (it never checks on GitHub Pages).
 
 ## Run the tests
 
@@ -80,7 +81,8 @@ HTML output, and saving (both copies, damaged copies, two tabs).
 - Saved in the browser you use, twice (IndexedDB and localStorage): if one copy is damaged, the
   other is used. If neither can be read, the app says so and changes nothing rather than starting
   empty. Another browser or device starts empty. Use **Export backup / Import backup** in the footer
-  to move it.
+  to move it. An imported file is checked (and brought up to date if it comes from an older
+  version) before you confirm; a file that isn't a backup is refused and nothing changes.
 - The app asks the browser to keep its storage even when space runs low (on a phone this is silent).
 - With the app open in two tabs, each follows the other's changes. A change can never overwrite a
   newer one made in the other tab: if both change at the same moment, the second one gives way and
