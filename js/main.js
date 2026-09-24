@@ -12,6 +12,8 @@
     ST.storage.onSaveFailed(ST.render.showSaveWarning);
     ST.storage.onExternalChange(ST.events.adoptState);
     if (ST.mascot) ST.mascot.init('status');     // decoration: the app runs without it
+    if (ST.crt) ST.crt.init();                    // decoration too
+    if (ST.tilt) ST.tilt.init();
 
     ST.storage.load().then(function(saved){
       ST.app.state = saved || ST.defaultState();

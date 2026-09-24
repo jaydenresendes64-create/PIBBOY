@@ -10,28 +10,27 @@
  * the network fails. So this file doesn't need to change when the app does;
  * bump CACHE only to throw the old copies away.
  *
- * Google Fonts: cache first, refreshed in the background. The page waits
- * for the fonts' stylesheet before it starts, so once cached it never waits
- * for the network again; the font files themselves never change.
+ * The fonts are the app's own files too (fonts/), so they're there offline
+ * from the first visit.
  *
  * The optional AI function (api/) is never cached.
  */
 'use strict';
 
 var CACHE_PREFIX = 'status-terminal-';
-var CACHE = CACHE_PREFIX + 'v3';
+var CACHE = CACHE_PREFIX + 'v4';
 
 // Cached at install, so the app opens offline after the first visit.
 var APP_SHELL = [
   './',
   'index.html',
   'css/terminal.css',
-  'js/state.js', 'js/storage.js', 'js/ai.js', 'js/render.js', 'js/mascot.js', 'js/events.js', 'js/main.js',
+  'js/state.js', 'js/storage.js', 'js/ai.js', 'js/render.js', 'js/mascot.js', 'js/crt.js', 'js/tilt.js', 'js/events.js', 'js/main.js',
   'images/mascot.png',
+  'fonts/vt323.woff2', 'fonts/ibm-plex-mono.woff2',
   'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png'
 ];
-var FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 var API_URL = new URL('api/', self.location).href;
 
 self.addEventListener('install', function(event){
@@ -55,11 +54,9 @@ self.addEventListener('activate', function(event){
   );
 });
 
-// Stores a copy of a good response. Fonts' files come back as CORS
-// responses; an opaque one is kept too, in case the stylesheet is loaded
-// without CORS.
+// Stores a copy of a good response.
 function keep(event, request, response){
-  if (response.status===200 || response.type==='opaque'){
+  if (response.status===200){
     var copy = response.clone();
     event.waitUntil(caches.open(CACHE).then(function(cache){ return cache.put(request, copy); }));
   }
@@ -93,20 +90,6 @@ function networkFirst(event){
   });
 }
 
-// Google Fonts: the cached copy at once when there is one (refreshed in the
-// background), else the network.
-function cacheFirst(event){
-  var request = event.request;
-  var network = fetch(request).then(function(response){ return keep(event, request, response); });
-  return fromCache(request).then(function(cached){
-    if (cached){
-      event.waitUntil(network.catch(function(){}));
-      return cached;
-    }
-    return network;
-  });
-}
-
 self.addEventListener('fetch', function(event){
   var request = event.request;
   if (request.method!=='GET') return;
@@ -114,7 +97,5 @@ self.addEventListener('fetch', function(event){
   if (url.origin===self.location.origin){
     if (request.url.indexOf(API_URL)===0) return;      // never cached
     event.respondWith(networkFirst(event));
-  } else if (FONT_HOSTS.indexOf(url.hostname)!==-1){
-    event.respondWith(cacheFirst(event));
   }
 });

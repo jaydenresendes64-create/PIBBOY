@@ -2,7 +2,8 @@
 
 A personal, Fallout-inspired life tracker: S.P.E.C.I.A.L. stats, skills, main / side / daily quests,
 inventory, a Caps wallet, and a journal that turns diary entries into XP and skill proposals you
-accept or reject.
+accept or reject. In ITEMS, **THINGS TO SELL** keeps an asking price per item; tapping **Sold** puts
+the money in the wallet's CASH row, gives 25 XP and writes the sale in the journal.
 
 Plain HTML, CSS and JavaScript: no framework, no build step.
 
@@ -18,13 +19,17 @@ js/storage.js       saving: two copies (IndexedDB and localStorage), backup file
 js/ai.js            journal analysis client + offline keyword rules
 js/render.js        builds each tab
 js/mascot.js        when the mascot walks or gestures (his moves are in css/terminal.css)
+js/crt.js           the screen's rare flicker (the tube look itself is in css/terminal.css)
+js/tilt.js          3D tilt: the screen's layers follow the phone's motion (or the mouse)
 js/events.js        user actions
 js/main.js          startup
 sw.js               service worker: offline use (network first for the app, so updates show right away)
 manifest.webmanifest name, colours and icons (icons/) for installing on a phone
 images/mascot.png   the amber mascot in the top-right corner
+fonts/              the two terminal fonts, VT323 and IBM Plex Mono (licence: fonts/OFL.txt)
 api/analyze.js      optional serverless AI function (not used on GitHub Pages, see below)
 tests/              automated tests (see "Run the tests")
+.github/workflows/  runs the tests on GitHub after every push
 .nojekyll           tells GitHub Pages to serve the files as they are, without Jekyll
 ```
 
@@ -48,12 +53,21 @@ It opens full screen like an app and keeps working without a connection. Updates
 normally: while online the app loads from GitHub Pages like any website (checked against the server
 on every open, so a new version shows up the next time you open it), and the copy saved on the phone
 is only used when there's no connection. Nothing needs to change in `sw.js` when you update the app.
-The terminal fonts are kept on the phone after the first visit, so the app never waits for Google
-Fonts again, even on a bad connection.
+The terminal fonts are part of the app (`fonts/`), so they work offline from the very first open and
+nothing is loaded from Google.
 
 Where your data lives: on Android the installed app shares it with Chrome. On iPhone the Home Screen
 app keeps its own data, separate from Safari, so use **Export backup** in Safari and **Import backup**
 in the app to bring it over.
+
+## 3D tilt
+
+The footer link **3D tilt: off/on** makes the screen's layers follow the phone's motion (or, lightly,
+the mouse on a computer): the glass, scanlines and mascot turn a little, while everything you tap only
+shifts a few pixels, so taps land where you aim. It's off by default and remembered on each device.
+On iPhone, turning it on asks for motion access (allow it); if iOS asks again after reopening the app,
+the first tap anywhere brings the question back. It pauses in the background and never runs with
+**Reduce Motion** switched on.
 
 ## Run it locally
 
@@ -73,15 +87,18 @@ node --test
 No install step and no dependencies: the tests use Node's built-in test runner and load the app's own
 scripts from `js/` with a small fake browser (`tests/helpers.js`). They cover migrating every earlier
 save format, checking backup files (including hostile ones), XP and level-ups, skill and
-S.P.E.C.I.A.L. limits, streaks across days, the offline journal rules in English and French, safe
+S.P.E.C.I.A.L. limits, selling items, streaks across days, the offline journal rules in English and French, safe
 HTML output, and saving (both copies, damaged copies, two tabs).
+
+GitHub also runs them after every push (the **Actions** tab, `.github/workflows/test.yml`): a red ✗
+next to a commit means a test failed.
 
 ## Your data
 
 - Saved in the browser you use, twice (IndexedDB and localStorage): if one copy is damaged, the
   other is used. If neither can be read, the app says so and changes nothing rather than starting
   empty. Another browser or device starts empty. Use **Export backup / Import backup** in the footer
-  to move it. An imported file is checked (and brought up to date if it comes from an older
+  to move it (a backup is saved as `status-terminal-backup-YYYY-MM-DD.json`, dated the day you made it). An imported file is checked (and brought up to date if it comes from an older
   version) before you confirm; a file that isn't a backup is refused and nothing changes.
 - The app asks the browser to keep its storage even when space runs low (on a phone this is silent).
 - With the app open in two tabs, each follows the other's changes. A change can never overwrite a

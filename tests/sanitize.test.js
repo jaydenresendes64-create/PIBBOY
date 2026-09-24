@@ -196,3 +196,15 @@ test('a "__proto__" key can\'t change what an imported object inherits', () => {
   assert.equal(out.quests.mains[0].polluted, undefined);
   assert.equal(({}).polluted, undefined);
 });
+
+test('asking prices: kept when 0 or more, dropped otherwise', () => {
+  const s = fullState();
+  s.inventory.push({ id: 'xs1', name: 'Guitar', category: 'SELL', price: 120.5 }, { id: 'xs2', name: 'Free', category: 'SELL', price: 0 },
+    { id: 'xs3', name: 'No price', category: 'SELL' }, { id: 'xs4', name: 'Neg', category: 'SELL', price: -3 },
+    { id: 'xs5', name: 'Evil', category: 'SELL', price: '"><b>' }, { id: 'xs6', name: 'Text', category: 'SELL', price: '40' },
+    { id: 'xs7', name: 'Null', category: 'SELL', price: null });
+  const out = sanitize(s).inventory.slice(-7);
+  assert.deepEqual(out.map(i => i.price), [120.5, 0, undefined, undefined, undefined, 40, undefined]);
+  assert.deepEqual(out.map(i => 'price' in i), [true, true, false, false, false, true, false]);
+  assert.deepEqual(sanitize(s).inventory.slice(-7), out);          // stable
+});

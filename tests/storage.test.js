@@ -275,3 +275,10 @@ test('requestPersistence asks once, quietly, only where supported', async () => 
   w.ST.storage.requestPersistence();               // a refusal is ignored
   await settle();
 });
+
+test('backup file name carries the local date, zero-padded', () => {
+  const w = openWindow(sharedStorage(), { now: new Date(2026, 0, 5, 23, 30) });
+  assert.equal(w.ST.storage.backupName(), 'status-terminal-backup-2026-01-05.json');
+  w.setNow(new Date(2026, 10, 24, 8));
+  assert.equal(w.ST.storage.backupName(), 'status-terminal-backup-2026-11-24.json');
+});

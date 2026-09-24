@@ -146,3 +146,14 @@ test('migrate() is idempotent and ignores non-objects', () => {
   assert.equal(ST.migrate(null), null);
   assert.equal(ST.migrate('text'), 'text');
 });
+
+test('WEAPONS items move to MISC, nothing disappears', () => {
+  const doc = JSON.parse(JSON.stringify(V1_SINGLE_FILE));
+  doc.inventory = [{ id: 'w1', name: 'Pocket knife', category: 'WEAPONS' }, { id: 'i1', name: 'Phone', category: 'MISC' },
+    { id: 'w2', name: 'Bat', category: 'WEAPONS' }];
+  const s = load(doc);
+  assert.deepEqual(s.inventory, [{ id: 'w1', name: 'Pocket knife', category: 'MISC' }, { id: 'i1', name: 'Phone', category: 'MISC' },
+    { id: 'w2', name: 'Bat', category: 'MISC' }]);
+  assert.equal(ST.CATS.includes('WEAPONS'), false);
+  assert.equal(ST.CATS[0], 'SELL');
+});

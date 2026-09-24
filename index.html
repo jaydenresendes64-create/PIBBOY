@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- Only this site's own scripts may run, so text that ever reached the page unescaped still
-     couldn't run code. Fonts come from Google Fonts; style attributes set the bars' widths;
-     file: keeps it working when index.html is opened straight from disk. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file:; style-src 'self' file: 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' file: data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+     couldn't run code. Everything, fonts included, comes from this site; style attributes set
+     the bars' widths; file: keeps it working when index.html is opened straight from disk. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; font-src 'self' file:; img-src 'self' file: data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <title>MALIK // Status Terminal</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230d0602'/%3E%3Ccircle cx='8' cy='8' r='4' fill='%23e8a33d'/%3E%3C/svg%3E">
 <!-- Installable on a phone (manifest + sw.js, registered in js/main.js). -->
@@ -14,11 +14,6 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-title" content="MALIK">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<!-- Only the weights the page uses (400). Loaded with CORS so the service worker can keep a
-     readable copy for offline use (see sw.js). -->
-<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono&display=swap" rel="stylesheet" crossorigin>
 <link rel="stylesheet" href="css/terminal.css">
 <!-- Plain scripts sharing window.StatusTerminal, in dependency order (see js/state.js). -->
 <script defer src="js/state.js"></script>
@@ -26,6 +21,8 @@
 <script defer src="js/ai.js"></script>
 <script defer src="js/render.js"></script>
 <script defer src="js/mascot.js"></script>
+<script defer src="js/crt.js"></script>
+<script defer src="js/tilt.js"></script>
 <script defer src="js/events.js"></script>
 <script defer src="js/main.js"></script>
 </head>
@@ -33,52 +30,59 @@
   <div class="toast-layer" id="toast-layer" role="status" aria-live="polite"></div>
   <main class="frame">
     <div class="scan-overlay"></div>
+    <!-- The tube's glass: darker edges and corners, the frame's edge with a faint inner shadow,
+         and the rare flicker (css/terminal.css, js/crt.js). Above the page, but taps go through it. -->
+    <div class="crt" id="crt" aria-hidden="true"></div>
     <!-- The mascot: under the scanlines, taps go through him (css/terminal.css, js/mascot.js). -->
     <div class="mascot" id="mascot" aria-hidden="true">
       <div class="mascot-move"><img class="mascot-img" src="images/mascot.png" alt="" width="144" height="204" draggable="false"></div>
     </div>
 
-    <div class="topbar">
-      <span><span class="status-dot"></span>ONLINE</span>
-      <span id="hdr-date"></span>
-    </div>
-
-    <div class="hero">
-      <h1 class="hero-name">MALIK</h1>
-      <div class="hero-sub">Personal Status Terminal</div>
-    </div>
-
-    <div class="level-block">
-      <div class="level-row">
-        <span class="level-tag">LVL</span>
-        <span class="level-num" id="hdr-level">07</span>
+    <!-- Everything you tap. With 3D tilt on it only shifts a few pixels, never turns (js/tilt.js). -->
+    <div class="screen" id="screen">
+      <div class="topbar">
+        <span><span class="status-dot"></span>ONLINE</span>
+        <span id="hdr-date"></span>
       </div>
-      <div class="xp-bar-outer"><div class="xp-bar-fill" id="hdr-xp-fill"></div></div>
-      <div class="xp-text" id="hdr-xp-text"></div>
-    </div>
 
-    <nav class="tabs">
-      <button class="tab-btn" data-tab="status">STATUS</button>
-      <button class="tab-btn" data-tab="quests">QUESTS</button>
-      <button class="tab-btn" data-tab="items">ITEMS</button>
-      <button class="tab-btn" data-tab="log">LOG</button>
-    </nav>
-
-    <section class="tab-content" id="tab-status"></section>
-    <section class="tab-content" id="tab-quests" style="display:none"></section>
-    <section class="tab-content" id="tab-items" style="display:none"></section>
-    <section class="tab-content" id="tab-log" style="display:none"></section>
-
-    <div class="footer-row">
-      <span id="ai-indicator">AI analysis: checking…</span>
-      <div class="footer-actions">
-        <button id="export-btn">Export backup</button>
-        <button id="import-btn">Import backup</button>
-        <button id="reset-btn">Reset</button>
+      <div class="hero">
+        <h1 class="hero-name">MALIK</h1>
+        <div class="hero-sub">Personal Status Terminal</div>
       </div>
+
+      <div class="level-block">
+        <div class="level-row">
+          <span class="level-tag">LVL</span>
+          <span class="level-num" id="hdr-level">07</span>
+        </div>
+        <div class="xp-bar-outer"><div class="xp-bar-fill" id="hdr-xp-fill"></div></div>
+        <div class="xp-text" id="hdr-xp-text"></div>
+      </div>
+
+      <nav class="tabs">
+        <button class="tab-btn" data-tab="status">STATUS</button>
+        <button class="tab-btn" data-tab="quests">QUESTS</button>
+        <button class="tab-btn" data-tab="items">ITEMS</button>
+        <button class="tab-btn" data-tab="log">LOG</button>
+      </nav>
+
+      <section class="tab-content" id="tab-status"></section>
+      <section class="tab-content" id="tab-quests" style="display:none"></section>
+      <section class="tab-content" id="tab-items" style="display:none"></section>
+      <section class="tab-content" id="tab-log" style="display:none"></section>
+
+      <div class="footer-row">
+        <span id="ai-indicator">AI analysis: checking…</span>
+        <div class="footer-actions">
+          <button id="tilt-btn" aria-pressed="false">3D tilt: off</button>
+          <button id="export-btn">Export backup</button>
+          <button id="import-btn">Import backup</button>
+          <button id="reset-btn">Reset</button>
+        </div>
+      </div>
+      <div class="footer-row" id="reset-confirm-area"></div>
+      <input type="file" id="import-file" accept="application/json,.json" hidden>
     </div>
-    <div class="footer-row" id="reset-confirm-area"></div>
-    <input type="file" id="import-file" accept="application/json,.json" hidden>
   </main>
 </body>
 </html>
