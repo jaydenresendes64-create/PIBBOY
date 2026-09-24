@@ -66,7 +66,7 @@
     html += '<div class="panel-title">Lifetime</div><div class="stats-grid">'+
       '<div class="stats-cell"><div class="stats-num">'+commas(state.lifetimeXp||0)+'</div><div class="stats-label">Total XP earned</div></div>'+
       '<div class="stats-cell"><div class="stats-num">'+state.quests.side.filter(function(q){return q.done;}).length+'</div><div class="stats-label">Side quests done</div></div>'+
-      '<div class="stats-cell"><div class="stats-num">'+state.log.length+'</div><div class="stats-label">Log entries</div></div>'+
+      '<div class="stats-cell"><div class="stats-num">'+commas(ST.logEntryCount())+'</div><div class="stats-label">Log entries</div></div>'+
     '</div>';
     el('tab-status').innerHTML = html;
   }
