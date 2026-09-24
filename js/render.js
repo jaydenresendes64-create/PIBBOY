@@ -498,7 +498,7 @@
   function switchTab(name){
     var swing = shownTab!==null && name!==shownTab;
     shownTab = name;
-    ['status','quests','items','log'].forEach(function(t){
+    ['status','quests','items','map','log'].forEach(function(t){
       var panel = el('tab-'+t);
       panel.style.display = (t===name)?'block':'none';
       panel.classList.toggle('tab-enter', swing && t===name);

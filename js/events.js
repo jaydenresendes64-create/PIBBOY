@@ -376,6 +376,7 @@
       if (tabBtn){
         var tab = tabBtn.getAttribute('data-tab');
         R.switchTab(tab);
+        if (tab==='map' && ST.map) ST.map.show();
         if (ST.mascot) ST.mascot.onTab(tab);
         return;
       }

@@ -21,6 +21,8 @@ js/render.js        builds each tab
 js/mascot.js        when the mascot walks or gestures (his moves are in css/terminal.css)
 js/crt.js           the screen's rare flicker (the tube look itself is in css/terminal.css)
 js/tilt.js          3D tilt: the screen's layers follow the phone's motion (or the mouse)
+js/map.js           the MAP tab (loads Leaflet the first time it's opened)
+vendor/leaflet/     Leaflet 1.9.4, the map library (licence: vendor/leaflet/LICENSE)
 js/events.js        user actions
 js/main.js          startup
 sw.js               service worker: offline use (network first for the app, so updates show right away)
@@ -68,6 +70,25 @@ shifts a few pixels, so taps land where you aim. It's off by default and remembe
 On iPhone, turning it on asks for motion access (allow it); if iOS asks again after reopening the app,
 the first tap anywhere brings the question back. It pauses in the background and never runs with
 **Reduce Motion** switched on.
+
+## MAP tab
+
+A world map at city level, tinted amber like the rest of the screen. Drag and pinch on the phone
+(drag and the mouse wheel on a computer). The round buttons on the map: **⌖** recenters on your latest
+place (the whole world when there's none yet), **⛶** zooms to show all your places.
+
+- **Map library:** [Leaflet](https://leafletjs.com) 1.9.4, kept in `vendor/leaflet/` (no CDN). It's
+  only loaded the first time you open MAP, so the app starts as fast as before.
+- **Map pictures (tiles):** CARTO's dark basemap ("Dark Matter", made from OpenStreetMap data), chosen
+  because its dark greys turn into a clean amber with a CSS filter, it has street-level detail and
+  labels, and CARTO allows free use for a personal, non-commercial app (up to 75,000 map views a
+  month, far more than one person uses) as long as the credit shows: the small
+  "© OpenStreetMap © CARTO" in the map's corner. OpenStreetMap's own tiles would work too, but their
+  usage policy asks apps not to lean on their servers, and their bright colours tint poorly.
+- Tiles you've looked at are kept on the phone (at most 400, the oldest go first; never downloaded
+  ahead), so places you've seen still show offline. With no tile at all, the map shows a plain dark
+  background and everything else still works.
+- With 3D tilt on, the map holds still while your finger is on it, so drags and pinches land exactly.
 
 ## Run it locally
 
