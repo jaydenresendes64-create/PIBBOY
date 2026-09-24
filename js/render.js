@@ -362,10 +362,35 @@
     t.textContent = text;
     el('toast-layer').appendChild(t);
     setTimeout(function(){ t.remove(); }, ms);
+    return t;
   }
   function showXpToast(amount){ toast('xp-toast', '+'+amount+' XP', 1400); }
   function showLevelUp(){ toast('levelup-banner', 'LEVEL UP — '+app.state.level, 2200); }
+  // The name in its own box: when the banner needs two lines, it breaks
+  // after the dash rather than inside the name.
+  function showQuestCompleted(name){
+    var questName = document.createElement('span');
+    questName.textContent = name;
+    toast('levelup-banner quest-banner', 'QUEST COMPLETED — ', 3200).appendChild(questName);
+  }
   function showSaveWarning(){ toast('xp-toast save-warning', 'Not saved — storage unavailable', 2600); }
+
+  // ---------- check animation ----------
+  var CHECK_ANIMATION_MS = 500;
+  function reducedMotion(){
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+  // A tapped check button pops and fills in amber with a glow, and its row
+  // flashes like a terminal redraw; `then` runs once that is over. With
+  // reduced motion there is no animation and `then` runs right away.
+  function playCheck(btn, then){
+    if (reducedMotion()){ then(); return; }
+    var row = btn.closest('.quest-item, .bonus-item, .streak-row');
+    btn.innerHTML = '&#10003;';
+    btn.classList.add('check-pop');
+    if (row) row.classList.add('row-flash');
+    setTimeout(then, CHECK_ANIMATION_MS);
+  }
 
   // ---------- tabs ----------
   function switchTab(name){
@@ -390,7 +415,9 @@
     renderAll: renderAll,
     showXpToast: showXpToast,
     showLevelUp: showLevelUp,
+    showQuestCompleted: showQuestCompleted,
     showSaveWarning: showSaveWarning,
+    playCheck: playCheck,
     switchTab: switchTab
   };
 })(window.StatusTerminal);

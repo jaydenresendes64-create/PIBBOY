@@ -15,12 +15,25 @@
   var scheduleSave = ST.storage.scheduleSave;
 
   var pendingImport = null;
+  var checkPlaying = false;     // a check button's animation is running
 
   function addXp(amount){
     var leveled = ST.gainXp(amount);
     R.showXpToast(amount);
     if (leveled) R.showLevelUp();
     renderHeader();
+  }
+  // After a check button (side quest, daily quest, bonus objective, streak
+  // check-in) changed the state: save right away, but redraw only once the
+  // button's animation is over. Taps in the quest list wait until then.
+  function afterCheck(btn){
+    ST.storage.saveNow();
+    checkPlaying = true;
+    R.playCheck(btn, function(){
+      checkPlaying = false;
+      renderStatus();
+      renderQuests();
+    });
   }
 
   // ---------- quest / inventory actions ----------
@@ -70,6 +83,7 @@
   // Grants a main quest's XP and skill gains, once.
   function completeMainQuest(m){
     m.completed = true;
+    R.showQuestCompleted(m.questName || m.title);
     addXp(m.xp||0);
     (m.skillGains||[]).forEach(function(g){ grantSkill(g.skill, g.amount); });
     renderStatus();
@@ -260,6 +274,7 @@
       var state = app.state;
       var actionBtn = e.target.closest('[data-action]');
       if (actionBtn){
+        if (checkPlaying && actionBtn.closest('#tab-quests')) return;
         var action = actionBtn.getAttribute('data-action');
         var key = actionBtn.getAttribute('data-key');
         var id = actionBtn.getAttribute('data-id');
@@ -278,13 +293,13 @@
           renderStatus(); scheduleSave();
         } else if (action==='quest-complete'){
           var q = state.quests.side.filter(function(x){return x.id===id;})[0];
-          if (q){ q.done=true; addXp(q.xp); renderQuests(); scheduleSave(); }
+          if (q && !q.done){ q.done=true; addXp(q.xp); afterCheck(actionBtn); }
         } else if (action==='quest-remove'){
           state.quests.side = state.quests.side.filter(function(x){return x.id!==id;});
           renderQuests(); scheduleSave();
         } else if (action==='daily-toggle'){
           var d = state.quests.daily.filter(function(x){return x.id===id;})[0];
-          if (d && d.lastDate!==todayStr()){ d.lastDate=todayStr(); addXp(d.xp); renderQuests(); scheduleSave(); }
+          if (d && d.lastDate!==todayStr()){ d.lastDate=todayStr(); addXp(d.xp); afterCheck(actionBtn); }
         } else if (action==='daily-remove'){
           state.quests.daily = state.quests.daily.filter(function(x){return x.id!==id;});
           renderQuests(); scheduleSave();
@@ -297,10 +312,10 @@
         } else if (action==='bonus-toggle'){
           var owner = findMain(actionBtn.getAttribute('data-quest'));
           var b = owner && (owner.bonus||[]).filter(function(x){return x.id===id;})[0];
-          if (b && !b.done){ b.done = true; addXp(b.xp||0); renderQuests(); scheduleSave(); }
+          if (b && !b.done){ b.done = true; addXp(b.xp||0); afterCheck(actionBtn); }
         } else if (action==='main-checkin'){
           var sq = findMain(id);
-          if (sq && checkIn(sq)){ renderQuests(); scheduleSave(); }
+          if (sq && checkIn(sq)) afterCheck(actionBtn);
         } else if (action==='main-remove'){
           app.confirmRemoveMain = id;
           renderQuests();
