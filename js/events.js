@@ -1,6 +1,7 @@
 /**
  * User actions — every change to the state document happens here, followed
- * by the matching re-render and a (debounced) save.
+ * by the matching re-render and a (debounced) save. The MAP tab's are in
+ * js/map.js (with js/places.js).
  */
 (function(ST){
   'use strict';

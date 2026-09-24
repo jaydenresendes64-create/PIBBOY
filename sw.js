@@ -36,7 +36,7 @@ var APP_SHELL = [
   'css/terminal.css',
   'js/state.js', 'js/storage.js', 'js/ai.js', 'js/places.js', 'js/render.js', 'js/mascot.js', 'js/crt.js', 'js/tilt.js', 'js/map.js', 'js/events.js', 'js/main.js',
   'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css',
-  'images/mascot.png',
+  'images/mascot.png', 'images/mascot-hand.svg',
   'fonts/vt323.woff2', 'fonts/ibm-plex-mono.woff2',
   'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png'

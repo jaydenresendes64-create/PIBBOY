@@ -80,8 +80,9 @@
  * changes `stats` otherwise, and a journal proposal is XP + SkillGains only.
  *
  * SCRIPTS — every file attaches to one namespace, window.StatusTerminal, and
- * index.html loads them in dependency order: state → storage → ai → render →
- * mascot → crt → tilt → events → main. They are plain scripts rather than ES modules so the app
+ * index.html loads them in dependency order: state → storage → ai → places →
+ * render → mascot → crt → tilt → map → events → main (map.js loads Leaflet,
+ * vendor/leaflet/, the first time MAP opens). They are plain scripts rather than ES modules so the app
  * still runs when index.html is opened straight from disk (file://), where
  * browsers refuse to load modules. The tests (tests/) load the same files in
  * Node: `node --test`.

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 204" width="144" height="204">
+  <!-- The mascot's right arm raised to his brow, for his "looking out" gesture on MAP (css/terminal.css). Same box as mascot.png. -->
+  <path d="M50 94 L56 72 L66 54" fill="none" stroke="#e9a43d" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M50 94 L56 72 L66 54" fill="none" stroke="#3b240b" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M53 84 L57 71" fill="none" stroke="#6e4717" stroke-width="3" stroke-linecap="round"/>
+  <path d="M59 58 C58 46 64 38 74 35 L103 30 C111 29 113 37 107 39 L108 40 C113 41 111 47 105 47 L84 49 C76 50 71 54 68 60 C65 63 60 62 59 58 Z"
+        fill="#b67a2c" stroke="#e9a43d" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M80 39 L104 35.5 M80 44 L104 42.5" fill="none" stroke="#6e4717" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M65 43 C68 39 73 37 79 36" fill="none" stroke="#f0b458" stroke-width="2" stroke-linecap="round"/>
+</svg>

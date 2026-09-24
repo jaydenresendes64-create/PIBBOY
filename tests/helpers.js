@@ -172,6 +172,14 @@ function loadApp(options) {
     indexedDB: options.indexedDB === null ? undefined : shared.idb,
     localStorage: localStorageFor(shared, win),
     matchMedia: () => ({ matches: false, addEventListener() {} }),
+    // The app's own files (data/...), read from the repository.
+    fetch: url => new Promise(resolve => {
+      fs.readFile(path.join(ROOT, String(url)), 'utf8', (err, text) => resolve({
+        ok: !err, status: err ? 404 : 200,
+        text: () => Promise.resolve(text),
+        json: () => Promise.resolve(JSON.parse(text))
+      }));
+    }),
     addEventListener(type, fn) { (listeners[type] = listeners[type] || []).push(fn); },
     document: {
       getElementById: id => elements[id] || (elements[id] = fakeElement(id)),

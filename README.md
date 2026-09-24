@@ -28,7 +28,10 @@ js/events.js        user actions
 js/main.js          startup
 sw.js               service worker: offline use (network first for the app, so updates show right away)
 manifest.webmanifest name, colours and icons (icons/) for installing on a phone
-images/mascot.png   the amber mascot in the top-right corner
+images/mascot.png   the amber mascot in the top-right corner (mascot-hand.svg: his raised hand on MAP)
+data/places.txt     MAP: every country, region and city (15,000 people or more), for searching
+data/regions/       MAP: one file per country with the shapes of its regions
+tools/              build-map-data.js, which makes data/ (see "Map data")
 fonts/              the two terminal fonts, VT323 and IBM Plex Mono (licence: fonts/OFL.txt)
 api/analyze.js      optional serverless AI function (not used on GitHub Pages, see below)
 tests/              automated tests (see "Run the tests")
@@ -96,10 +99,48 @@ out of it, with soft smoky edges: a circle around each city and pin, the exact s
 Sizes are real distances, so a 5 km circle stays 5 km whatever the zoom. The fog is one canvas
 drawn over the tiles, redrawn at most once per frame while the map moves, and only then.
 
+**Revealing places** (under the map):
+
+- **Search city:** type a name (accents and capitals don't matter; "Paris, Texas" or "Paris, USA"
+  narrows it down) and tap it. It reveals a circle around the city: about 3 km for a town of 15,000
+  people up to 15 km for a city of 3 million or more. The slider changes it (1-30 km).
+- **Mark a region:** pick a country, then one of its provinces, states or departments; the exact
+  shape of that region is revealed. In France, Italy, Spain, Belgium and the Philippines you can
+  also pick a whole region (Île-de-France, Lombardia...), which reveals all its departments/provinces.
+- **Pins:** long-press the map (or right-click on a computer), or tap **Drop pin** and then the map.
+  Name it, add a note if you like; it reveals a 500 m circle (100 m to 5 km with the slider).
+- **I'm here:** asks for your location once (never followed afterwards) and offers to reveal the
+  city you're in, your region, or a pin on the spot.
+- Tap a place in the lists (or its mark on the map) to go there, rename it, resize it, add a note or
+  remove it (asks first).
+- The line above the map counts your places: "3 countries · 14 cities · 5 regions · 8 pins". The
+  countries are the ones your cities, regions and pins are in.
+- A city or region revealed for the first time shows **DISCOVERED** and gives 50 XP (city) or
+  100 XP (region), once per place: removing it and adding it back gives nothing again. Pins give no XP.
+
+**Map data** (`data/`, made by `tools/build-map-data.js`, used offline once loaded):
+
+- Cities: [GeoNames](https://www.geonames.org) "cities15000", every place of 15,000 people or more,
+  licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (credit: GeoNames,
+  geonames.org). `data/places.txt` is about 1.7 MB (about 0.8 MB as sent), loaded the first time you
+  search, mark a region or drop a pin.
+- Regions: [Natural Earth](https://www.naturalearthdata.com) 1:10m "Admin 1 – States, Provinces"
+  (public domain), version 5.1.2, simplified to about 400 m and split into one small file per country
+  (`data/regions/CA.json`...), each loaded only when a region of that country is shown or looked up.
+  Natural Earth's regions aren't always the latest: Morocco still has its 16 regions from before 2015
+  (Grand Casablanca, Chaouia - Ouardigha... rather than Casablanca-Settat).
+- To rebuild them (only to update the data), download
+  [ne_10m_admin_1_states_provinces.geojson](https://github.com/nvkelso/natural-earth-vector/tree/v5.1.2/geojson),
+  and `cities15000.zip` (unzipped) and `countryInfo.txt` from
+  [download.geonames.org/export/dump](https://download.geonames.org/export/dump/), then run
+  `node tools/build-map-data.js ne_10m_admin_1_states_provinces.geojson cities15000.txt countryInfo.txt`.
+  The files in this repository were made from the copy of GeoNames' cities15000 and country list
+  packaged in geonamescache 3.0.2 (the same data, in JSON).
+
 ## Run it locally
 
-Double-click `index.html`. Everything works the same as on GitHub Pages, except installing and
-offline use, which need the site to be served over http(s) (for example `npx http-server` in this
+Double-click `index.html`. Everything works the same as on GitHub Pages, except installing, offline
+use and the MAP tab's city and region lists, which need the site to be served over http(s) (for example `npx http-server` in this
 folder, then http://localhost:8080). Served that way, the browser console shows one harmless 404: the
 app checking whether the optional AI function exists (it never checks on GitHub Pages).
 

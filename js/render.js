@@ -434,6 +434,7 @@
     renderQuests();
     renderInventory();
     renderLog();
+    if (ST.map) ST.map.render();
     updateAiIndicator();
   }
 
@@ -460,6 +461,13 @@
     var itemName = document.createElement('span');
     itemName.textContent = name;
     toast('levelup-banner quest-banner', 'SOLD: ', 3200).appendChild(itemName);
+  }
+  // A city or region revealed for the first time (js/map.js), or several at
+  // once: "DISCOVERED: 12 places".
+  function showDiscovered(name){
+    var placeName = document.createElement('span');
+    placeName.textContent = name;
+    toast('levelup-banner quest-banner', 'DISCOVERED: ', 3200).appendChild(placeName);
   }
   function showSaveWarning(){ toast('xp-toast save-warning', 'Not saved — storage unavailable', 2600); }
   function showConflictWarning(){
@@ -524,6 +532,7 @@
     showQuestCompleted: showQuestCompleted,
     showNotice: showNotice,
     showSold: showSold,
+    showDiscovered: showDiscovered,
     showSaveWarning: showSaveWarning,
     showConflictWarning: showConflictWarning,
     showLoadError: showLoadError,
