@@ -55,7 +55,7 @@
         {id:'b2',name:'Launch a project',xp:500,done:false}
       ]},
       side:[
-        {id:'s1',name:'Pass the PSSAC / CIZR certification',xp:150,done:false},
+        {id:'s1',name:'Earn a certification',xp:150,done:false},
         {id:'s2',name:'Build up savings',xp:100,done:false},
         {id:'s3',name:'Get back into consistent training',xp:100,done:false},
         {id:'s4',name:'Push the music project forward',xp:100,done:false}
@@ -70,12 +70,7 @@
       {id:'i1',name:'Phone',category:'MISC'},
       {id:'i2',name:'Keys',category:'IMPORTANT'}
     ],
-    finances:{
-      holdings:[
-        {id:'f1',label:'USDT',amount:855.8,rateToCAD:1.406},
-        {id:'f2',label:'CASH',amount:160,rateToCAD:1}
-      ]
-    },
+    finances:{ holdings:[] },   // starts empty: add your own in ITEMS → wallet
     log:[]
   };
 
