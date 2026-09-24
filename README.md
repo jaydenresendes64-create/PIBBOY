@@ -121,6 +121,9 @@ next to a commit means a test failed.
   empty. Another browser or device starts empty. Use **Export backup / Import backup** in the footer
   to move it (a backup is saved as `status-terminal-backup-YYYY-MM-DD.json`, dated the day you made it). An imported file is checked (and brought up to date if it comes from an older
   version) before you confirm; a file that isn't a backup is refused and nothing changes.
+- The MAP tab's places (cities, regions, pins, and which ones already gave XP) are part of the same
+  data: saved in the browser and included in backups. A backup from before the MAP tab loads with an
+  empty map and nothing else changed.
 - The app asks the browser to keep its storage even when space runs low (on a phone this is silent).
 - With the app open in two tabs, each follows the other's changes. A change can never overwrite a
   newer one made in the other tab: if both change at the same moment, the second one gives way and

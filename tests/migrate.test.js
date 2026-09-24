@@ -157,3 +157,24 @@ test('WEAPONS items move to MISC, nothing disappears', () => {
   assert.equal(ST.CATS.includes('WEAPONS'), false);
   assert.equal(ST.CATS[0], 'SELL');
 });
+
+test('saves from before the MAP tab: an empty map, everything else as it was', () => {
+  const before = load(V1_SINGLE_FILE);
+  assert.deepEqual(before.map, { cities: [], regions: [], pins: [], discovered: [] });
+  // The THINGS TO SELL version (the last one without a map), exactly as it saved.
+  const doc = app.plain(ST.defaultState());
+  delete doc.map;
+  doc.inventory.push({ id: 'xsell', name: 'Old bike', category: 'SELL', price: 80 });
+  const s = load(doc);
+  assert.deepEqual(s.map, { cities: [], regions: [], pins: [], discovered: [] });
+  delete s.map;
+  assert.deepEqual(s, doc);
+});
+
+test('a map that is not an object, or with missing lists, is made empty', () => {
+  for (const map of [null, 'x', 7, [], { cities: 'x' }]) {
+    const doc = app.plain(ST.defaultState());
+    doc.map = map;
+    assert.deepEqual(load(doc).map, { cities: [], regions: [], pins: [], discovered: [] });
+  }
+});
