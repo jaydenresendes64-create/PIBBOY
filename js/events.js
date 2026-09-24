@@ -36,6 +36,13 @@
     });
   }
 
+  // After the STATUS tab is redrawn, puts the keyboard focus back on the
+  // matching button (when there still is one).
+  function focusStatus(selector){
+    var btn = el('tab-status').querySelector(selector);
+    if (btn && !btn.disabled) btn.focus();
+  }
+
   // ---------- quest / inventory actions ----------
   // The quest name and objective typed in an add row. Both are required: the
   // first empty box gets the cursor and nothing is added.
@@ -241,6 +248,7 @@
     app.state = pendingImport;
     app.pendingProposal = null;
     app.confirmRemoveMain = null;
+    app.confirmSpecial = null;
     pendingImport = null;
     el('reset-confirm-area').innerHTML = '';
     renderAll();
@@ -260,6 +268,7 @@
   function doReset(){
     app.state = ST.defaultState();
     app.confirmRemoveMain = null;
+    app.confirmSpecial = null;
     el('reset-confirm-area').innerHTML = '';
     renderAll();
     scheduleSave();
@@ -269,7 +278,12 @@
   function setupEvents(){
     document.body.addEventListener('click', function(e){
       var tabBtn = e.target.closest('[data-tab]');
-      if (tabBtn){ R.switchTab(tabBtn.getAttribute('data-tab')); return; }
+      if (tabBtn){
+        var tab = tabBtn.getAttribute('data-tab');
+        R.switchTab(tab);
+        if (ST.mascot) ST.mascot.onTab(tab);
+        return;
+      }
 
       var state = app.state;
       var actionBtn = e.target.closest('[data-action]');
@@ -279,15 +293,27 @@
         var key = actionBtn.getAttribute('data-key');
         var id = actionBtn.getAttribute('data-id');
         var dir = parseInt(actionBtn.getAttribute('data-dir')||'0',10);
-        if (action==='stat'){
-          state.stats[key] = clamp(state.stats[key]+dir,0,10);
-          renderStatus(); scheduleSave();
-        } else if (action==='special-assign'){
-          if ((state.unspentSpecialPoints||0)>0){
-            grantStat(key, 1);
-            state.unspentSpecialPoints -= 1;
-            renderStatus(); scheduleSave();
+        if (action==='special-assign'){
+          if ((state.unspentSpecialPoints||0)>0 && ST.STAT_KEYS.indexOf(key)!==-1 && state.stats[key]<10){
+            app.confirmSpecial = key;
+            renderStatus();
+            focusStatus('[data-action="special-no"]');
           }
+        } else if (action==='special-yes'){
+          var statKey = app.confirmSpecial;
+          app.confirmSpecial = null;
+          if (statKey && (state.unspentSpecialPoints||0)>0 && state.stats[statKey]<10){
+            grantStat(statKey, 1);
+            state.unspentSpecialPoints -= 1;
+            scheduleSave();
+          }
+          renderStatus();
+          focusStatus('[data-action="special-assign"][data-key="'+statKey+'"]');
+        } else if (action==='special-no'){
+          var askedKey = app.confirmSpecial;
+          app.confirmSpecial = null;
+          renderStatus();
+          focusStatus('[data-action="special-assign"][data-key="'+askedKey+'"]');
         } else if (action==='skill'){
           state.skills[key] = clamp(state.skills[key]+dir,0,100);
           renderStatus(); scheduleSave();

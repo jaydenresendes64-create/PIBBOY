@@ -19,6 +19,7 @@
 <script defer src="js/storage.js"></script>
 <script defer src="js/ai.js"></script>
 <script defer src="js/render.js"></script>
+<script defer src="js/mascot.js"></script>
 <script defer src="js/events.js"></script>
 <script defer src="js/main.js"></script>
 </head>
@@ -26,6 +27,10 @@
   <div class="toast-layer" id="toast-layer"></div>
   <div class="frame">
     <div class="scan-overlay"></div>
+    <!-- The mascot: under the scanlines, taps go through him (css/terminal.css, js/mascot.js). -->
+    <div class="mascot" id="mascot" aria-hidden="true">
+      <div class="mascot-move"><img class="mascot-img" src="images/mascot.png" alt="" width="144" height="204" draggable="false"></div>
+    </div>
 
     <div class="topbar">
       <span><span class="status-dot"></span>ONLINE</span>

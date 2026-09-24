@@ -17,10 +17,12 @@ js/state.js         data model, defaults, reward rules, backup validation
 js/storage.js       saving: IndexedDB with a localStorage fallback, backup files
 js/ai.js            journal analysis client + offline keyword rules
 js/render.js        builds each tab
+js/mascot.js        when the mascot walks or gestures (his moves are in css/terminal.css)
 js/events.js        user actions
 js/main.js          startup
 sw.js               service worker: offline use (network first, so updates show right away)
 manifest.webmanifest name, colours and icons (icons/) for installing on a phone
+images/mascot.png   the amber mascot in the top-right corner
 api/analyze.js      optional serverless AI function (not used on GitHub Pages, see below)
 .nojekyll           tells GitHub Pages to serve the files as they are, without Jekyll
 ```

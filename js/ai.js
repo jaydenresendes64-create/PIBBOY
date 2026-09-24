@@ -63,6 +63,8 @@
     return !!err && PERMANENT_ERRORS.indexOf(err.code)!==-1;
   }
 
+  // A proposal is XP plus skill gains, nothing else: only SKILL_KEYS pass,
+  // so it can never raise S.P.E.C.I.A.L. (that takes a level-up point).
   function sanitizeProposal(data){
     data = data || {};
     var xp = clamp(Math.round(Number(data.xp)||10),1,150);
@@ -92,14 +94,31 @@
       'avons marché','promenade','balade','randonnée','rando','vélo','natation','nager','nagé',
       'étirements','boxe','escalade','basket','abdos','pompes'
     ]},
-    {skill:'SCIENCE', xp:25, reason:'Learning / studying', kws:[
-      'study','studied','studying','read','reading','book','course','class','classes','lecture','lectures',
-      'lesson','lessons','homework','exam','exams','quiz','learn','learned','learnt','learning','research',
-      'tutorial','school','university','college','library','revised','revising','revision',
-      'certification','certificate','documentary',
-      'étudier','étudié','étude','études','lire','ai lu','livre','livres','cours','classe','leçon','leçons',
-      'examen','examens','partiel','partiels','apprendre','appris','réviser','révisé','révisions','devoirs',
-      'bibliothèque','école','université','fac','formation','certificat','documentaire'
+    {skill:'KNOWLEDGE', xp:25, reason:'Learning / studying', kws:[
+      'study','studied','studying','studies','read','reading','book','books','textbook','course','courses',
+      'class','classes','lecture','lectures','lesson','lessons','homework','exam','exams','quiz',
+      'learn','learned','learnt','learning','research','tutorial','school','university','college',
+      'library','revised','revising','revision','flashcards','certification','certifications',
+      'certificate','certificates','certified','documentary',
+      'étudier','étudié','étude','études','lire','je lis','ai lu','livre','livres','bouquin','bouquins',
+      'cours','classe','leçon','leçons','examen','examens','partiel','partiels','apprendre','appris',
+      'apprends','apprentissage','réviser','révisé','révisions','devoirs','bibliothèque','école',
+      'université','fac','formation','certificat','certificats','documentaire'
+    ]},
+    {skill:'CONCENTRATION', xp:20, reason:'Focus / concentration', kws:[
+      'focus','focused','focusing','focussed','concentrate','concentrated','concentrating','concentration',
+      'deep work','deep focus','focus session','pomodoro','pomodoros',
+      'meditate','meditated','meditating','meditation','mindfulness','breathing exercise',
+      'breathing exercises','breathwork',
+      'no phone','without my phone','without phone','phone off','put my phone away','turned off my phone',
+      'switched off my phone','airplane mode','do not disturb','no social media','no distraction',
+      'no distractions','without distractions','distraction free',
+      'pray','prayed','praying','prayer','prayers',
+      'concentré','concentrée','concentrer','me concentrer','focalisé','focalisée','me focaliser',
+      'travail profond','travail en profondeur','méditer','médité','méditée','pleine conscience',
+      'exercices de respiration','sans téléphone','sans mon téléphone','sans portable','sans mon portable',
+      'téléphone éteint','portable éteint','mode avion','ne pas déranger','sans réseaux sociaux',
+      'sans distraction','sans distractions','prier','prière','prières','ai prié','avons prié'
     ]},
     {skill:'SPEECH', xp:15, reason:'Social connection', kws:[
       'friend','friends','social','socialized','socializing','call','called','facetime','facetimed',
