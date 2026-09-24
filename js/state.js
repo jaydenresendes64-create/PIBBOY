@@ -11,16 +11,22 @@
  *   stats:  { STR,END,CHA,INT,AGI: number(0-10) },   // SPECIAL — user-placed only
  *   skills: { SCIENCE,SPEECH,SURVIVAL,COOKING,FINANCE,MUSIC,BUSINESS: number(0-100) },
  *   quests: {
- *     main: { title, progress(0-100), xp, completed, skillGains:[SkillGain],
+ *     main: { questName, title, progress(0-100), xp, completed, skillGains:[SkillGain],
  *             bonus: [ { id, name, xp, done } ] },
- *     side: [ { id, name, xp, done } ],
- *     daily:[ { id, name, xp, lastDate:'YYYY-M-D'|null } ]  // done = lastDate===today
+ *     side: [ { id, questName, name, xp, done } ],
+ *     daily:[ { id, questName, name, xp, lastDate:'YYYY-M-D'|null } ]  // done = lastDate===today
  *   },
  *   inventory: [ { id, name, category: one of CATS } ],
  *   finances: { holdings: [ { id, label, amount, rateToCAD } ] },
  *   log: [ { date, text, xp, reason } ]
  * }
  * SkillGain { skill: one of SKILL_KEYS, amount: number }
+ *
+ * Quest names: `questName` (at most QUEST_NAME_MAX characters) is the quest's
+ * title, like a Fallout quest: "Caps on the Line". `title` (main) and `name`
+ * (side, daily) hold its objective: "Obtain 5 Caps". The name is optional:
+ * quests saved before it existed have none ('' or missing) and show only
+ * their objective. Bonus objectives have no name.
  *
  * Every reward path (quest completion, bonus objective, journal proposal)
  * should express its reward as XP plus zero or more SkillGains, and apply
@@ -43,6 +49,7 @@
   var SKILL_KEYS = ['SCIENCE','SPEECH','SURVIVAL','COOKING','FINANCE','MUSIC','BUSINESS'];
   var CATS = ['WEAPONS','APPAREL','AID','MISC','IMPORTANT'];
   var CAD_PER_CAP = 1000;
+  var QUEST_NAME_MAX = 60;
 
   var DEFAULT_STATE = {
     level:2, xp:0, xpToNext:1000,
@@ -52,20 +59,20 @@
     stats:{STR:4,END:3,CHA:4,INT:5,AGI:2},
     skills:{SCIENCE:21,SPEECH:42,SURVIVAL:23,COOKING:8,FINANCE:17,MUSIC:35,BUSINESS:5},
     quests:{
-      main:{title:'Obtain 5 Caps', progress:0, xp:1000, completed:false, skillGains:[{skill:'FINANCE',amount:8},{skill:'BUSINESS',amount:2}], bonus:[
+      main:{questName:'Caps on the Line', title:'Obtain 5 Caps', progress:0, xp:1000, completed:false, skillGains:[{skill:'FINANCE',amount:8},{skill:'BUSINESS',amount:2}], bonus:[
         {id:'b1',name:'Find a job',xp:500,done:false},
         {id:'b2',name:'Launch a project',xp:500,done:false}
       ]},
       side:[
-        {id:'s1',name:'Earn a certification',xp:150,done:false},
-        {id:'s2',name:'Build up savings',xp:100,done:false},
-        {id:'s3',name:'Get back into consistent training',xp:100,done:false},
-        {id:'s4',name:'Push the music project forward',xp:100,done:false}
+        {id:'s1',questName:'Paper Trail',name:'Earn a certification',xp:150,done:false},
+        {id:'s2',questName:'Pennies from Heaven',name:'Build up savings',xp:100,done:false},
+        {id:'s3',questName:'Back in the Saddle',name:'Get back into consistent training',xp:100,done:false},
+        {id:'s4',questName:'Sing, Sing, Sing',name:'Push the music project forward',xp:100,done:false}
       ],
       daily:[
-        {id:'d1',name:'Move your body',xp:20,lastDate:null},
-        {id:'d2',name:'Learn or study something',xp:20,lastDate:null},
-        {id:'d3',name:'Reach out to someone',xp:15,lastDate:null}
+        {id:'d1',questName:'Shake, Rattle and Roll',name:'Move your body',xp:20,lastDate:null},
+        {id:'d2',questName:'How Little We Know',name:'Learn or study something',xp:20,lastDate:null},
+        {id:'d3',questName:'Why Can\'t We Be Friends?',name:'Reach out to someone',xp:15,lastDate:null}
       ]
     },
     inventory:[
@@ -82,7 +89,8 @@
     state: null,
     walletExpanded: false,
     aiAvailable: false,
-    pendingProposal: null
+    pendingProposal: null,
+    finishRename: null          // saves the quest name being edited, while its box is open
   };
 
   function el(id){ return document.getElementById(id); }
@@ -117,8 +125,20 @@
     }
     return loaded;
   }
+  // Brings a document written by an older version up to the current shape,
+  // before the defaults are merged in. Saves and imported backups both pass
+  // through here (via mergeDefaults). Edits `doc` in place and returns it.
+  function migrate(doc){
+    var quests = doc && doc.quests;
+    if (!quests || typeof quests!=='object') return doc;
+    // Quest names came later: without this, deepMergeDefaults would give an
+    // old main quest the default quest's name.
+    var main = quests.main;
+    if (main && typeof main==='object' && !Array.isArray(main) && !('questName' in main)) main.questName = '';
+    return doc;
+  }
   function mergeDefaults(loaded){
-    return deepMergeDefaults(DEFAULT_STATE, loaded||{});
+    return deepMergeDefaults(DEFAULT_STATE, migrate(loaded||{}));
   }
   function defaultState(){ return clone(DEFAULT_STATE); }
 
@@ -192,6 +212,7 @@
     q.xp = Math.max(0, num(q.xp, 0));
   }
   function fixDoneQuest(q){ fixQuest(q); q.done = q.done===true; }
+  function fixQuestName(q){ q.questName = text(q.questName, QUEST_NAME_MAX).trim(); }
 
   // Returns a clean state document, or null when `raw` isn't a backup of this app.
   function sanitizeImported(raw){
@@ -207,6 +228,7 @@
     SKILL_KEYS.forEach(function(k){ s.skills[k] = clamp(Math.round(num(s.skills[k], 0)), 0, 100); });
 
     var m = s.quests.main;
+    fixQuestName(m);
     m.title = text(m.title, 60);
     m.progress = clamp(Math.round(num(m.progress, 0)), 0, 100);
     m.xp = Math.max(0, num(m.xp, 0));
@@ -214,9 +236,10 @@
     m.skillGains = records(m.skillGains, function(g){ g.amount = num(g.amount, 0); })
       .filter(function(g){ return SKILL_KEYS.indexOf(g.skill)!==-1; });
     m.bonus = records(m.bonus, fixDoneQuest);
-    s.quests.side = records(s.quests.side, fixDoneQuest);
+    s.quests.side = records(s.quests.side, function(q){ fixDoneQuest(q); fixQuestName(q); });
     s.quests.daily = records(s.quests.daily, function(q){
       fixQuest(q);
+      fixQuestName(q);
       q.lastDate = typeof q.lastDate==='string' ? q.lastDate.slice(0,10) : null;
     });
 
@@ -248,6 +271,7 @@
   ST.SKILL_KEYS = SKILL_KEYS;
   ST.CATS = CATS;
   ST.CAD_PER_CAP = CAD_PER_CAP;
+  ST.QUEST_NAME_MAX = QUEST_NAME_MAX;
   ST.app = app;
 
   ST.el = el;

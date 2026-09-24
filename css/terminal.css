@@ -196,6 +196,29 @@ button{ cursor:pointer; }
 .bonus-item .complete-btn{ width:24px; height:24px; }
 .main-xp-note{ font-size:0.7rem; color:var(--phosphor-dim); margin-top:8px; }
 
+/* Quest names: the name on top, the objective under it, smaller and dimmed.
+   Tapping the name swaps it for .quest-title-input. */
+.quest-text{ display:flex; flex-direction:column; align-items:flex-start; min-width:0; }
+.quest-title{
+  display:block; max-width:100%; padding:1px 0; text-align:left;
+  font-family:'VT323',ui-monospace,monospace; font-size:1.3rem; line-height:1.05;
+  color:var(--amber); letter-spacing:0.02em; overflow-wrap:anywhere;
+}
+.quest-title-input{
+  width:100%; border:1px solid var(--amber-dim); border-radius:3px; background:var(--bg);
+  padding:1px 6px; font-family:'VT323',ui-monospace,monospace; font-size:1.3rem; line-height:1.1;
+  color:var(--amber); letter-spacing:0.02em;
+}
+.add-name{
+  display:block; padding:2px 0; font-size:0.66rem; letter-spacing:0.04em;
+  color:var(--phosphor-dim); text-decoration:underline;
+}
+.quest-text.has-name .quest-name{ font-size:0.74rem; color:var(--phosphor-dim); margin-top:1px; }
+.main-quest-card .quest-title, .main-quest-card .quest-title-input{ font-size:1.6rem; }
+.main-quest-card .quest-title{ text-shadow:0 0 8px rgba(255,154,46,0.35); }
+.main-quest-card .quest-title, .main-quest-card .quest-title-input, .main-quest-card .add-name{ margin-bottom:6px; }
+.main-quest-card.has-name .main-title-input{ padding:6px 8px; font-size:0.8rem; color:var(--phosphor-dim); }
+
 .quest-list{ display:flex; flex-direction:column; }
 .quest-item{
   display:grid; grid-template-columns:auto 1fr auto auto; align-items:center;
@@ -218,6 +241,8 @@ button{ cursor:pointer; }
   padding:8px; font-size:0.85rem; min-height:38px;
 }
 .add-row input[type="text"]{ flex:1 1 60%; min-width:110px; }
+.add-row input.field-full{ flex:1 1 100%; }
+.add-row input.field-objective{ flex:1 1 120px; min-width:0; }
 .add-row input[type="number"]{ width:64px; }
 .add-row select{ flex:0 0 auto; }
 .add-row button{

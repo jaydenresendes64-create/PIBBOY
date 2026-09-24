@@ -6,7 +6,8 @@
   'use strict';
 
   var el = ST.el, clamp = ST.clamp, commas = ST.commas, money = ST.money, escapeHtml = ST.escapeHtml, todayStr = ST.todayStr;
-  var STAT_KEYS = ST.STAT_KEYS, STAT_LABELS = ST.STAT_LABELS, SKILL_KEYS = ST.SKILL_KEYS, CATS = ST.CATS, CAD_PER_CAP = ST.CAD_PER_CAP;
+  var STAT_KEYS = ST.STAT_KEYS, STAT_LABELS = ST.STAT_LABELS, SKILL_KEYS = ST.SKILL_KEYS, CATS = ST.CATS, CAD_PER_CAP = ST.CAD_PER_CAP,
+      QUEST_NAME_MAX = ST.QUEST_NAME_MAX;
   var app = ST.app;
 
   function renderHeader(){
@@ -71,13 +72,45 @@
     el('tab-status').innerHTML = html;
   }
 
+  // A quest's name, which is tapped to rename it. A quest without one (saved
+  // before quest names existed) gets a small "+ name" link in its place.
+  function questTitleHtml(kind, q){
+    var ref = ' data-action="rename" data-kind="'+kind+'"'+(q.id ? ' data-id="'+q.id+'"' : '');
+    return q.questName
+      ? '<button class="quest-title"'+ref+' title="Rename">'+escapeHtml(q.questName)+'</button>'
+      : '<button class="add-name"'+ref+'>+ name</button>';
+  }
+  // Side and daily quests: the name on top, the objective under it.
+  function questTextHtml(kind, q){
+    return '<div class="quest-text'+(q.questName?' has-name':'')+'">'+
+      questTitleHtml(kind, q)+
+      '<span class="quest-name">'+escapeHtml(q.name)+'</span>'+
+    '</div>';
+  }
+  // Puts a quest's name (or its "+ name" link) back where its rename box was
+  // and returns it. Only that spot changes, so the tap that ended the rename
+  // still lands on whatever it was aimed at.
+  function swapQuestTitle(input, kind, q){
+    if (!input.parentNode) return null;
+    var box = input.closest('.quest-text, .main-quest-card');
+    var holder = document.createElement('div');
+    holder.innerHTML = questTitleHtml(kind, q);
+    var btn = holder.firstChild;
+    input.replaceWith(btn);
+    if (box) box.classList.toggle('has-name', !!q.questName);
+    return btn;
+  }
+
   function renderQuests(){
+    // Rebuilding the list would drop a rename still in progress: save it first.
+    if (app.finishRename) app.finishRename();
     var state = app.state;
     var m = state.quests.main;
     var bonus = m.bonus || [];
     var html = '<div class="panel-title">Main Quest</div>'+
-      '<div class="main-quest-card">'+
-        '<input type="text" class="main-title-input" id="main-title-input" value="'+escapeHtml(m.title)+'">'+
+      '<div class="main-quest-card'+(m.questName?' has-name':'')+'">'+
+        questTitleHtml('main', m)+
+        '<input type="text" class="main-title-input" id="main-title-input" maxlength="60" value="'+escapeHtml(m.title)+'" aria-label="Objective">'+
         '<div class="progress-row">'+
           '<input type="range" min="0" max="100" value="'+m.progress+'" id="main-progress-input">'+
           '<span class="progress-pct">'+m.progress+'%</span>'+
@@ -105,7 +138,7 @@
       active.forEach(function(q){
         html += '<div class="quest-item">'+
           '<button class="complete-btn" data-action="quest-complete" data-id="'+q.id+'" aria-label="Complete">&#10003;</button>'+
-          '<span class="quest-name">'+escapeHtml(q.name)+'</span>'+
+          questTextHtml('side', q)+
           '<span class="quest-xp">+'+q.xp+' XP</span>'+
           '<button class="remove-btn" data-action="quest-remove" data-id="'+q.id+'" aria-label="Remove">&times;</button>'+
         '</div>';
@@ -113,8 +146,9 @@
       html += '</div>';
     }
     html += '<div class="add-row">'+
-      '<input type="text" id="new-quest-name" placeholder="New side quest...">'+
-      '<input type="number" id="new-quest-xp" value="100" min="5" max="500">'+
+      '<input type="text" class="field-full" id="new-quest-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
+      '<input type="text" class="field-objective" id="new-quest-objective" placeholder="Objective..." required aria-label="Objective">'+
+      '<input type="number" id="new-quest-xp" value="100" min="5" max="500" aria-label="XP reward">'+
       '<button id="add-quest-btn">Add</button>'+
     '</div>';
 
@@ -124,14 +158,15 @@
       var doneToday = q.lastDate===today;
       html += '<div class="quest-item">'+
         '<button class="complete-btn'+(doneToday?' done':'')+'" data-action="daily-toggle" data-id="'+q.id+'" '+(doneToday?'disabled':'')+' aria-label="Mark done">'+(doneToday?'&#10003;':'&#9675;')+'</button>'+
-        '<span class="quest-name">'+escapeHtml(q.name)+'</span>'+
+        questTextHtml('daily', q)+
         '<span class="quest-xp">+'+q.xp+' XP</span>'+
         '<button class="remove-btn" data-action="daily-remove" data-id="'+q.id+'" aria-label="Remove">&times;</button>'+
       '</div>';
     });
     html += '</div><div class="add-row">'+
-      '<input type="text" id="new-daily-name" placeholder="New daily habit...">'+
-      '<input type="number" id="new-daily-xp" value="15" min="5" max="100">'+
+      '<input type="text" class="field-full" id="new-daily-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
+      '<input type="text" class="field-objective" id="new-daily-objective" placeholder="Daily habit..." required aria-label="Objective">'+
+      '<input type="number" id="new-daily-xp" value="15" min="5" max="100" aria-label="XP reward">'+
       '<button id="add-daily-btn">Add</button>'+
     '</div>';
 
@@ -285,6 +320,7 @@
     renderInventory: renderInventory,
     renderLog: renderLog,
     renderProposal: renderProposal,
+    swapQuestTitle: swapQuestTitle,
     updateAiIndicator: updateAiIndicator,
     renderAll: renderAll,
     showXpToast: showXpToast,

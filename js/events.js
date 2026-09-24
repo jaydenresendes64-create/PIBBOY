@@ -24,18 +24,29 @@
   }
 
   // ---------- quest / inventory actions ----------
+  // The quest name and objective typed in an add row. Both are required: the
+  // first empty box gets the cursor and nothing is added.
+  function readNewQuest(prefix){
+    var nameInput = el(prefix+'-questname');
+    var objectiveInput = el(prefix+'-objective');
+    var questName = nameInput.value.trim().slice(0, ST.QUEST_NAME_MAX);
+    var objective = objectiveInput.value.trim();
+    if (!questName){ nameInput.focus(); return null; }
+    if (!objective){ objectiveInput.focus(); return null; }
+    return {questName:questName, objective:objective};
+  }
   function addSideQuest(){
-    var name = el('new-quest-name').value.trim();
-    if (!name) return;
+    var q = readNewQuest('new-quest');
+    if (!q) return;
     var xp = clamp(parseInt(el('new-quest-xp').value,10)||100,5,500);
-    app.state.quests.side.push({id:genId(),name:name,xp:xp,done:false});
+    app.state.quests.side.push({id:genId(),questName:q.questName,name:q.objective,xp:xp,done:false});
     renderQuests(); scheduleSave();
   }
   function addDailyQuest(){
-    var name = el('new-daily-name').value.trim();
-    if (!name) return;
+    var q = readNewQuest('new-daily');
+    if (!q) return;
     var xp = clamp(parseInt(el('new-daily-xp').value,10)||15,5,100);
-    app.state.quests.daily.push({id:genId(),name:name,xp:xp,lastDate:null});
+    app.state.quests.daily.push({id:genId(),questName:q.questName,name:q.objective,xp:xp,lastDate:null});
     renderQuests(); scheduleSave();
   }
   function addInventoryItem(){
@@ -59,6 +70,59 @@
     if (!isFinite(rate) || rate<=0) rate = 1;
     app.state.finances.holdings.push({id:genId(), label:label, amount:amount, rateToCAD:rate});
     renderInventory(); scheduleSave();
+  }
+
+  // ---------- quest names ----------
+  function findQuest(kind, id){
+    var quests = app.state.quests;
+    if (kind==='main') return quests.main;
+    var list = kind==='side' ? quests.side : kind==='daily' ? quests.daily : [];
+    return list.filter(function(x){ return x.id===id; })[0] || null;
+  }
+  // Turns a quest's name (or its "+ name" link) into a text box. Enter or
+  // tapping elsewhere saves it, Escape cancels; saving an empty box removes
+  // the name.
+  function startRename(btn){
+    var kind = btn.getAttribute('data-kind');
+    var quest = findQuest(kind, btn.getAttribute('data-id'));
+    if (!quest) return;
+    if (app.finishRename) app.finishRename();
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'quest-title-input';
+    input.maxLength = ST.QUEST_NAME_MAX;
+    input.placeholder = 'Quest name';
+    input.setAttribute('aria-label', 'Quest name');
+    input.value = quest.questName || '';
+
+    var open = true;
+    function finish(save, refocus){
+      if (!open) return;
+      open = false;
+      app.finishRename = null;
+      document.removeEventListener('pointerdown', onPointerDown, true);
+      if (save){
+        var name = input.value.trim().slice(0, ST.QUEST_NAME_MAX);
+        if (name!==(quest.questName||'')){ quest.questName = name; scheduleSave(); }
+      }
+      var back = R.swapQuestTitle(input, kind, quest);
+      if (refocus && back) back.focus();
+    }
+    function commit(){ finish(true, false); }
+    // Tapping a plain part of the page doesn't always take the focus away
+    // from the box (iOS), so any tap outside it counts.
+    function onPointerDown(e){ if (e.target!==input) commit(); }
+
+    input.addEventListener('keydown', function(e){
+      if (e.key==='Enter'){ e.preventDefault(); finish(true, true); }
+      else if (e.key==='Escape'){ e.preventDefault(); finish(false, true); }
+    });
+    input.addEventListener('blur', commit);
+    document.addEventListener('pointerdown', onPointerDown, true);
+    app.finishRename = commit;
+    btn.replaceWith(input);
+    input.focus();
+    input.select();
   }
 
   // ---------- log analysis ----------
@@ -197,6 +261,8 @@
         } else if (action==='bonus-toggle'){
           var b = (state.quests.main.bonus||[]).filter(function(x){return x.id===id;})[0];
           if (b && !b.done){ b.done = true; addXp(b.xp||0); renderQuests(); scheduleSave(); }
+        } else if (action==='rename'){
+          startRename(actionBtn);
         }
         return;
       }
@@ -257,8 +323,9 @@
     });
     document.body.addEventListener('keydown', function(e){
       if (e.key!=='Enter') return;
-      if (e.target.id==='new-quest-name' || e.target.id==='new-quest-xp') addSideQuest();
-      else if (e.target.id==='new-daily-name' || e.target.id==='new-daily-xp') addDailyQuest();
+      var targetId = e.target.id || '';
+      if (targetId.indexOf('new-quest-')===0) addSideQuest();
+      else if (targetId.indexOf('new-daily-')===0) addDailyQuest();
       else if (e.target.id==='new-item-name') addInventoryItem();
       else if (e.target.id==='new-wallet-label' || e.target.id==='new-wallet-amount') addHolding();
     });
