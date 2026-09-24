@@ -130,6 +130,12 @@
     });
   }
   function clone(value){ return JSON.parse(JSON.stringify(value)); }
+  // Copies `from`'s own fields onto `to`. A "__proto__" key (JSON.parse
+  // makes it an ordinary key) would replace `to`'s prototype: skipped.
+  function copyFields(to, from){
+    Object.keys(from).forEach(function(k){ if (k!=='__proto__') to[k] = from[k]; });
+    return to;
+  }
 
   // Recursive merge: any field added to DEFAULT_STATE later (a new stat, a new
   // quest property, a new top-level system) is filled in automatically for a
@@ -165,9 +171,7 @@
     if (!quests || typeof quests!=='object') return;
     var main = quests.main;
     if (!Array.isArray(quests.mains) && main && typeof main==='object' && !Array.isArray(main)){
-      var first = {id:'m1', questName:'', progressType:'percent'};
-      Object.keys(main).forEach(function(k){ first[k] = main[k]; });
-      quests.mains = [first];
+      quests.mains = [copyFields({id:'m1', questName:'', progressType:'percent'}, main)];
     }
     delete quests.main;
   }
@@ -338,8 +342,7 @@
     return (Array.isArray(list) ? list : []).filter(function(x){
       return x && typeof x==='object' && !Array.isArray(x);
     }).map(function(x){
-      var out = {};
-      Object.keys(x).forEach(function(k){ out[k] = x[k]; });
+      var out = copyFields({}, x);
       fix(out);
       return out;
     });

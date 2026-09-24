@@ -10,6 +10,13 @@
       QUEST_NAME_MAX = ST.QUEST_NAME_MAX;
   var app = ST.app;
 
+  // Everything put into the HTML below is escaped text (escapeHtml), an id
+  // (attr: escaped too, so it can't leave its attribute) or a number (num:
+  // always a plain number). sanitizeImported() already guarantees ids and
+  // numbers; this keeps the page safe even for data that skipped it.
+  var attr = escapeHtml;
+  function num(v){ var n = Number(v); return isFinite(n) ? n : 0; }
+
   // ---------- what was typed ----------
   // Redrawing a tab rebuilds its boxes. What was typed in a box with an id
   // (an add row, the journal entry) is put back, so a tap elsewhere or a
@@ -41,7 +48,7 @@
   }
 
   function statRowHtml(key){
-    var value = app.state.stats[key];
+    var value = num(app.state.stats[key]);
     var segs='';
     for (var i=1;i<=10;i++){ segs += '<span class="seg'+(i<=value?' filled':'')+'"></span>'; }
     return '<div class="stat-row">'+
@@ -52,7 +59,7 @@
   }
 
   function skillRowHtml(key){
-    var value = app.state.skills[key];
+    var value = num(app.state.skills[key]);
     var pct = clamp(value,0,100);
     return '<div class="skill-row">'+
       '<div class="skill-label">'+key+'</div>'+
@@ -67,7 +74,7 @@
 
   function renderStatus(){
     var state = app.state;
-    var pts = state.unspentSpecialPoints||0;
+    var pts = num(state.unspentSpecialPoints);
     var html = '';
     // Level-up points are the only way S.P.E.C.I.A.L. goes up. Tapping a
     // stat asks first, inside the banner; only "Yes" spends the point.
@@ -104,7 +111,7 @@
   // A quest's name, which is tapped to rename it. A quest without one (saved
   // before quest names existed) gets a small "+ name" link in its place.
   function questTitleHtml(kind, q){
-    var ref = ' data-action="rename" data-kind="'+kind+'"'+(q.id ? ' data-id="'+q.id+'"' : '');
+    var ref = ' data-action="rename" data-kind="'+kind+'"'+(q.id ? ' data-id="'+attr(q.id)+'"' : '');
     return q.questName
       ? '<button class="quest-title"'+ref+' title="Rename">'+escapeHtml(q.questName)+'</button>'
       : '<button class="add-name"'+ref+'>+ name</button>';
@@ -132,12 +139,12 @@
 
   // A streak quest's progress: "Day 3 / 7", and a check-in button usable once a day.
   function streakRowHtml(m){
-    var days = ST.currentStreak(m);
+    var days = num(ST.currentStreak(m)), target = num(m.streakTarget);
     var done = m.completed || ST.checkedInToday(m);
     return '<div class="streak-row">'+
-      '<button class="complete-btn'+(done?' done':'')+'" data-action="main-checkin" data-id="'+m.id+'" '+(done?'disabled':'')+' aria-label="Check in for today">'+(done?'&#10003;':'&#9675;')+'</button>'+
-      '<span class="streak-days">Day '+days+' / '+m.streakTarget+'</span>'+
-      '<div class="streak-bar"><div class="streak-fill" style="width:'+clamp(days/m.streakTarget*100,0,100)+'%"></div></div>'+
+      '<button class="complete-btn'+(done?' done':'')+'" data-action="main-checkin" data-id="'+attr(m.id)+'" '+(done?'disabled':'')+' aria-label="Check in for today">'+(done?'&#10003;':'&#9675;')+'</button>'+
+      '<span class="streak-days">Day '+days+' / '+target+'</span>'+
+      '<div class="streak-bar"><div class="streak-fill" style="width:'+(target ? clamp(days/target*100,0,100) : 0)+'%"></div></div>'+
     '</div>';
   }
   function streakNote(m){
@@ -153,23 +160,23 @@
       '<div class="main-quest-head">'+
         questTitleHtml('main', m)+
         (m.completed ? '<span class="badge">Completed</span>' : '')+
-        '<button class="remove-btn" data-action="main-remove" data-id="'+m.id+'" aria-label="Remove main quest">&times;</button>'+
+        '<button class="remove-btn" data-action="main-remove" data-id="'+attr(m.id)+'" aria-label="Remove main quest">&times;</button>'+
       '</div>'+
-      '<input type="text" class="main-title-input" data-id="'+m.id+'" maxlength="60" value="'+escapeHtml(m.title)+'" aria-label="Objective">'+
+      '<input type="text" class="main-title-input" data-id="'+attr(m.id)+'" maxlength="60" value="'+escapeHtml(m.title)+'" aria-label="Objective">'+
       (streak ? streakRowHtml(m) :
         '<div class="progress-row">'+
-          '<input type="range" min="0" max="100" value="'+m.progress+'" class="main-progress-input" data-id="'+m.id+'" aria-label="Progress">'+
-          '<span class="progress-pct">'+m.progress+'%</span>'+
+          '<input type="range" min="0" max="100" value="'+num(m.progress)+'" class="main-progress-input" data-id="'+attr(m.id)+'" aria-label="Progress">'+
+          '<span class="progress-pct">'+num(m.progress)+'%</span>'+
         '</div>')+
       '<div class="main-xp-note">'+(streak && !m.completed ? '<span>'+streakNote(m)+' ·</span> ' : '')+
-        '<span>'+(m.completed?'Completed — ':'On completion: ')+'+'+(m.xp||0)+' XP</span></div>';
+        '<span>'+(m.completed?'Completed — ':'On completion: ')+'+'+num(m.xp)+' XP</span></div>';
     if (bonus.length){
       html += '<div class="bonus-label">Bonus objectives</div><div class="bonus-list">';
       bonus.forEach(function(b){
         html += '<div class="bonus-item'+(b.done?' done':'')+'">'+
-          '<button class="complete-btn'+(b.done?' done':'')+'" data-action="bonus-toggle" data-quest="'+m.id+'" data-id="'+b.id+'" '+(b.done?'disabled':'')+' aria-label="Toggle">'+(b.done?'&#10003;':'&#9675;')+'</button>'+
+          '<button class="complete-btn'+(b.done?' done':'')+'" data-action="bonus-toggle" data-quest="'+attr(m.id)+'" data-id="'+attr(b.id)+'" '+(b.done?'disabled':'')+' aria-label="Toggle">'+(b.done?'&#10003;':'&#9675;')+'</button>'+
           '<span class="quest-name">'+escapeHtml(b.name)+'</span>'+
-          '<span class="quest-xp">+'+(b.xp||0)+' XP</span>'+
+          '<span class="quest-xp">+'+num(b.xp)+' XP</span>'+
         '</div>';
       });
       html += '</div>';
@@ -178,7 +185,7 @@
     if (app.confirmRemoveMain===m.id){
       html += '<div class="card-confirm">'+
         '<span class="reset-warning">Remove this quest?</span>'+
-        '<button class="confirm-yes" data-action="main-remove-yes" data-id="'+m.id+'">Yes, remove</button>'+
+        '<button class="confirm-yes" data-action="main-remove-yes" data-id="'+attr(m.id)+'">Yes, remove</button>'+
         '<button data-action="main-remove-no">Cancel</button>'+
       '</div>';
     }
@@ -218,10 +225,10 @@
       html += '<div class="quest-list">';
       active.forEach(function(q){
         html += '<div class="quest-item">'+
-          '<button class="complete-btn" data-action="quest-complete" data-id="'+q.id+'" aria-label="Complete">&#10003;</button>'+
+          '<button class="complete-btn" data-action="quest-complete" data-id="'+attr(q.id)+'" aria-label="Complete">&#10003;</button>'+
           questTextHtml('side', q)+
-          '<span class="quest-xp">+'+q.xp+' XP</span>'+
-          '<button class="remove-btn" data-action="quest-remove" data-id="'+q.id+'" aria-label="Remove">&times;</button>'+
+          '<span class="quest-xp">+'+num(q.xp)+' XP</span>'+
+          '<button class="remove-btn" data-action="quest-remove" data-id="'+attr(q.id)+'" aria-label="Remove">&times;</button>'+
         '</div>';
       });
       html += '</div>';
@@ -238,10 +245,10 @@
     state.quests.daily.forEach(function(q){
       var doneToday = q.lastDate===today;
       html += '<div class="quest-item">'+
-        '<button class="complete-btn'+(doneToday?' done':'')+'" data-action="daily-toggle" data-id="'+q.id+'" '+(doneToday?'disabled':'')+' aria-label="Mark done">'+(doneToday?'&#10003;':'&#9675;')+'</button>'+
+        '<button class="complete-btn'+(doneToday?' done':'')+'" data-action="daily-toggle" data-id="'+attr(q.id)+'" '+(doneToday?'disabled':'')+' aria-label="Mark done">'+(doneToday?'&#10003;':'&#9675;')+'</button>'+
         questTextHtml('daily', q)+
-        '<span class="quest-xp">+'+q.xp+' XP</span>'+
-        '<button class="remove-btn" data-action="daily-remove" data-id="'+q.id+'" aria-label="Remove">&times;</button>'+
+        '<span class="quest-xp">+'+num(q.xp)+' XP</span>'+
+        '<button class="remove-btn" data-action="daily-remove" data-id="'+attr(q.id)+'" aria-label="Remove">&times;</button>'+
       '</div>';
     });
     html += '</div><div class="add-row">'+
@@ -275,9 +282,9 @@
             '<div class="wallet-row-main">'+
               '<span class="wallet-label">'+escapeHtml(h.label)+'</span>'+
               '<span class="wallet-cad">$'+money(cad)+'</span>'+
-              '<button class="remove-btn" data-action="wallet-remove" data-id="'+h.id+'" aria-label="Remove">&times;</button>'+
+              '<button class="remove-btn" data-action="wallet-remove" data-id="'+attr(h.id)+'" aria-label="Remove">&times;</button>'+
             '</div>'+
-            '<div class="wallet-row-sub">'+money(h.amount)+' &times; <input type="number" class="rate-input" data-id="'+h.id+'" value="'+rate+'" step="0.001" aria-label="Rate to CAD"> CAD</div>'+
+            '<div class="wallet-row-sub">'+money(h.amount)+' &times; <input type="number" class="rate-input" data-id="'+attr(h.id)+'" value="'+rate+'" step="0.001" aria-label="Rate to CAD"> CAD</div>'+
           '</div>';
         });
         html += '<div class="wallet-total-row"><span>Total</span><span>$'+money(ST.totalHoldingsCAD())+'</span></div>';
@@ -307,7 +314,7 @@
         html += '<div class="inv-list">';
         items.forEach(function(i){
           html += '<div class="inv-item"><span>'+escapeHtml(i.name)+'</span>'+
-            '<button class="remove-btn" data-action="inv-remove" data-id="'+i.id+'" aria-label="Remove">&times;</button></div>';
+            '<button class="remove-btn" data-action="inv-remove" data-id="'+attr(i.id)+'" aria-label="Remove">&times;</button></div>';
         });
         html += '</div>';
       }
@@ -335,7 +342,7 @@
         html += '<div class="log-entry">'+
           '<div class="log-date">'+escapeHtml(entry.date)+'</div>'+
           '<div class="log-text">'+escapeHtml(entry.text)+'</div>'+
-          '<div class="log-xp">+'+entry.xp+' XP — '+escapeHtml(entry.reason||'')+'</div>'+
+          '<div class="log-xp">+'+num(entry.xp)+' XP — '+escapeHtml(entry.reason||'')+'</div>'+
         '</div>';
       });
     }
@@ -346,9 +353,9 @@
 
   function renderProposal(source){
     var p = app.pendingProposal;
-    var lines = '<div class="proposal-line">+'+p.xp+' XP</div>'+
+    var lines = '<div class="proposal-line">+'+num(p.xp)+' XP</div>'+
       '<div class="proposal-reason">'+escapeHtml(p.reason)+'</div>';
-    p.skillGains.forEach(function(g){ lines += '<div class="proposal-sub">+'+g.amount+' '+g.skill+'</div>'; });
+    p.skillGains.forEach(function(g){ lines += '<div class="proposal-sub">+'+num(g.amount)+' '+escapeHtml(g.skill)+'</div>'; });
     var badge = source==='ai' ? '<span class="badge">AI</span>' : '<span class="badge dim">Offline rules</span>';
     el('proposal-area').innerHTML =
       '<div class="proposal-card">'+

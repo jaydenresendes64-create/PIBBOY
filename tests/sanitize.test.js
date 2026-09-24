@@ -181,3 +181,18 @@ test('the input document is not trusted to be a plain tree of the right types', 
   assert.deepEqual(out.finances.holdings, []);
   assert.deepEqual(out.log, []);
 });
+
+test('a "__proto__" key can\'t change what an imported object inherits', () => {
+  const raw = JSON.parse(JSON.stringify(fullState()));
+  const text = JSON.stringify(raw)
+    .replace('"id":"s1"', '"__proto__":{"polluted":"yes","questName":"<b>x</b>"},"id":"s1"')
+    .replace('"level":9', '"__proto__":{"polluted":"yes"},"level":9');
+  const hostile = JSON.parse(text);
+  hostile.quests.main = JSON.parse('{"__proto__":{"polluted":"yes"},"title":"t"}');
+  delete hostile.quests.mains;
+  const out = ST.sanitizeImported(hostile);
+  assert.equal(out.polluted, undefined);
+  assert.equal(out.quests.side[0].polluted, undefined);
+  assert.equal(out.quests.mains[0].polluted, undefined);
+  assert.equal(({}).polluted, undefined);
+});

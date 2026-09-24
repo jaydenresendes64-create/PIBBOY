@@ -70,8 +70,8 @@ node --test
 No install step and no dependencies: the tests use Node's built-in test runner and load the app's own
 scripts from `js/` with a small fake browser (`tests/helpers.js`). They cover migrating every earlier
 save format, checking backup files (including hostile ones), XP and level-ups, skill and
-S.P.E.C.I.A.L. limits, streaks across days, the offline journal rules in English and French, and
-saving (both copies, damaged copies, two tabs).
+S.P.E.C.I.A.L. limits, streaks across days, the offline journal rules in English and French, safe
+HTML output, and saving (both copies, damaged copies, two tabs).
 
 ## Your data
 
