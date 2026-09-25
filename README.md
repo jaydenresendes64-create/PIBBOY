@@ -5,6 +5,9 @@ inventory, a Caps wallet, and a journal that turns diary entries into XP and ski
 accept or reject. In ITEMS, **THINGS TO SELL** keeps an asking price per item; tapping **Sold** puts
 the money in the wallet's CASH row, gives 25 XP and writes the sale in the journal. The **⇄** button on
 an item moves it to another category (its asking price is kept for if it goes back to THINGS TO SELL).
+Beside each ITEMS category, a small 3D model drawn in amber wireframe turns slowly, like the items in a
+Fallout 4 Pip-Boy (a price tag, a vault jumpsuit, a first-aid kit, a crate, a key); drag one sideways
+to turn it by hand.
 
 Plain HTML, CSS and JavaScript: no framework, no build step.
 
@@ -19,6 +22,7 @@ js/state.js         data model, defaults, reward rules, migrating and checking s
 js/storage.js       saving: two copies (IndexedDB and localStorage), backup files
 js/ai.js            journal analysis client + offline keyword rules
 js/render.js        builds each tab
+js/items3d.js       ITEMS: the turning 3D wireframe models (loads Three.js the first time ITEMS opens)
 js/mascot.js        when the mascot walks or gestures (his moves are in css/terminal.css)
 js/crt.js           the screen's rare flicker (the tube look itself is in css/terminal.css)
 js/tilt.js          3D tilt: the screen's layers follow the phone's motion (or the mouse)
@@ -29,6 +33,7 @@ js/fog.js           MAP: the fog of war, drawn with WebGL in the same frame as t
 js/map.js           the MAP tab (loads MapLibre the first time it's opened)
 js/bulk.js          MAP: "Add several places" (paste a list, review it, reveal it all)
 vendor/maplibre/    MapLibre GL JS 6.11.2, the map library (licence: vendor/maplibre/LICENSE.txt)
+vendor/three/       Three.js r186, only the parts ITEMS uses (licence: vendor/three/LICENSE)
 js/events.js        user actions
 js/main.js          startup
 sw.js               service worker: offline use (network first for the app, so updates show right away)
@@ -37,7 +42,8 @@ images/mascot.png   the amber mascot in the top-right corner
 data/map-style.json MAP: the map's own amber Pip-Boy style (colours, line widths, labels, by zoom)
 data/places.txt     MAP: every country, region and city (15,000 people or more), for searching
 data/regions/       MAP: one file per country with the shapes of its regions
-tools/              build-map-data.js, which makes data/ (see "Map data")
+tools/              build-map-data.js, which makes data/ (see "Map data"); build-three.mjs, which makes
+                    vendor/three/ from the parts listed in three-entry.mjs
 fonts/              the two terminal fonts, VT323 and IBM Plex Mono (licence: fonts/OFL.txt)
 api/analyze.js      optional serverless AI function (not used on GitHub Pages, see below)
 tests/              automated tests (see "Run the tests")

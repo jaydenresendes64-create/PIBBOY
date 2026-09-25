@@ -362,7 +362,10 @@
     var html = renderWallet();
     CATS.forEach(function(cat){
       var items = state.inventory.filter(function(i){ return i.category===cat; });
-      html += '<div class="panel-title">'+ST.catLabel(cat)+'</div>';
+      // A turning 3D model beside the title (js/items3d.js), when that category has one.
+      var model = ST.items3d && ST.items3d.CATEGORIES.indexOf(cat)!==-1
+        ? '<canvas class="item-model" data-model="'+cat+'" aria-hidden="true"></canvas>' : '';
+      html += '<div class="panel-title inv-cat">'+ST.catLabel(cat)+model+'</div>';
       if (items.length===0){
         html += '<div class="empty-note">Nothing here yet.</div>';
       } else {
@@ -387,6 +390,7 @@
     var tab = el('tab-items');
     keepTyped(tab, function(){ tab.innerHTML = html; });
     el('new-item-price').hidden = el('new-item-cat').value!=='SELL';
+    if (ST.items3d) ST.items3d.attach(tab);
   }
 
   function renderLog(){
@@ -535,6 +539,7 @@
     var swing = shownTab!==null && name!==shownTab;
     if (swing) sound('tab');
     shownTab = name;
+    if (ST.items3d) ST.items3d.show(name==='items');
     ['status','quests','items','map','log'].forEach(function(t){
       var panel = el('tab-'+t);
       panel.style.display = (t===name)?'block':'none';

@@ -893,3 +893,13 @@ html.sl-open{ overflow:hidden; }
   color:var(--phosphor); padding:4px 6px; font-size:0.8rem;
 }
 .sl-pack{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 4px; }
+
+/* ---------- ITEMS: turning 3D wireframe models (js/items3d.js) ----------
+   Beside each category's title, glowing like the rest of the screen. A
+   sideways drag turns one by hand; up and down still scrolls the page. */
+.panel-title.inv-cat{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+canvas.item-model{
+  width:78px; height:44px; margin:-12px 0 -8px; flex:0 0 auto;
+  filter:drop-shadow(0 0 3px rgba(232,163,61,0.55));
+  touch-action:pan-y; cursor:grab;
+}
