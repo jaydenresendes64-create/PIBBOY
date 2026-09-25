@@ -141,6 +141,7 @@
     map.on('load', function(){
       status('');
       if (ST.routes) ST.routes.attach(map);      // the routes' lines, under the fog
+      if (ST.radar) ST.radar.attach(map);        // the scanner (its own canvas, over the map)
       fog = ST.fog.createLayer(map, revealed);
       map.addLayer(fog);
       fog.setActive(onScreen);
@@ -288,6 +289,7 @@
     return '<div class="map-counts" id="map-counts" aria-live="polite"></div>'+
       '<div class="map-box" id="map-box">'+
         '<div class="map-view" id="map-view"></div>'+
+        '<canvas class="map-radar" id="map-radar" aria-hidden="true" hidden></canvas>'+
         '<div class="map-scan" aria-hidden="true"></div>'+
         '<div class="map-status" id="map-status">LOADING MAP…</div>'+
         '<div class="map-hint" id="map-hint" hidden><span id="map-hint-text"></span>'+
@@ -295,6 +297,7 @@
         '<div class="map-tools">'+
           '<button class="map-tool" data-map="recenter" aria-label="Recenter on my latest place" title="Recenter">&#8982;</button>'+
           '<button class="map-tool" data-map="fit" aria-label="Zoom to all my places" title="All my places">&#9974;</button>'+
+          '<button class="map-tool" data-map="radar" aria-pressed="false" aria-label="Scanner: undiscovered places nearby" title="Scanner">&#9678;</button>'+
         '</div>'+
       '</div>'+
       '<div id="map-panel"></div>'+
@@ -471,6 +474,7 @@
       : panel.kind==='region' ? regionCardHtml()
       : panel.kind==='here' ? hereCardHtml()
       : panel.kind.indexOf('route')===0 ? (ST.routes ? ST.routes.html(panel) : '')
+      : panel.kind==='radar' ? (ST.radar ? ST.radar.html(panel) : '')
       : ST.bulk ? ST.bulk.html(panel) : '';
   }
   function closePanel(){
@@ -500,6 +504,7 @@
     renderLists();
     syncMarkers();
     if (ST.routes) ST.routes.sync();
+    if (ST.radar) ST.radar.refresh();
     redrawFog();
     ST.storage.scheduleSave();
   }
@@ -727,6 +732,7 @@
     else if (action==='region') openRegionPicker();
     else if (action==='region-add') addPickedRegion();
     else if (action.indexOf('route')===0){ if (ST.routes) ST.routes.onAction(action, btn); }
+    else if (action.indexOf('radar')===0){ if (ST.radar) ST.radar.onAction(action, btn); }
     else if (ST.bulk) ST.bulk.onAction(action, btn);
   }
   function focusIn(selector){

@@ -44,6 +44,7 @@ js/fog.js           MAP: the fog of war, drawn with WebGL in the same frame as t
 js/map.js           the MAP tab (loads MapLibre the first time it's opened)
 js/bulk.js          MAP: "Add several places" (paste a list, review it, reveal it all)
 js/routes.js        MAP: routes (road trips): stops, the road traced once (OSRM), its line and card
+js/radar.js         MAP: the scanner, a radar sweep whose blips are real undiscovered cities
 vendor/maplibre/    MapLibre GL JS 6.11.2, the map library (licence: vendor/maplibre/LICENSE.txt)
 vendor/three/       Three.js r186, only the parts ITEMS uses (licence: vendor/three/LICENSE)
 js/events.js        user actions
@@ -231,6 +232,11 @@ later. With **Reduce Motion** on, the fog stays still and changes appear at once
   (or its line on the map) to see it whole, rename it, add a note or remove it.
 - Tap a place in the lists (or its mark on the map) to go there, rename it, resize it, add a note or
   remove it (asks first).
+- **Scanner** (the ◎ button on the map): a Pip-Boy radar sweeps the map. Its blips are real places:
+  the 24 biggest cities in view that you haven't revealed yet (not the ones inside a revealed city,
+  pin or region), lit as the sweep passes and fading like phosphor, with a soft ping. Tap a blip: what
+  it is, its population, how far it is from your nearest place, and **I've been there** to reveal it
+  (DISCOVERED, 50 XP). Works offline (the city list is on the phone); still with Reduce Motion.
 - The line above the map counts your places: "3 countries · 14 cities · 5 regions · 8 pins" (and
   "· 2 routes" once you have some). The countries are the ones your cities, regions and pins are in.
 - A city or region revealed for the first time shows **DISCOVERED** and gives 50 XP (city) or

@@ -20,6 +20,7 @@
  *   geiger    a Geiger counter's crackle: rads, time to back up
  *   radaway   a falling whir into a chime: a backup made, the rads drained
  *   key       a small keystroke: each line of the RobCo boot (js/boot.js)
+ *   ping      a soft sonar ping: the scanner's sweep crossing a blip (js/radar.js)
  *
  * Browsers only allow sound after a tap: the audio starts on the first one,
  * and anything asked before that is simply skipped. While the app is in the
@@ -260,6 +261,10 @@
         hiss(at, 0.004, 0.45 + Math.random()*0.35, 'highpass', 2800, 0.8, 0.0005);
         tone('square', vary(3100, 0.1), null, at, 0.002, 0.035, 0.0005);
       }
+    },
+    ping: function(t){                                                   // the scanner's sweep crossing a blip
+      tone('sine', 1320, null, t, 0.16, 0.05, 0.002);
+      tone('sine', 1980, null, t, 0.08, 0.018, 0.002);
     },
     key: function(t){                                                    // the RobCo boot typing a line
       hiss(t, 0.012, 0.16, 'bandpass', vary(2400, 0.08), 1.3, 0.001);
