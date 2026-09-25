@@ -868,6 +868,29 @@ button{ cursor:pointer; }
   animation:powerHint 2.4s steps(2) infinite;
 }
 .power-on-cursor{ animation:pulse 1s steps(1) infinite; }
+
+/* The RobCo boot (js/boot.js): typed over the whole screen, once a day. */
+.robco{
+  position:fixed; inset:0; z-index:1900; overflow:hidden; cursor:pointer;
+  padding:max(28px, env(safe-area-inset-top)) 18px 24px;
+  background:#0d0602;
+  background-image:repeating-linear-gradient(0deg, rgba(0,0,0,0.28) 0 1px, transparent 1px 3px);
+  color:var(--phosphor); -webkit-tap-highlight-color:transparent;
+  font-family:'VT323', ui-monospace, monospace; font-size:clamp(0.98rem, 4.3vw, 1.3rem); line-height:1.22;
+  text-shadow:0 0 6px rgba(232,163,61,0.5);
+}
+.robco-text{ margin:0; font:inherit; white-space:pre-wrap; overflow-wrap:anywhere; }
+.robco-cursor{ animation:pulse 1s steps(1) infinite; }
+.robco-out{ animation:robcoOut 0.45s ease-in forwards; pointer-events:none; }
+@keyframes robcoOut{ to{ opacity:0; transform:scaleY(0.03); filter:brightness(2.5); } }
+
+/* The weather beside the date (js/weather.js); a tap reads the alert. */
+.topbar-right{ display:flex; align-items:center; gap:10px; }
+.weather-btn{ position:relative; color:var(--text-dim); letter-spacing:0.06em; font-size:0.75rem; }
+.weather-btn::before{ content:''; position:absolute; inset:-12px -6px; }
+.weather-btn[hidden]{ display:none; }
+.credits{ font-size:0.62rem; color:var(--text-dim); opacity:0.8; }
+.credits a{ color:inherit; }
 @keyframes powerHint{ 0%,100%{ opacity:1; } 50%{ opacity:0.7; } }
 .frame.crt-power-on{ animation:crtPowerOn 0.7s ease-out both; transform-origin:50% 30vh; }
 @keyframes crtPowerOn{

@@ -537,6 +537,7 @@
     'sound-btn': function(){ if (ST.sfx) ST.sfx.toggleSound(); },
     'power-btn': function(){ if (ST.sfx) ST.sfx.togglePowerScreen(); },
     'sounds-btn': function(){ if (ST.sfxCustom) ST.sfxCustom.open(); },
+    'weather-btn': function(){ if (ST.weather) ST.weather.tell(); },
     'export-btn': exportData,
     'import-btn': function(){ el('import-file').click(); },
     'import-confirm-btn': confirmImport,

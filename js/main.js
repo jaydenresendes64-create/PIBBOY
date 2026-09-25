@@ -15,6 +15,7 @@
     if (ST.crt) ST.crt.init();                    // decoration too
     if (ST.tilt) ST.tilt.init();
     if (ST.sfx) ST.sfx.init();                    // sounds: decoration as well
+    if (ST.weather) ST.weather.init();            // the topbar's weather (decoration)
 
     ST.storage.load().then(function(saved){
       ST.app.state = saved || ST.defaultState();

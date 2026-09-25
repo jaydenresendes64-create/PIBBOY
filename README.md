@@ -36,6 +36,8 @@ js/mascot.js        when the mascot walks or gestures (his moves are in css/term
 js/crt.js           the screen's rare flicker (the tube look itself is in css/terminal.css)
 js/tilt.js          3D tilt: the screen's layers follow the phone's motion (or the mouse)
 js/sfx.js           sounds, all made in code (no audio files), and the power-on screen
+js/weather.js       the real weather (Open-Meteo), read the Pip-Boy way
+js/boot.js          the RobCo boot: the startup typed with your real status, once a day
 js/sfx-custom.js    "Custom sounds": your own clips, cut from a video or audio file, kept on the device
 js/places.js        the MAP tab's logic: positions, city and region lists, finding and revealing places
 js/fog.js           MAP: the fog of war, drawn with WebGL in the same frame as the map
@@ -117,6 +119,18 @@ When the app opens, a black screen says **TAP TO POWER ON**; the tap plays the b
 screen lights up like a tube (browsers only allow sound after a tap). Two footer links, remembered on
 each device: **Sound: on/off** and **Power-on: on/off** (with power-on off, the app opens directly and
 the boot sound plays on the first tap). The phone's own volume and silent switch apply as usual.
+
+**RobCo boot** (`js/boot.js`): the first power-on of the day, the terminal then types its startup
+letter by letter, about 2.5 seconds: the RobCo logon, then your real status (level and XP, quests,
+today's dailies, a streak quest's day, S.P.E.C.I.A.L. points waiting, rads and the last backup) and
+the weather outside. A tap shows it all at once; a second tap (or the end) opens the app. Not with
+Power-on off, nor with Reduce Motion.
+
+**Weather** (`js/weather.js`): Montréal's real weather beside the date in the topbar (☂︎ 14°C); a
+tap reads it the Pip-Boy way ("RAD-STORM INCOMING — SEEK SHELTER" when it rains, "NUCLEAR WINTER
+CONDITIONS" in snow, "FOG BANK — WATCH FOR FERAL GHOULS"...). From [Open-Meteo](https://open-meteo.com)
+(free, no key, CC BY 4.0, credited in the footer), asked at most every 30 minutes, for Montréal only
+(never your position), and kept on the phone for offline.
 
 ### Custom sounds (your own clips)
 

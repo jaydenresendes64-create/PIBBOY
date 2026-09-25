@@ -19,6 +19,7 @@
  *   mapSelect a place opened on the MAP (a city picked, a marker tapped)
  *   geiger    a Geiger counter's crackle: rads, time to back up
  *   radaway   a falling whir into a chime: a backup made, the rads drained
+ *   key       a small keystroke: each line of the RobCo boot (js/boot.js)
  *
  * Browsers only allow sound after a tap: the audio starts on the first one,
  * and anything asked before that is simply skipped. While the app is in the
@@ -260,6 +261,10 @@
         tone('square', vary(3100, 0.1), null, at, 0.002, 0.035, 0.0005);
       }
     },
+    key: function(t){                                                    // the RobCo boot typing a line
+      hiss(t, 0.012, 0.16, 'bandpass', vary(2400, 0.08), 1.3, 0.001);
+      tone('square', vary(900, 0.05), null, t, 0.01, 0.03, 0.001);
+    },
     radaway: function(t){                                                // a backup: the rads drain away
       tone('sine', 1500, 280, t, 0.75, 0.07, 0.05);                     // falling whir
       hiss(t, 0.65, 0.07, 'bandpass', 1100, 0.6, 0.12);
@@ -408,6 +413,8 @@
     if (!frame) return;
     frame.classList.add('crt-power-on');
     setTimeout(function(){ frame.classList.remove('crt-power-on'); }, POWER_ON_MS + 50);
+    // Once the tube is lit: the RobCo boot, the first time today (js/boot.js).
+    setTimeout(function(){ if (ST.boot) ST.boot.afterPowerOn(); }, POWER_ON_MS);
   }
 
   // ---------- footer links ----------

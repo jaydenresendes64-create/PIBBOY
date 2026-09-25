@@ -178,7 +178,7 @@ test('sw.js: every app file it keeps exists, including MapLibre, the style and t
 
 test('index.html: the map may only reach OpenFreeMap (and OSRM, to trace a route\'s road)', () => {
   const csp = read('index.html').match(/Content-Security-Policy" content="([^"]+)"/)[1];
-  assert.match(csp, /connect-src 'self' https:\/\/tiles\.openfreemap\.org https:\/\/router\.project-osrm\.org;/);
+  assert.match(csp, /connect-src 'self' https:\/\/tiles\.openfreemap\.org https:\/\/router\.project-osrm\.org https:\/\/api\.open-meteo\.com;/);
   assert.match(csp, /script-src 'self' file:;/);                      // the map's worker is a file of the app
   assert.doesNotMatch(csp, /cartocdn|unsafe-eval/);
 });
