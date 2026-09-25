@@ -7,7 +7,7 @@
  * (#screen) only shifts, by at most MAX_SHIFT_PX, and never turns, so a tap
  * lands where it's aimed.
  *
- * Off by default. The footer link "3D tilt: off/on" switches it, and the
+ * Off by default. Settings' "3D tilt" switch turns it on, and the
  * choice is kept on this device only (localStorage, not in the saved data).
  * On iPhone, motion needs a permission that can only be asked from a tap:
  * the link's tap asks it; after the app is reopened, if iOS wants to ask
@@ -183,7 +183,7 @@
     ask().then(function(ok){ if (!ok && on) refused(); });
   }
 
-  // The footer link. The permission request is made right in the tap, as
+  // The switch in Settings. The permission request is made right in the tap, as
   // iOS requires.
   function toggle(){
     document.removeEventListener('click', askOnFirstTap, true);

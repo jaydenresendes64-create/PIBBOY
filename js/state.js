@@ -8,7 +8,7 @@
  *   level: number, xp: number, xpToNext: number, lifetimeXp: number,
  *   lifetimeLogEntries: number,             // every accepted entry, even past the LOG_MAX (200) kept in `log`
  *   capsQuestsLinked: true,                 // linkCapsQuests() has run on this document (see migrate())
- *   lastBackup: 'YYYY-M-D'|null,            // the day of the last Export backup (the footer's reminder)
+ *   lastBackup: 'YYYY-M-D'|null,            // the day of the last Export backup (rads, Settings)
  *   unspentSpecialPoints: number,           // level-up points not yet placed
  *   perks: { [perk id]: rank(1-ranks) },    // the perks taken (PERKS); older saves: see migrate()
  *   unspentPerkPoints: number,              // a perk point comes with each level-up too

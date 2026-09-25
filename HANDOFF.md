@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of commit `8d299ab` (2026-09-24). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-203/203 tests pass locally and on GitHub Actions. `sw.js` cache: `v16`.
+205/205 tests pass locally and on GitHub Actions. `sw.js` cache: `v16`.
 
 ## 1. What it is
 
@@ -47,6 +47,9 @@ Plain scripts (not ES modules, so `index.html` still opens from disk) sharing
 - **Perks are data:** each PERKS entry says `on` (an event type) and `xpFlat` / `xpPercent` /
   `skillFlat` per rank; `text` is generated from those numbers. A new perk = one table entry.
 - events.js never changes XP, skills or stats itself; it asks state.js and shows the toasts.
+- Settings (index.html `#settings`, opened by `#settings-btn`): the old footer controls moved there
+  with their ids, so tilt.js / sfx.js / events.js still find them; toggles are `.set-toggle` rows whose
+  text ("Sound: on") is for screen readers and shows as `data-label` + `[ ON ]` (CSS on aria-pressed).
 - events.js dispatches taps through tables: `ACTIONS` (by `data-action`: `run(btn, id, key)`) and
   `BUTTONS` (by id). A new button = one entry. `replaceState()` (import/reset) and `adoptState()`
   both re-sync caps quests.
@@ -79,12 +82,12 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   glare, physical tab keys, recessed panels, faint "PIBBOY 3000" plate, animated amber mascot
   (stepped Vault-Boy-style gestures per tab; MAP = "scout"), tab swing transition, 3D tilt (opt-in).
 - Sounds: boot, tick (scroll/slider), press, tab, complete, levelUp, quest, discover, sold, error,
-  step (skill ±), mapSelect; power-on screen; Sound / Power-on / Custom sounds footer links.
+  step (skill ±), mapSelect; power-on screen; Settings panel (⚙ in the topbar): 3D tilt, Power-on, Sound, Custom sounds, backup/import/reset, credits.
 - Data safety: dual storage, backups with dated file names (share sheet on phones), a "Last backup"
-  footer line + a once-a-day notice when one is due (`lastBackup`, `backupDue()`), cross-tab conflict
+  Settings line + a once-a-day notice when one is due (`lastBackup`, `backupDue()`), cross-tab conflict
   handling, CSP. RADS meter in the header (`rads()`: 40/day since `lastBackup`, max 1000; tap =
   export = RadAway). Live ONLINE/OFFLINE topbar (main.js). RobCo boot once a day after power-on
-  (boot.js, `lines()` tested); weather from Open-Meteo for Montréal (weather.js, CSP + footer credit).
+  (boot.js, `lines()` tested); weather from Open-Meteo for Montréal (weather.js, CSP + credit in Settings).
   MAP scanner (radar.js): 2D canvas over the map, blips = `candidates()` of the offline city list
   not `covered()` by a revealed place; runs only while on + on screen + app visible.
   Perks (state.js `PERKS`, `takePerk`, effects inside each reward fn: discoverPlace, sellItem,
@@ -150,7 +153,6 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   WebGL context loss they stay hidden until reload.
 - Custom sounds and 3D tilt choice are per device/origin; on iPhone the Home Screen app and Safari
   have separate storage.
-- Footer settings links are small and easy to miss (owner couldn't find "Custom sounds" at first).
 
 ## 7. Pending / waiting on the owner
 

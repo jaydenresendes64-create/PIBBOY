@@ -97,7 +97,7 @@ The app is a static site served by GitHub Pages from this repository:
 https://jaydenresendes64-create.github.io/PIBBOY/ a minute or two later.
 
 There is no server and no API key. The journal uses the offline keyword rules in `js/ai.js`, and the
-footer shows `AI analysis: offline rules`.
+Settings (About) show `AI analysis: offline rules`.
 
 ## Install it on your phone / use it offline
 
@@ -117,9 +117,17 @@ Where your data lives: on Android the installed app shares it with Chrome. On iP
 app keeps its own data, separate from Safari, so use **Export backup** in Safari and **Import backup**
 in the app to bring it over.
 
+## Settings
+
+The **⚙** in the topbar (beside the date) opens Settings, over the app: **Display** (3D tilt, the
+power-on screen and its RobCo boot), **Sound** (sound on/off, Custom sounds), **Data** (Export backup
+= RadAway, with the last backup's date; Import backup; Reset everything, which asks first) and
+**About** (the journal's analysis mode and the credits). Each setting is a whole row to tap, its
+state shown as `[ ON ]` / `[ OFF ]`. × , Escape or a tap outside closes it.
+
 ## 3D tilt
 
-The footer link **3D tilt: off/on** makes the screen's layers follow the phone's motion (or, lightly,
+The **3D tilt** switch in Settings makes the screen's layers follow the phone's motion (or, lightly,
 the mouse on a computer): the glass, scanlines and mascot turn a little, while everything you tap only
 shifts a few pixels, so taps land where you aim. It's off by default and remembered on each device.
 On iPhone, turning it on asks for motion access (allow it); if iOS asks again after reopening the app,
@@ -143,7 +151,7 @@ speaker" filter so they sound mechanical and lo-fi:
 | step / map select | a skill's − / + button / a place opened on the MAP |
 
 When the app opens, a black screen says **TAP TO POWER ON**; the tap plays the boot sound while the
-screen lights up like a tube (browsers only allow sound after a tap). Two footer links, remembered on
+screen lights up like a tube (browsers only allow sound after a tap). Two switches in Settings, remembered on
 each device: **Sound: on/off** and **Power-on: on/off** (with power-on off, the app opens directly and
 the boot sound plays on the first tap). The phone's own volume and silent switch apply as usual.
 
@@ -156,12 +164,12 @@ Power-on off, nor with Reduce Motion.
 **Weather** (`js/weather.js`): Montréal's real weather beside the date in the topbar (☂︎ 14°C); a
 tap reads it the Pip-Boy way ("RAD-STORM INCOMING — SEEK SHELTER" when it rains, "NUCLEAR WINTER
 CONDITIONS" in snow, "FOG BANK — WATCH FOR FERAL GHOULS"...). From [Open-Meteo](https://open-meteo.com)
-(free, no key, CC BY 4.0, credited in the footer), asked at most every 30 minutes, for Montréal only
+(free, no key, CC BY 4.0, credited in Settings), asked at most every 30 minutes, for Montréal only
 (never your position), and kept on the phone for offline.
 
 ### Custom sounds (your own clips)
 
-The footer link **Custom sounds** replaces any sound with a clip of your own (`js/sfx-custom.js`):
+**Custom sounds** (in Settings) replaces any sound with a clip of your own (`js/sfx-custom.js`):
 
 - **Choose a video or audio file** (mp4, m4a, mp3, wav…): every separate sound in it is found and
   listed (#1, #2…), plus **ALL** for the whole file. Play each with ▶, trim it with its start/end
@@ -329,11 +337,11 @@ next to a commit means a test failed.
 
 - Saved in the browser you use, twice (IndexedDB and localStorage): if one copy is damaged, the
   other is used. If neither can be read, the app says so and changes nothing rather than starting
-  empty. Another browser or device starts empty. Use **Export backup / Import backup** in the footer
+  empty. Another browser or device starts empty. Use **Export backup / Import backup** in Settings
   to move it (a backup is saved as `status-terminal-backup-YYYY-MM-DD.json`, dated the day you made it). An imported file is checked (and brought up to date if it comes from an older
   version) before you confirm; a file that isn't a backup is refused and nothing changes.
 - **Backups on iPhone:** Export backup opens the share sheet (Save to Files, iCloud Drive, AirDrop...),
-  since a Home Screen app can't download a file; on a computer it downloads. The footer shows the
+  since a Home Screen app can't download a file; on a computer it downloads. Settings show the
   last one ("Last backup: 3 days ago", marked ▲ when it's been 14 days or more, or never with
   progress to lose), and a notice says so once a day while one is due, with a Geiger crackle.
   Everything lives on the phone: a backup file is the only other copy.
@@ -358,7 +366,7 @@ next to a commit means a test failed.
 
 `api/analyze.js` is a serverless function that sends a diary entry to an AI model. GitHub Pages can't
 run it or keep a secret, so the live site never calls it. It only matters if you ever move the app to a
-host that runs serverless functions (such as Vercel); there, the footer shows `AI analysis: on` once
+host that runs serverless functions (such as Vercel); there, Settings show `AI analysis: on` once
 the key is set, and the diary text is sent to the AI provider for analysis.
 
 | Variable         | Required | Default                      | Notes                                         |

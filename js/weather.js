@@ -4,7 +4,7 @@
  * alert) and in the RobCo boot (js/boot.js).
  *
  * From Open-Meteo (open-meteo.com): free for non-commercial use, no key and
- * no account, CC BY 4.0 (the footer credits it). Asked for HOME (Montréal)
+ * no account, CC BY 4.0 (credited in Settings). Asked for HOME (Montréal)
  * only, never the phone's position, at most once every FRESH_MS; the last
  * answer is kept on this device (localStorage), so it shows at once, and
  * offline the last one known is used. It's decoration: without it, nothing

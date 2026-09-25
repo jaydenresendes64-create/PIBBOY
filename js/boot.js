@@ -4,7 +4,7 @@
  * status (level, quests, today's dailies, rads, the weather outside), then
  * the app. Once a day (the first power-on of the day), about 2.5 seconds;
  * a tap shows it all at once, a second tap (or the end) opens the app.
- * Only with the power-on screen on (the footer's Power-on link), and never
+ * Only with the power-on screen on (Settings: Power-on screen), and never
  * with Reduce Motion.
  *
  * lines() builds the text from the state and doesn't touch the page, so the
