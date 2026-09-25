@@ -170,14 +170,62 @@
   }
 
   // ---------- bobbleheads ----------
-  // The shelf: a little figure per bobblehead, lit once found (a big head
-  // on a spring, on its stand), a dim "?" silhouette until then. A tap
-  // shows what it is and how it's found.
-  function bobbleSvg(found){
-    return '<svg class="bobble-svg" viewBox="0 0 32 40" aria-hidden="true">'+
-      '<circle cx="16" cy="11" r="9"/>'+
-      (found ? '<path d="M12 10h.01M20 10h.01M12 14q4 3 8 0"/>' : '<path d="M13.5 8.5q2.5-3 5 0t-2.5 3.5v1.5M16 16h.01"/>')+
-      '<path d="M16 20v3M11 29q0-6 5-6t5 6zM7 33h18l-2 4H9z"/></svg>';
+  // The shelf: a trophy per bobblehead, each its own (what it was won for),
+  // all on the same little stand. Lit once found, a dim outline until then
+  // (its name stays "?"). A tap shows what it is and how it's found; a
+  // found one wobbles on its stand. Line art on a 40×48 grid, like the perk
+  // icons; `solid` parts are filled.
+  var TROPHY_STAND = '<path d="M12 36h16v3H12zM9 39h22l1 6H8zM16 42h8"/>';
+  var TROPHIES = {
+    // Vault Dweller (level 5): a vault door with a 5 on it.
+    vault: '<circle cx="20" cy="19" r="12"/><circle cx="20" cy="19" r="7"/>'+
+      '<path d="M20 7V4.5M20 31v2.5M8 19H5.5M32 19h2.5M11.5 10.5l-1.8-1.8M28.5 10.5l1.8-1.8M11.5 27.5l-1.8 1.8M28.5 27.5l1.8 1.8'+
+      'M22.5 15.5h-4l-.5 3.3h2a2 2 0 0 1 0 4h-2.5"/>',
+    // Wasteland Veteran (level 10): a medal on its ribbon.
+    veteran: '<path d="M12.5 3h15l-5 12h-5zM20 3v12"/><circle cx="20" cy="23.5" r="8.5"/>'+
+      '<path class="solid" d="M20 18.5L21.18 21.88 24.76 21.95 21.9 24.12 22.94 27.55 20 25.5 17.06 27.55 18.1 24.12 15.24 21.95 18.82 21.88Z"/>',
+    // Devotion (a day streak): an eternal flame in its brazier.
+    devotion: '<path d="M20 24c-4 0-6-2.5-6-6 0-4 4-5.5 4-11 3 2 5 5 5 8 1-1 1.5-2.5 1.5-4 2 2 2.5 4.5 2.5 7 0 3.5-3 6-7 6z'+
+      'M20 24c-1.7 0-2.7-1.1-2.7-2.7 0-1.8 1.7-2.6 1.7-4.8 1.8 1.2 3.7 2.6 3.7 4.8 0 1.6-1.1 2.7-2.7 2.7zM11 25h18l-2.5 6h-13zM20 31v3M16 34h8"/>',
+    // Capitalist (a Caps goal): a full money bag.
+    capitalist: '<path d="M16 7h8l-2 4.5c5 2.5 9 7.5 9 13 0 4.5-3 7.5-7 7.5h-8c-4 0-7-3-7-7.5 0-5.5 4-10.5 9-13zM17 11.5h6'+
+      'M22.5 19.8c-.5-1-1.4-1.5-2.5-1.5-1.4 0-2.5.8-2.5 2s1 1.6 2.5 2 2.5.9 2.5 2.1-1.1 2-2.5 2c-1.1 0-2-.5-2.5-1.5M20 16.8v1.5M20 26.4v1.5"/>',
+    // Merchant (an item sold): the trader's scales.
+    merchant: '<circle cx="20" cy="6" r="1.5"/>'+
+      '<path d="M20 7.5V33M14 33h12M9 11h22M9 11l-4.5 9M9 11l4.5 9M4 20h10a5 3.5 0 0 1-10 0zM31 11l-4.5 9M31 11l4.5 9M26 20h10a5 3.5 0 0 1-10 0z"/>',
+    // Errand Runner (10 side quests): a running boot.
+    errands: '<path d="M14 6h7v14c5 1 10.5 3 11.5 7v4H10V10c0-2.5 1.5-4 4-4zM10 27.5h22.5M21 11h-4M21 15h-4M3 13h5M2 18.5h6M4 24h4"/>',
+    // Creature of Routine (30 daily quests): an alarm clock.
+    routine: '<circle cx="20" cy="20" r="10"/>'+
+      '<path d="M9.5 12.5a4.5 4.5 0 0 1 6-6M24.5 6.5a4.5 4.5 0 0 1 6 6M20 14v6l4 2.5M13.5 28l-2.5 3.5M26.5 28l2.5 3.5M20 10V8M18 8h4"/>',
+    // Explorer (10 cities): a compass.
+    explorer: '<circle cx="20" cy="19" r="13"/>'+
+      '<path d="M20 6v2.5M20 32v-2.5M7 19h2.5M33 19h-2.5M20 9.5l3.5 9.5-3.5 9.5-3.5-9.5z"/><path class="solid" d="M20 9.5l3.5 9.5h-7z"/>',
+    // Globetrotter (5 countries): a globe on its stand.
+    globetrotter: '<circle cx="20" cy="17" r="10"/>'+
+      '<path d="M20 7a5 10 0 0 0 0 20a5 10 0 0 0 0-20M10.6 13.5h18.8M10.6 20.5h18.8M11.5 8.5A12 12 0 0 0 28.5 25.5M20 29v3.5M15 32.5h10"/>',
+    // Road Warrior (1,000 km of routes): the road to the horizon, the sun setting on it.
+    roadwarrior: '<path d="M6 7h28M14.5 7a5.5 5.5 0 0 1 11 0M18 7L8 33M22 7l10 26M20 9.5v3M20 16v4.5M20 24.5v6"/>',
+    // Scribe (25 journal entries): a quill in its inkwell.
+    scribe: '<path d="M14 25h12v8H14zM16 25v-3h8v3M19.5 23.5C20.5 15 25 8 33 4c-1 7.5-5.5 13.5-12 16.5M19.5 23.5l7-12"/>',
+    // Specialist (a skill at 50): an arrow in the bullseye.
+    specialist: '<circle cx="18" cy="21" r="11"/><circle cx="18" cy="21" r="6.5"/><circle class="solid" cx="18" cy="21" r="2"/>'+
+      '<path d="M18 21L31 8M28 11V6.5M28 11h4.5M31 8V3.5M31 8h4.5"/>',
+    // S.P.E.C.I.A.L.ist (a stat at 10): the atom.
+    special: '<ellipse cx="20" cy="19" rx="13" ry="5"/><ellipse cx="20" cy="19" rx="13" ry="5" transform="rotate(60 20 19)"/>'+
+      '<ellipse cx="20" cy="19" rx="13" ry="5" transform="rotate(-60 20 19)"/><circle class="solid" cx="20" cy="19" r="2.2"/>',
+    // Perk Collector (3 perks): a hand of perk cards, a star on the top one.
+    perks: '<path d="M9.5 12v18a2 2 0 0 0 2 2h13M12 9.5v18a2 2 0 0 0 2 2h13"/><rect x="14.5" y="6" width="15" height="21" rx="2"/>'+
+      '<path class="solid" d="M22 12L23.06 15.04 26.28 15.11 23.71 17.06 24.65 20.14 22 18.3 19.35 20.14 20.29 17.06 17.72 15.11 20.94 15.04Z"/>',
+    // Rad-Free (a backup made): a bag of RadAway.
+    radfree: '<path d="M13 7h14v18a4 4 0 0 1-4 4h-6a4 4 0 0 1-4-4zM17 7V4.5h6V7M20 29v5M20 12.5v8M16 16.5h8"/>',
+    // Archivist (5 holotapes): a tape.
+    archivist: '<rect x="6" y="11" width="28" height="19" rx="2"/><circle cx="14.5" cy="19" r="2.8"/><circle cx="25.5" cy="19" r="2.8"/>'+
+      '<path d="M11 15h18v8H11zM11.5 30l2-4h13l2 4"/>'
+  };
+  function bobbleSvg(id){
+    return '<svg class="bobble-svg" viewBox="0 0 40 48" aria-hidden="true">'+
+      '<g class="bobble-top">'+(TROPHIES[id] || '')+'</g>'+TROPHY_STAND+'</svg>';
   }
   function bobbleheadsHtml(){
     var s = app.state, all = ST.BOBBLEHEADS;
@@ -187,7 +235,7 @@
       var date = s.bobbleheads && s.bobbleheads[b.id];
       html += '<button class="bobble'+(date ? ' found' : '')+(app.bobbleOpen===b.id ? ' open' : '')+'" data-action="bobble" data-key="'+b.id+'" '+
         'aria-label="'+escapeHtml(date ? b.name+': found' : 'Bobblehead not found yet')+'" aria-expanded="'+(app.bobbleOpen===b.id)+'">'+
-        bobbleSvg(!!date)+'<span class="bobble-name">'+escapeHtml(date ? b.name : '?')+'</span></button>';
+        bobbleSvg(b.id)+'<span class="bobble-name">'+escapeHtml(date ? b.name : '?')+'</span></button>';
     });
     html += '</div>';
     var open = app.bobbleOpen && all.filter(function(b){ return b.id===app.bobbleOpen; })[0];
@@ -641,12 +689,20 @@
     toast('levelup-banner quest-banner', 'QUEST COMPLETED — ', 3200).appendChild(questName);
   }
   function showNotice(text){ toast('xp-toast', text, 2600).style.animationDuration = '2.6s'; }
-  // One or several found by the same change: one banner.
+  // One or several found by the same change: one banner. A single one shows
+  // its trophy above its name.
   function showBobbleheads(found){
     var names = document.createElement('span');
     names.textContent = found.length===1 ? found[0].name : found.length+' ('+found.map(function(b){ return b.name; }).join(', ')+')';
     sound('bobble', 0.15);
-    toast('levelup-banner quest-banner', found.length===1 ? 'BOBBLEHEAD FOUND: ' : 'BOBBLEHEADS FOUND: ', 3600).appendChild(names);
+    var banner = toast('levelup-banner quest-banner', found.length===1 ? 'BOBBLEHEAD FOUND: ' : 'BOBBLEHEADS FOUND: ', 3600);
+    if (found.length===1){
+      var trophy = document.createElement('span');
+      trophy.className = 'banner-trophy';
+      trophy.innerHTML = bobbleSvg(found[0].id);          // the app's own drawing, no user text
+      banner.insertBefore(trophy, banner.firstChild);
+    }
+    banner.appendChild(names);
   }
   function showPerk(name, rank){
     var perkName = document.createElement('span');

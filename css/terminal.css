@@ -437,20 +437,26 @@ button{ cursor:pointer; }
 .perk-card .perk-take{ margin-top:auto; align-self:stretch; }
 .perk-confirm{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:0.76rem; color:var(--phosphor); }
 
-/* Bobbleheads (js/render.js bobbleheadsHtml): a shelf of little figures. */
+/* Bobbleheads (js/render.js bobbleheadsHtml): a shelf of trophies, each its own. */
 .bobble-shelf{ display:grid; grid-template-columns:repeat(auto-fill, minmax(72px, 1fr)); gap:8px; }
 .bobble{
-  display:flex; flex-direction:column; align-items:center; gap:4px; min-height:84px; padding:8px 4px 6px;
+  display:flex; flex-direction:column; align-items:center; gap:4px; min-height:92px; padding:8px 4px 6px;
   border:1px solid var(--line); border-radius:3px; background:var(--panel-alt); color:var(--phosphor-dim);
 }
-.bobble-svg{ width:34px; height:42px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; opacity:0.45; }
+.bobble-svg{ width:40px; height:48px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; opacity:0.3; }
+.bobble-svg .solid{ fill:currentColor; }
 .bobble-name{ font-size:0.62rem; line-height:1.2; text-align:center; overflow-wrap:anywhere; }
 .bobble.found{ border-color:var(--amber-dim); color:var(--amber); }
-.bobble.found .bobble-svg{ opacity:1; filter:drop-shadow(0 0 4px rgba(255,154,46,0.55)); transform-origin:50% 60%; }
-.bobble.found.open .bobble-svg{ animation:bobble 0.9s ease-out; }       /* its head wobbles when tapped */
+.bobble.found .bobble-svg{ opacity:1; filter:drop-shadow(0 0 4px rgba(255,154,46,0.55)); }
+/* A found one wobbles on its stand when tapped (the stand stays put). */
+.bobble-top{ transform-box:fill-box; transform-origin:50% 100%; }
+.bobble.found.open .bobble-top{ animation:bobble 0.9s ease-out; }
 .bobble.open{ background:var(--bg); }
 @keyframes bobble{ 20%{ transform:rotate(-9deg); } 45%{ transform:rotate(7deg); } 70%{ transform:rotate(-4deg); } 100%{ transform:none; } }
-@media (prefers-reduced-motion:reduce){ .bobble.found.open .bobble-svg{ animation:none; } }
+@media (prefers-reduced-motion:reduce){ .bobble.found.open .bobble-top{ animation:none; } }
+/* "BOBBLEHEAD FOUND": the trophy won, above its name. */
+.quest-banner .banner-trophy{ display:block; margin:0 auto 4px; }
+.banner-trophy .bobble-svg{ display:block; margin:0 auto; opacity:1; filter:drop-shadow(0 0 6px rgba(255,154,46,0.6)); }
 .bobble-detail{ margin-top:8px; padding:8px 10px; border:1px solid var(--line); border-radius:3px; font-size:0.78rem; color:var(--phosphor); }
 
 /* Holotapes (js/holotapes.js), in the LOG tab: the deck, then the tapes. */

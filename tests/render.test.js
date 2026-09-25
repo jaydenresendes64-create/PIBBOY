@@ -92,6 +92,15 @@ test('a main quest at 100% shows its Complete button; below 100%, done or a stre
   assert.ok(html.includes('Complete quest &middot; +700 XP'));
 });
 
+test('every bobblehead has its own trophy, on the same stand', () => {
+  const html = renderEverything(ST => ST.defaultState());
+  const trophies = html.split('data-action="bobble"').slice(1)
+    .map(part => part.slice(part.indexOf('<g class="bobble-top">'), part.indexOf('</g>')));
+  assert.equal(trophies.length, 16);
+  trophies.forEach(g => assert.ok(g.length > 60, 'a drawing: ' + g));
+  assert.equal(new Set(trophies).size, trophies.length);     // no two alike
+});
+
 test('a normal state renders its numbers as before', () => {
   const html = renderEverything(ST => {
     const s = ST.defaultState();
