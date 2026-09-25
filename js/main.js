@@ -21,6 +21,8 @@
       ST.events.setup();
       ST.render.switchTab('status');
       ST.render.renderAll();
+      // Caps quests whose target the wallet already reaches complete now.
+      if (ST.events.syncCaps()){ ST.render.renderQuests(); ST.storage.scheduleSave(); }
       if (!saved) ST.storage.saveNow();
       ST.storage.requestPersistence();
     }, function(){

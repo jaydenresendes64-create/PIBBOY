@@ -9,6 +9,11 @@ Beside each ITEMS category, a small 3D model drawn in amber wireframe turns slow
 Fallout 4 Pip-Boy (a price tag, a vault jumpsuit, a first-aid kit, a crate, a key); drag one sideways
 to turn it by hand.
 
+Main quests track their progress three ways: a **percentage** slider, a **day streak** (one check-in a
+day; missing a day starts it over), or a **Caps goal**: the bar follows the wallet by itself (`1.50 / 5 CAPS`)
+and the quest completes on its own when the wallet reaches the target. A quest saved before Caps goals
+existed whose objective is a Caps amount ("Obtain 5 Caps") switches to one automatically, once.
+
 Plain HTML, CSS and JavaScript: no framework, no build step.
 
 **Hosted on GitHub Pages:** https://jaydenresendes64-create.github.io/PIBBOY/

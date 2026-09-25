@@ -167,9 +167,22 @@
     return 'Check in once a day';
   }
 
+  // A caps quest's progress: the wallet's CAPS against the target, filling
+  // on its own (ST.syncCapsQuests keeps m.progress in step).
+  function capsRowHtml(m){
+    var pct = m.completed ? 100 : num(ST.capsProgress(m));
+    var target = Number(num(m.capsTarget).toFixed(2));
+    return '<div class="streak-row caps-row">'+
+      '<span class="streak-days">'+escapeHtml(ST.capsText())+' / '+target+' CAPS</span>'+
+      '<div class="streak-bar"><div class="streak-fill" style="width:'+pct+'%"></div></div>'+
+      '<span class="progress-pct">'+pct+'%</span>'+
+    '</div>';
+  }
+
   function mainQuestHtml(m){
     var bonus = m.bonus || [];
     var streak = m.progressType==='streak';
+    var caps = m.progressType==='caps';
     var html = '<div class="main-quest-card'+(m.questName?' has-name':'')+(m.completed?' completed':'')+'">'+
       '<div class="main-quest-head">'+
         questTitleHtml('main', m)+
@@ -177,12 +190,13 @@
         '<button class="remove-btn" data-action="main-remove" data-id="'+attr(m.id)+'" aria-label="Remove main quest: '+about(m.questName, m.title)+'">&times;</button>'+
       '</div>'+
       '<input type="text" class="main-title-input" data-id="'+attr(m.id)+'" maxlength="60" value="'+escapeHtml(m.title)+'" aria-label="Objective">'+
-      (streak ? streakRowHtml(m) :
+      (streak ? streakRowHtml(m) : caps ? capsRowHtml(m) :
         '<div class="progress-row">'+
           '<input type="range" min="0" max="100" value="'+num(m.progress)+'" class="main-progress-input" data-id="'+attr(m.id)+'" aria-label="Progress"'+(m.completed?' disabled':'')+'>'+
           '<span class="progress-pct">'+num(m.progress)+'%</span>'+
         '</div>')+
       '<div class="main-xp-note">'+(streak && !m.completed ? '<span>'+streakNote(m)+' ·</span> ' : '')+
+        (caps && !m.completed ? '<span>Follows your wallet ·</span> ' : '')+
         '<span>'+(m.completed?'Completed — ':'On completion: ')+'+'+num(m.xp)+' XP</span></div>';
     if (bonus.length){
       html += '<div class="bonus-label">Bonus objectives</div><div class="bonus-list">';
@@ -224,7 +238,11 @@
       '<select id="new-main-type" aria-label="Progress type">'+
         '<option value="percent">Percentage</option>'+
         '<option value="streak">Day streak</option>'+
+        '<option value="caps">Caps goal</option>'+
       '</select>'+
+      '<label class="days-field" id="new-main-caps-field" hidden>'+
+        '<input type="number" id="new-main-caps" value="5" min="0.01" step="0.01" aria-label="Target caps"><span>caps</span>'+
+      '</label>'+
       '<label class="days-field" id="new-main-days-field" hidden>'+
         '<input type="number" id="new-main-days" value="7" min="1" max="'+ST.STREAK_MAX_DAYS+'" aria-label="Target days"><span>days</span>'+
       '</label>'+
@@ -276,6 +294,7 @@
     var tab = el('tab-quests');
     keepTyped(tab, function(){ tab.innerHTML = html; });
     el('new-main-days-field').hidden = el('new-main-type').value!=='streak';
+    el('new-main-caps-field').hidden = el('new-main-type').value!=='caps';
   }
 
   function renderWallet(){

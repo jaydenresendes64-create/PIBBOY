@@ -91,10 +91,27 @@
       quest.streakTarget = readWhole('new-main-days', 7, 1, ST.STREAK_MAX_DAYS);
       quest.streakDays = 0;
       quest.lastCheckIn = null;
+    } else if (el('new-main-type').value==='caps'){
+      var target = Number(el('new-main-caps').value);
+      quest.progressType = 'caps';
+      quest.capsTarget = isFinite(target) && target>0 ? clamp(target, 0.01, 1e6) : 5;
     }
     app.state.quests.mains.push(quest);
     R.clearTyped('new-main-');
+    syncCaps();
     renderQuests(); scheduleSave();
+  }
+  // Caps quests follow the wallet: after any change to it (a row added,
+  // removed or re-rated, a sale), their bars move and the ones that reached
+  // their target are completed, with their reward, once.
+  function syncCaps(){
+    var reached = ST.syncCapsQuests();
+    reached.forEach(completeMainQuest);
+    return reached.length;
+  }
+  function walletChanged(){
+    syncCaps();
+    renderQuests();
   }
   function findMain(id){
     return app.state.quests.mains.filter(function(x){ return x.id===id; })[0] || null;
@@ -152,6 +169,7 @@
       R.showSold(sale.name);
       showXp(ST.SALE_XP, sale.leveled);
       renderStatus(); renderLog();
+      walletChanged();
       scheduleSave();
     }
     renderInventory();
@@ -170,7 +188,7 @@
     if (!isFinite(rate) || rate<=0) rate = 1;
     app.state.finances.holdings.push({id:genId(), label:label, amount:amount, rateToCAD:rate});
     R.clearTyped('new-wallet-');
-    renderInventory(); scheduleSave();
+    renderInventory(); walletChanged(); scheduleSave();
   }
 
   // ---------- removing, after "Yes, remove" ----------
@@ -197,7 +215,9 @@
     else if (kind==='wallet') state.finances.holdings = state.finances.holdings.filter(keep);
     else return;
     app.confirmRemove = null;
-    redraw(kind); scheduleSave();
+    redraw(kind);
+    if (kind==='wallet') walletChanged();
+    scheduleSave();
   }
 
   // ---------- quest names ----------
@@ -521,6 +541,7 @@
         if (mq) e.target.value = mq.title;       // emptied: the objective stays as it was
       } else if (e.target.id==='new-main-type'){
         el('new-main-days-field').hidden = e.target.value!=='streak';
+        el('new-main-caps-field').hidden = e.target.value!=='caps';
       } else if (e.target.id==='new-item-cat'){
         el('new-item-price').hidden = e.target.value!=='SELL';
       } else if (e.target.classList.contains('rate-input')){
@@ -547,6 +568,7 @@
         var newRate = Number(e.target.value);
         if (h && e.target.value.trim() && isFinite(newRate) && newRate>0 && newRate!==h.rateToCAD){
           h.rateToCAD = newRate;
+          walletChanged();
           scheduleSave();
         }
       } else if (e.target.classList.contains('price-input')){
@@ -583,5 +605,5 @@
     });
   }
 
-  ST.events = { setup: setupEvents, adoptState: adoptState, commitEdits: commitEdits };
+  ST.events = { setup: setupEvents, adoptState: adoptState, commitEdits: commitEdits, syncCaps: syncCaps };
 })(window.StatusTerminal);

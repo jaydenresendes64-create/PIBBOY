@@ -7,6 +7,7 @@
  * State {
  *   level: number, xp: number, xpToNext: number, lifetimeXp: number,
  *   lifetimeLogEntries: number,             // every accepted entry, even past the LOG_MAX (200) kept in `log`
+ *   capsQuestsLinked: true,                 // linkCapsQuests() has run on this document (see migrate())
  *   unspentSpecialPoints: number,           // level-up points not yet placed
  *   stats:  { STR,END,CHA,INT,AGI: number(0-10) },   // SPECIAL — see "S.P.E.C.I.A.L." below
  *   skills: { CONCENTRATION,KNOWLEDGE,SPEECH,SURVIVAL,COOKING,FINANCE,MUSIC,BUSINESS: number(0-100) },
@@ -42,8 +43,9 @@
  *   id, questName, title, xp, completed,          // completed ones stay in the list
  *   skillGains: [SkillGain],
  *   bonus: [ { id, name, xp, done } ],             // bonus objectives
- *   progressType: 'percent'|'streak',              // saves from before streaks: 'percent'
- *   progress: number(0-100),                       // percent: the slider, 100 completes it
+ *   progressType: 'percent'|'streak'|'caps',       // saves from before streaks: 'percent'
+ *   progress: number(0-100),                       // percent: the slider, 100 completes it; caps: follows the wallet
+ *   capsTarget: number,                            // caps quests only: the wallet's CAPS to reach (syncCapsQuests)
  *   // streak quests only: a check-in a day; reaching streakTarget completes it
  *   streakTarget: number(1-STREAK_MAX_DAYS),
  *   streakDays: number,                            // days in a row, up to lastCheckIn...
@@ -126,12 +128,13 @@
     level:2, xp:0, xpToNext:1000,
     lifetimeXp:0,
     lifetimeLogEntries:0,
+    capsQuestsLinked:true,
     unspentSpecialPoints:0,
     stats:{STR:4,END:3,CHA:4,INT:5,AGI:2},
     skills:{CONCENTRATION:21,KNOWLEDGE:10,SPEECH:42,SURVIVAL:23,COOKING:8,FINANCE:17,MUSIC:35,BUSINESS:5},
     quests:{
       mains:[
-        {id:'m1', questName:'Caps on the Line', title:'Obtain 5 Caps', progressType:'percent', progress:0, xp:1000, completed:false, skillGains:[{skill:'FINANCE',amount:8},{skill:'BUSINESS',amount:2}], bonus:[
+        {id:'m1', questName:'Caps on the Line', title:'Obtain 5 Caps', progressType:'caps', capsTarget:5, progress:0, xp:1000, completed:false, skillGains:[{skill:'FINANCE',amount:8},{skill:'BUSINESS',amount:2}], bonus:[
           {id:'b1',name:'Find a job',xp:500,done:false},
           {id:'b2',name:'Launch a project',xp:500,done:false}
         ]}
@@ -219,10 +222,28 @@
   function migrate(doc){
     if (!doc || typeof doc!=='object') return doc;
     migrateMainQuests(doc.quests);
+    linkCapsQuests(doc);
     migrateSkills(doc);
     migrateInventory(doc);
     migrateMap(doc);
     return doc;
+  }
+  // Main quests from before "caps" quests whose objective is a Caps amount
+  // ("Obtain 5 Caps") start following the wallet, once: after that the
+  // player's choice of type is left alone.
+  var CAPS_OBJECTIVE = /^\s*(?:obtain|get|reach|earn|have|save)\s+(\d+(?:[.,]\d+)?)\s*caps?\s*!?\s*$/i;
+  function linkCapsQuests(doc){
+    if (doc.capsQuestsLinked===true) return;
+    var mains = doc.quests && Array.isArray(doc.quests.mains) ? doc.quests.mains : [];
+    mains.forEach(function(m){
+      if (!m || typeof m!=='object' || m.completed===true) return;
+      if (m.progressType && m.progressType!=='percent') return;
+      var match = CAPS_OBJECTIVE.exec(String(m.title || ''));
+      if (!match) return;
+      m.progressType = 'caps';
+      m.capsTarget = Number(match[1].replace(',', '.'));
+    });
+    doc.capsQuestsLinked = true;
   }
   // Older saves have a single main quest, the object quests.main. It
   // becomes the first of the list with every field it had (progress,
@@ -288,6 +309,23 @@
     return totalHoldingsCAD() / CAD_PER_CAP;
   }
   function capsText(){ return cents(capsValue()).toFixed(2); }
+  // A caps quest's progress, 0-100: the wallet's CAPS against its target.
+  function capsProgress(m){
+    var target = Number(m.capsTarget);
+    if (!(target>0)) return 0;
+    return Math.floor(clamp(capsValue()/target*100, 0, 100));
+  }
+  // Brings every open caps quest's progress up to date with the wallet and
+  // returns the ones that reached their target (events.js completes them).
+  function syncCapsQuests(){
+    var reached = [];
+    app.state.quests.mains.forEach(function(m){
+      if (m.progressType!=='caps' || m.completed) return;
+      m.progress = capsProgress(m);
+      if (m.progress>=100) reached.push(m);
+    });
+    return reached;
+  }
   // `log` only keeps the latest LOG_MAX entries. Saves made before
   // lifetimeLogEntries existed start from the entries they still have.
   function logEntryCount(){
@@ -513,7 +551,8 @@
       m.id = safeId(m.id);
       fixQuestName(m);
       m.title = text(m.title, 60);
-      m.progressType = m.progressType==='streak' ? 'streak' : 'percent';
+      m.progressType = m.progressType==='streak' || m.progressType==='caps' ? m.progressType : 'percent';
+      if (m.progressType==='caps') m.capsTarget = clamp(num(m.capsTarget, 5), 0.01, 1e6);
       m.progress = clamp(Math.round(num(m.progress, 0)), 0, 100);
       if (m.progressType==='streak'){
         m.streakTarget = clamp(Math.round(num(m.streakTarget, 7)), 1, STREAK_MAX_DAYS);
@@ -645,6 +684,8 @@
   ST.commas = commas;
   ST.money = money;
   ST.capsText = capsText;
+  ST.capsProgress = capsProgress;
+  ST.syncCapsQuests = syncCapsQuests;
   ST.escapeHtml = escapeHtml;
   ST.catLabel = catLabel;
 
