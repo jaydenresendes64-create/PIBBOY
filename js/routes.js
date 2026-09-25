@@ -20,7 +20,7 @@
 (function(ST){
   'use strict';
 
-  var el = ST.el, escapeHtml = ST.escapeHtml, attr = ST.escapeHtml, clamp = ST.clamp;
+  var el = ST.el, escapeHtml = ST.escapeHtml, attr = ST.escapeHtml, clamp = ST.clamp, dateText = ST.dateText;
   var app = ST.app, P = ST.places;
 
   var ROUTER = 'https://router.project-osrm.org/route/v1/driving/';
@@ -242,10 +242,6 @@
     return html+'</div>';
   }
   function html(p){ return p.kind==='route-new' ? newHtml(p) : routeHtml(p); }
-  function dateText(date){
-    var m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(date || '');
-    return m ? new Date(+m[1], +m[2]-1, +m[3]).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}) : '';
-  }
   // The Routes list under the map.
   function listHtml(){
     var list = app.state.map.routes;

@@ -25,6 +25,7 @@
       if (ST.events.syncCaps()){ ST.render.renderQuests(); ST.storage.scheduleSave(); }
       if (!saved) ST.storage.saveNow();
       ST.storage.requestPersistence();
+      remindBackup();
     }, function(){
       ST.render.switchTab('status');
       ST.render.showLoadError();
@@ -51,6 +52,22 @@
     // app was left open overnight or comes back from the browser's page cache.
     window.addEventListener('pageshow', ST.render.refreshIfNewDay);
     setInterval(ST.render.refreshIfNewDay, 60000);
+  }
+
+  // Everything lives on this phone: when a backup is due (ST.backupDue), a
+  // notice says so, at most once a day. The footer's line always shows it.
+  var REMINDED_KEY = 'status_terminal_backup_reminded';
+  function remindBackup(){
+    if (!ST.backupDue()) return;
+    var today = ST.todayStr();
+    try{
+      if (localStorage.getItem(REMINDED_KEY)===today) return;
+      localStorage.setItem(REMINDED_KEY, today);
+    }catch(e){ return; }
+    var d = ST.backupDays();
+    setTimeout(function(){
+      ST.render.showNotice((d===null ? 'No backup yet' : 'Last backup '+d+' days ago')+' — Export backup, at the bottom');
+    }, 1500);
   }
 
   document.addEventListener('DOMContentLoaded', boot);

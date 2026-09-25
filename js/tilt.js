@@ -38,9 +38,7 @@
   var frame = null;
   var lastTime = 0;
   var screenLayer = null, glass = [], glare = null, mascot = null, button = null;
-  var motion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
-
-  function stayStill(){ return !!(motion && motion.matches); }
+  var motion = ST.motion, stayStill = ST.stayStill;      // the phone's Reduce Motion setting
   function hidden(){ return document.visibilityState==='hidden'; }
   function clamp(v){ return Math.max(-1, Math.min(1, v)); }
 

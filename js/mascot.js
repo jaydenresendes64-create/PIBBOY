@@ -16,9 +16,7 @@
   var walkTimer = null;
   var frame = null;             // the animation frame that starts the next move
   var currentTab = null;
-  var motion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
-
-  function stayStill(){ return !!(motion && motion.matches); }
+  var motion = ST.motion, stayStill = ST.stayStill;      // the phone's Reduce Motion setting
   function hidden(){ return document.visibilityState==='hidden'; }
 
   function stop(){

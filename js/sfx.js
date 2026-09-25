@@ -297,6 +297,12 @@
     src.start(t);
   }
 
+  // A long clip of the player's (the level-up music) isn't started again
+  // while it still plays: several level-ups in a row play it once, instead
+  // of the same music on top of itself. name → when it ends (audio clock).
+  var LONG_CLIP_S = 1.5;
+  var playingUntil = {};
+
   // Plays a sound now (or after `delay` seconds). Skipped when sound is off,
   // before the first tap, or while the app is in the background.
   function play(name, delay){
@@ -305,8 +311,13 @@
     if (ctx.state==='suspended') ctx.resume().catch(function(){});
     var t = ctx.currentTime + 0.01 + (delay || 0);
     try{
-      if (custom[name]) playBuffer(custom[name], t);
-      else SOUNDS[name](t);
+      var clip = custom[name];
+      if (!clip){ SOUNDS[name](t); return; }
+      if (clip.duration>LONG_CLIP_S){
+        if ((playingUntil[name]||0) > t) return;
+        playingUntil[name] = t + clip.duration;
+      }
+      playBuffer(clip, t);
     }catch(e){}
   }
   // For the Custom sounds panel: plays even with sound off (it's a tap on a

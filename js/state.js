@@ -8,6 +8,7 @@
  *   level: number, xp: number, xpToNext: number, lifetimeXp: number,
  *   lifetimeLogEntries: number,             // every accepted entry, even past the LOG_MAX (200) kept in `log`
  *   capsQuestsLinked: true,                 // linkCapsQuests() has run on this document (see migrate())
+ *   lastBackup: 'YYYY-M-D'|null,            // the day of the last Export backup (the footer's reminder)
  *   unspentSpecialPoints: number,           // level-up points not yet placed
  *   stats:  { STR,END,CHA,INT,AGI: number(0-10) },   // SPECIAL — see "S.P.E.C.I.A.L." below
  *   skills: { CONCENTRATION,KNOWLEDGE,SPEECH,SURVIVAL,COOKING,FINANCE,MUSIC,BUSINESS: number(0-100) },
@@ -135,6 +136,7 @@
     lifetimeXp:0,
     lifetimeLogEntries:0,
     capsQuestsLinked:true,
+    lastBackup:null,
     unspentSpecialPoints:0,
     stats:{STR:4,END:3,CHA:4,INT:5,AGI:2},
     skills:{CONCENTRATION:21,KNOWLEDGE:10,SPEECH:42,SURVIVAL:23,COOKING:8,FINANCE:17,MUSIC:35,BUSINESS:5},
@@ -186,6 +188,16 @@
   function genId(){ return 'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
   function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
   function todayDisplay(){ return new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+  // A saved date ('YYYY-M-D') as shown: "Sep 24, 2026", or '' when it isn't one.
+  function dateText(date){
+    var m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(date || '');
+    return m ? new Date(+m[1], +m[2]-1, +m[3]).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+  }
+  // The phone's Reduce Motion setting: every animation checks it (and the
+  // ones that run on their own listen for it changing). null where the
+  // browser can't tell.
+  var motion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+  function stayStill(){ return !!(motion && motion.matches); }
   function commas(n){ return Number(n).toLocaleString('en-US'); }
   // Rounded to the cent first, so a tiny negative amount shows 0.00, not -0.00.
   function cents(n){ return Math.round(Number(n)*100)/100 || 0; }
@@ -439,6 +451,17 @@
       Date.UTC(+m[1], +m[2]-1, +m[3])) / 864e5);
   }
 
+  // ---------- backups ----------
+  // Everything lives on this one phone: a backup file is the only copy
+  // elsewhere. Days since the last one (null: never), and whether it's time
+  // for another (BACKUP_DUE_DAYS, or never made while there's progress to lose).
+  var BACKUP_DUE_DAYS = 14;
+  function backupDays(){ return daysSince(app.state.lastBackup); }
+  function backupDue(){
+    var d = backupDays();
+    return d===null ? (app.state.lifetimeXp||0)>0 : d>=BACKUP_DUE_DAYS;
+  }
+
   // ---------- once a day: daily quests and streak check-ins ----------
   // Done today, for a date saved when it was done. A date of tomorrow still
   // counts as today: after flying west, the calendar can be a day behind
@@ -523,6 +546,19 @@
     if (q.done) return null;
     q.done = true;
     return payQuest(q);
+  }
+  // A main quest's bonus objective: its XP, once.
+  function completeBonus(b){
+    if (b.done) return null;
+    b.done = true;
+    return payQuest({xp:b.xp});
+  }
+  // A daily quest, once a day: its XP only (no skills, the owner's choice:
+  // a skill a day would reach 100 within months).
+  function completeDaily(d){
+    if (dailyDoneToday(d)) return null;
+    d.lastDate = todayStr();
+    return payQuest({xp:d.xp});
   }
   // {xp, leveled, skillGains} for the toasts.
   function payQuest(q){
@@ -636,6 +672,7 @@
       entry.reason = text(entry.reason, 200);
     });
     s.lifetimeLogEntries = Math.max(log.length, Math.round(num(s.lifetimeLogEntries, 0)));
+    s.lastBackup = normalizeDate(s.lastBackup);
     s.log = log.slice(-LOG_MAX);
     sanitizeMap(s.map);
     return s;
@@ -787,6 +824,11 @@
   ST.genId = genId;
   ST.todayStr = todayStr;
   ST.todayDisplay = todayDisplay;
+  ST.dateText = dateText;
+  ST.backupDays = backupDays;
+  ST.backupDue = backupDue;
+  ST.motion = motion;
+  ST.stayStill = stayStill;
   ST.commas = commas;
   ST.money = money;
   ST.capsText = capsText;
@@ -810,6 +852,8 @@
   ST.gainXp = gainXp;
   ST.completeMain = completeMain;
   ST.completeSide = completeSide;
+  ST.completeBonus = completeBonus;
+  ST.completeDaily = completeDaily;
   ST.sellItem = sellItem;
   ST.moveItem = moveItem;
   ST.foldName = foldName;

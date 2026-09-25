@@ -827,6 +827,8 @@ button{ cursor:pointer; }
 .footer-actions{ display:flex; flex-wrap:wrap; gap:20px 10px; }
 .footer-actions button{ color:var(--text-dim); text-decoration:underline; font-size:0.68rem; padding:1px 2px; white-space:nowrap; }
 .reset-warning{ color:var(--danger); }
+.backup-age.due{ color:var(--amber); }
+.backup-age.due::before{ content:'\25B2  '; }
 #reset-confirm-area button{ text-decoration:underline; font-size:0.68rem; margin-left:6px; }
 #reset-confirm-btn, #import-confirm-btn{ color:var(--danger); }
 

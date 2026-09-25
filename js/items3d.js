@@ -42,9 +42,7 @@
   var tabShown = false;
   var frame = null, lastTime = 0;
   var drag = null;              // {canvas, cat, x, y}
-  var motion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
-
-  function stayStill(){ return !!(motion && motion.matches); }
+  var motion = ST.motion, stayStill = ST.stayStill;      // the phone's Reduce Motion setting
 
   // ---------- the models (tested in tests/items3d.test.js) ----------
   // Each returns a Group of amber line segments, centred and sized to fit a

@@ -208,3 +208,33 @@ test('moveItem: another category, nothing else changes; the asking price stays',
   assert.equal(ST.moveItem('nope', 'MISC'), false);
   assert.equal(s.inventory.length, 3);
 });
+
+test('completeBonus and completeDaily: XP only, once (a daily once a day)', () => {
+  const s = fresh();
+  const bonus = s.quests.mains[0].bonus[0];                 // Find a job: 500 XP
+  const skills = JSON.stringify(s.skills);
+  assert.deepEqual(app.plain(ST.completeBonus(bonus)), { xp: 500, leveled: false, skillGains: [] });
+  assert.equal(bonus.done, true);
+  assert.equal(ST.completeBonus(bonus), null);
+  const daily = s.quests.daily[0];                          // Move your body: 20 XP
+  assert.deepEqual(app.plain(ST.completeDaily(daily)), { xp: 20, leveled: false, skillGains: [] });
+  assert.equal(daily.lastDate, ST.todayStr());
+  assert.equal(ST.completeDaily(daily), null);               // not twice the same day
+  daily.lastDate = '2020-1-1';                               // another day: again
+  assert.equal(ST.completeDaily(daily).xp, 20);
+  assert.equal(JSON.stringify(s.skills), skills);            // no skill from either
+  assert.equal(s.lifetimeXp, 540);
+});
+
+test('backups: never made, then made today; due after 14 days or never with progress', () => {
+  const s = fresh();
+  assert.equal(ST.backupDays(), null);
+  assert.equal(ST.backupDue(), false);                       // nothing to lose yet
+  ST.gainXp(10);
+  assert.equal(ST.backupDue(), true);                        // progress, never backed up
+  s.lastBackup = ST.todayStr();
+  assert.deepEqual([ST.backupDays(), ST.backupDue()], [0, false]);
+  const old = new Date(Date.now() - 20 * 864e5);
+  s.lastBackup = old.getFullYear() + '-' + (old.getMonth() + 1) + '-' + old.getDate();
+  assert.deepEqual([ST.backupDays(), ST.backupDue()], [20, true]);
+});

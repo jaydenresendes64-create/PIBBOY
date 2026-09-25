@@ -12,9 +12,7 @@
 
   var glass = null;
   var timer = null;
-  var motion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
-
-  function stayStill(){ return !!(motion && motion.matches); }
+  var motion = ST.motion, stayStill = ST.stayStill;      // the phone's Reduce Motion setting
   function hidden(){ return document.visibilityState==='hidden'; }
 
   function stop(){

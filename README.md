@@ -280,6 +280,11 @@ next to a commit means a test failed.
   empty. Another browser or device starts empty. Use **Export backup / Import backup** in the footer
   to move it (a backup is saved as `status-terminal-backup-YYYY-MM-DD.json`, dated the day you made it). An imported file is checked (and brought up to date if it comes from an older
   version) before you confirm; a file that isn't a backup is refused and nothing changes.
+- **Backups on iPhone:** Export backup opens the share sheet (Save to Files, iCloud Drive, AirDrop...),
+  since a Home Screen app can't download a file; on a computer it downloads. The footer shows the
+  last one ("Last backup: 3 days ago", marked ▲ when it's been 14 days or more, or never with
+  progress to lose), and a notice says so once a day while one is due. Everything lives on the phone:
+  a backup file is the only other copy.
 - The MAP tab's places (cities, regions, pins, and which ones already gave XP) are part of the same
   data: saved in the browser and included in backups. A backup from before the MAP tab loads with an
   empty map and nothing else changed.

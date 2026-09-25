@@ -475,6 +475,16 @@
     renderQuests();
   }
 
+  // The footer's backup line: "Last backup: 3 days ago", in the warning
+  // colour when it's time for another one (ST.backupDue).
+  function renderBackup(){
+    var e = el('backup-age');
+    if (!e) return;
+    var d = ST.backupDays();
+    e.textContent = d===null ? 'No backup yet' : 'Last backup: '+(d<=0 ? 'today' : d===1 ? 'yesterday' : d+' days ago');
+    e.classList.toggle('due', ST.backupDue());
+  }
+
   function updateAiIndicator(){
     var e = el('ai-indicator');
     if (!e) return;
@@ -489,6 +499,7 @@
     renderLog();
     if (ST.map) ST.map.render();
     updateAiIndicator();
+    renderBackup();
   }
 
   // ---------- toasts ----------
@@ -549,15 +560,12 @@
 
   // ---------- check animation ----------
   var CHECK_ANIMATION_MS = 500;
-  function reducedMotion(){
-    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  }
   // A tapped check button pops and fills in amber with a glow, and its row
   // flashes like a terminal redraw; `then` runs once that is over. With
   // reduced motion there is no animation and `then` runs right away.
   function playCheck(btn, then){
     sound('complete');
-    if (reducedMotion()){ then(); return; }
+    if (ST.stayStill()){ then(); return; }
     var row = btn.closest('.quest-item, .bonus-item, .streak-row');
     btn.innerHTML = '&#10003;';
     btn.classList.add('check-pop');
@@ -595,6 +603,7 @@
     swapQuestTitle: swapQuestTitle,
     refreshIfNewDay: refreshIfNewDay,
     updateAiIndicator: updateAiIndicator,
+    renderBackup: renderBackup,
     renderAll: renderAll,
     showXpToast: showXpToast,
     showLevelUp: showLevelUp,

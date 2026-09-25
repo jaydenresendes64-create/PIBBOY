@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of commit `8d299ab` (2026-09-24). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-169/169 tests pass locally and on GitHub Actions. `sw.js` cache: `v13`.
+172/172 tests pass locally and on GitHub Actions. `sw.js` cache: `v13`.
 
 ## 1. What it is
 
@@ -35,6 +35,18 @@ Plain scripts (not ES modules, so `index.html` still opens from disk) sharing
 | `tests/*.test.js` | `node --test` (Node built-in runner, vm harness in `tests/helpers.js`, no deps) |
 | `.github/workflows/test.yml` | Runs the tests on every push |
 
+**Code rules (engineering pass, 2026-09-24):**
+- Every reward goes through state.js: `completeMain/Side/Bonus/Daily()` (once, `payQuest()` =
+  skills + `gainXp()`), `sellItem()`, `discoverPlace()`; events.js only shows toasts.
+- events.js dispatches taps through tables: `ACTIONS` (by `data-action`: `run(btn, id, key)`) and
+  `BUTTONS` (by id). A new button = one entry. `replaceState()` (import/reset) and `adoptState()`
+  both re-sync caps quests.
+- Shared helpers live in state.js: `ST.stayStill()`/`ST.motion` (Reduce Motion), `ST.dateText()`,
+  `encodePath/decodePath`. Don't re-declare them in a module.
+- Measured (desktop, local): DOMContentLoaded ~0.1 s; each tab renders in ~1 ms with a heavy save
+  (200 log entries, 40 quests, 80 items); sanitize ~0.7 ms. Rendering isn't a bottleneck: no
+  virtual DOM or lazy script loading needed.
+
 **Data flow rule:** every document entering the app (storage load, other tab, backup import) goes
 through `sanitizeImported()` → `mergeDefaults(migrate(doc))` → type coercion. Any schema change
 needs a `migrate()` step + `sanitizeImported()` coverage + a test.
@@ -59,7 +71,9 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   (stepped Vault-Boy-style gestures per tab; MAP = "scout"), tab swing transition, 3D tilt (opt-in).
 - Sounds: boot, tick (scroll/slider), press, tab, complete, levelUp, quest, discover, sold, error,
   step (skill ±), mapSelect; power-on screen; Sound / Power-on / Custom sounds footer links.
-- Data safety: dual storage, backups with dated file names, cross-tab conflict handling, CSP.
+- Data safety: dual storage, backups with dated file names (share sheet on phones), a "Last backup"
+  footer line + a once-a-day notice when one is due (`lastBackup`, `backupDue()`), cross-tab conflict
+  handling, CSP.
 - PWA: installable, offline (fonts local, city list precached).
 
 ## 4. Important design decisions
@@ -103,10 +117,7 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 
 - Caps linking regex only matches English objectives ("Obtain/Get/Reach/Earn/Have/Save N Caps"); a
   French objective ("Obtenir 5 caps") is not auto-converted.
-- Caps quests complete on wallet changes and at boot; after a backup import or another tab's save
-  the bar is correct but completion waits for the next wallet change or reload.
 - Scroll ticks only follow window scrolling (not inner scroll areas such as the custom-sounds panel).
-- Several level-ups in a row play the level-up music overlapping.
 - Right after a deploy, one open on a weak signal (>2.5 s) may mix old cached and new files; the next
   open is whole again.
 - The MAP opens on Montréal (`HOME` in `map.js`), not on the whole world.
@@ -136,7 +147,7 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
    `tilt-btn`, `sound-btn`, `power-btn`, `sounds-btn` so `tilt.js`/`sfx.js` keep working; add tests.
 3. Extend `CAPS_OBJECTIVE` in `state.js` with French verbs (obtenir|avoir|atteindre|gagner) — a new
    one-time migration flag is needed since `capsQuestsLinked` is already set on existing saves.
-4. Call `syncCaps()` after `confirmImport()` and `adoptState()` in `events.js`.
+4. (Done: caps quests re-sync after import, reset and another window's save.)
 5. Optional next features the owner showed interest in: STATUS 3D globe with revealed places
    (`SphereGeometry` already in the Three bundle; reuse items3d's shared renderer), Fallout-style
    full-screen LEVEL UP screen.

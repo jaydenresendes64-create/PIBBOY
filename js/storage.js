@@ -259,16 +259,31 @@
     function two(n){ return (n<10 ? '0' : '')+n; }
     return 'status-terminal-backup-'+d.getFullYear()+'-'+two(d.getMonth()+1)+'-'+two(d.getDate())+'.json';
   }
+  // Resolves true once the file is handed over, false when the person
+  // cancelled. On a phone, the share sheet (Save to Files, iCloud Drive,
+  // AirDrop...): a Home Screen app on iPhone can't download a file. On a
+  // computer, or when sharing files isn't possible, a download.
   function exportFile(state){
-    var blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
-    var url = URL.createObjectURL(blob);
+    var text = JSON.stringify(state, null, 2), name = backupName();
+    var file = typeof File==='function' ? new File([text], name, {type:'application/json'}) : null;
+    var touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    if (touch && file && navigator.canShare && navigator.share && navigator.canShare({files:[file]})){
+      return navigator.share({files:[file], title:name}).then(function(){ return true; }, function(err){
+        return err && err.name==='AbortError' ? false : download(text, name);
+      });
+    }
+    return Promise.resolve(download(text, name));
+  }
+  function download(text, name){
+    var url = URL.createObjectURL(new Blob([text], {type:'application/json'}));
     var a = document.createElement('a');
     a.href = url;
-    a.download = backupName();
+    a.download = name;
     document.body.appendChild(a);
     a.click();
     a.remove();
     setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    return true;
   }
   function readJsonFile(file){
     return new Promise(function(resolve, reject){

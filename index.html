@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- Only this site's own scripts may run, so text that ever reached the page unescaped still
      couldn't run code. Everything, fonts and the map's worker included, comes from this site,
-     except the MAP tab's data (OpenFreeMap's vector tiles); style attributes set the bars' widths;
-     file: keeps it working when index.html is opened straight from disk. -->
+     except the MAP tab's data (OpenFreeMap's vector tiles) and a new route's road (OSRM, asked
+     once); style attributes set the bars' widths; file: keeps it working when index.html is
+     opened straight from disk. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; font-src 'self' file:; img-src 'self' file: data:; connect-src 'self' https://tiles.openfreemap.org https://router.project-osrm.org; object-src 'none'; base-uri 'self'; form-action 'none'">
 <title>MALIK // Status Terminal</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230d0602'/%3E%3Ccircle cx='8' cy='8' r='4' fill='%23e8a33d'/%3E%3C/svg%3E">
@@ -101,6 +102,7 @@
           <button id="reset-btn">Reset</button>
         </div>
       </div>
+      <div class="footer-row"><span class="backup-age" id="backup-age"></span></div>
       <div class="footer-row" id="reset-confirm-area"></div>
       <input type="file" id="import-file" accept="application/json,.json" hidden>
     </div>

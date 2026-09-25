@@ -218,3 +218,12 @@ test('asking prices: kept when 0 or more, dropped otherwise', () => {
   assert.deepEqual(out.map(i => 'price' in i), [true, true, false, false, false, true, false]);
   assert.deepEqual(sanitize(s).inventory.slice(-7), out);          // stable
 });
+
+test('lastBackup: a date is kept (zero-padded ones normalized), anything else is none', () => {
+  const s = fullState();
+  s.lastBackup = '2026-09-04';
+  assert.equal(sanitize(s).lastBackup, '2026-9-4');
+  for (const bad of ['yesterday', 7, {}, '<b>']) { s.lastBackup = bad; assert.equal(sanitize(s).lastBackup, null); }
+  delete s.lastBackup;
+  assert.equal(sanitize(s).lastBackup, null);                // saves from before it
+});

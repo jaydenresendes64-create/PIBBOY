@@ -47,9 +47,7 @@
   var loading = null;           // the promise of MapLibre and the style
   var built = false;            // the tab's frame (map box, buttons) is in the page
   var onScreen = false;         // the map box is on the screen (the tab open, not scrolled away)
-  var motion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
-
-  function stayStill(){ return !!(motion && motion.matches); }
+  var stayStill = ST.stayStill, dateText = ST.dateText;
 
   // ---------- loading MapLibre and the style (once) ----------
   // MapLibre's stylesheet goes before the app's, so the app's own map styles
@@ -356,10 +354,6 @@
   // "1.5 km", "500 m".
   function distanceText(m){
     return m<1000 ? Math.round(m)+' m' : (Math.round(m/100)/10)+' km';
-  }
-  function dateText(date){
-    var m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(date || '');
-    return m ? new Date(+m[1], +m[2]-1, +m[3]).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) : '';
   }
   function placeMeta(type, p){
     var parts = [p.cc || '—'];

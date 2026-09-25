@@ -33,7 +33,7 @@
 (function(ST){
   'use strict';
 
-  var P = ST.places, clamp = ST.clamp;
+  var P = ST.places, clamp = ST.clamp, stayStill = ST.stayStill;
 
   var TILE_PX = 512;                  // MapLibre's whole world, in pixels, at zoom 0
   var MIN_HOLE_PX = 3;                // a place still shows as a spark when zoomed far out
@@ -345,9 +345,6 @@
     gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
     return fbo;
-  }
-  function stayStill(){
-    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }
 
   // The layer. `places()` returns {circles: [{key, lat, lon, radius}],

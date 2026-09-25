@@ -321,8 +321,34 @@
   }
 
   // ---------- export / import / reset ----------
+  // The file handed over (not cancelled): today is the last backup.
   function exportData(){
-    ST.storage.exportFile(app.state);
+    ST.storage.exportFile(app.state).then(function(done){
+      if (!done) return;
+      app.state.lastBackup = todayStr();
+      R.renderBackup();
+      scheduleSave();
+    });
+  }
+  // Every question left open under a row or in a banner is dropped (the
+  // data under it changed as a whole).
+  function clearQuestions(){
+    app.confirmRemoveMain = null;
+    app.confirmSell = null;
+    app.confirmRemove = null;
+    app.confirmMove = null;
+    app.confirmSpecial = null;
+  }
+  // A whole new state (a backup, a reset): drawn, caps quests brought up to
+  // date with its wallet, and saved.
+  function replaceState(state){
+    app.state = state;
+    app.pendingProposal = null;
+    clearQuestions();
+    el('reset-confirm-area').innerHTML = '';
+    renderAll();
+    if (syncCaps()) renderQuests();
+    ST.storage.saveNow();
   }
   function importBackup(file){
     ST.storage.readJsonFile(file).then(function(raw){
@@ -341,17 +367,9 @@
   }
   function confirmImport(){
     if (!pendingImport) return;
-    app.state = pendingImport;
-    app.pendingProposal = null;
-    app.confirmRemoveMain = null;
-    app.confirmSell = null;
-    app.confirmRemove = null;
-    app.confirmMove = null;
-    app.confirmSpecial = null;
+    var imported = pendingImport;
     pendingImport = null;
-    el('reset-confirm-area').innerHTML = '';
-    renderAll();
-    ST.storage.saveNow();
+    replaceState(imported);
   }
   function cancelImport(){
     pendingImport = null;
@@ -365,16 +383,7 @@
       '<button id="reset-cancel-btn">Cancel</button>';
   }
   function doReset(){
-    app.state = ST.defaultState();
-    app.pendingProposal = null;
-    app.confirmRemoveMain = null;
-    app.confirmSell = null;
-    app.confirmRemove = null;
-    app.confirmMove = null;
-    app.confirmSpecial = null;
-    el('reset-confirm-area').innerHTML = '';
-    renderAll();
-    ST.storage.saveNow();
+    replaceState(ST.defaultState());
   }
 
   // ---------- other windows / leaving ----------
@@ -382,12 +391,9 @@
   // a change made here wasn't saved, since it would have overwritten it.
   function adoptState(state, lost){
     app.state = state;
-    app.confirmRemoveMain = null;
-    app.confirmSell = null;
-    app.confirmRemove = null;
-    app.confirmMove = null;
-    app.confirmSpecial = null;
+    clearQuestions();
     renderAll();
+    if (syncCaps()){ renderQuests(); scheduleSave(); }
     if (lost) R.showConflictWarning();
   }
   // Before the page is hidden or closed: a quest name still being typed is
@@ -397,143 +403,168 @@
     if (app.finishRename) app.finishRename();
   }
 
+  // ---------- taps ----------
+  // What a button with data-action does, by that action: run(button, id, key)
+  // with its data-id and data-key. One row question at a time: opening one
+  // (remove, sell, move) closes the others.
+  function reward(btn, result){
+    if (!result) return;
+    showXp(result.xp, result.leveled, result.skillGains);
+    afterCheck(btn);
+  }
+  var ACTIONS = {
+    // S.P.E.C.I.A.L.: a level-up point, only after "Yes".
+    'special-assign': function(btn, id, key){
+      var s = app.state;
+      if (!((s.unspentSpecialPoints||0)>0 && ST.STAT_KEYS.indexOf(key)!==-1 && s.stats[key]<10)) return;
+      app.confirmSpecial = key;
+      renderStatus();
+      focusStatus('[data-action="special-no"]');
+    },
+    'special-yes': function(){
+      var s = app.state, key = app.confirmSpecial;
+      app.confirmSpecial = null;
+      if (key && (s.unspentSpecialPoints||0)>0 && s.stats[key]<10){
+        grantStat(key, 1);
+        s.unspentSpecialPoints -= 1;
+        scheduleSave();
+      }
+      renderStatus();
+      focusStatus('[data-action="special-assign"][data-key="'+key+'"]');
+    },
+    'special-no': function(){
+      var key = app.confirmSpecial;
+      app.confirmSpecial = null;
+      renderStatus();
+      focusStatus('[data-action="special-assign"][data-key="'+key+'"]');
+    },
+    'skill': function(btn, id, key){
+      grantSkill(key, parseInt(btn.getAttribute('data-dir')||'0', 10));
+      renderStatus(); scheduleSave();
+    },
+    // Quests: every reward through state.js, once (completeSide/Daily/Bonus).
+    'quest-complete': function(btn, id){
+      var q = findQuest('side', id);
+      reward(btn, q && ST.completeSide(q));
+    },
+    'daily-toggle': function(btn, id){
+      var d = findQuest('daily', id);
+      reward(btn, d && ST.completeDaily(d));
+    },
+    'bonus-toggle': function(btn, id){
+      var owner = findMain(btn.getAttribute('data-quest'));
+      var b = owner && (owner.bonus||[]).filter(function(x){ return x.id===id; })[0];
+      reward(btn, b && ST.completeBonus(b));
+    },
+    'main-checkin': function(btn, id){
+      var m = findMain(id);
+      if (m && checkIn(m)) afterCheck(btn);
+    },
+    'main-remove': function(btn, id){
+      app.confirmRemoveMain = id;
+      renderQuests();
+      var cancel = document.querySelector('[data-action="main-remove-no"]');
+      if (cancel) cancel.focus();
+    },
+    'main-remove-yes': function(btn, id){
+      app.state.quests.mains = app.state.quests.mains.filter(function(x){ return x.id!==id; });
+      app.confirmRemoveMain = null;
+      renderQuests(); scheduleSave();
+    },
+    'main-remove-no': function(){
+      app.confirmRemoveMain = null;
+      renderQuests();
+    },
+    'rename': function(btn){ startRename(btn); },
+    // Removing a row: asks first, under it.
+    'quest-remove': function(btn, id){ askRemove('side', id); },
+    'daily-remove': function(btn, id){ askRemove('daily', id); },
+    'inv-remove': function(btn, id){ askRemove('item', id); },
+    'wallet-remove': function(btn, id){ askRemove('wallet', id); },
+    'remove-yes': function(btn, id){ remove(btn.getAttribute('data-kind'), id); },
+    'remove-no': function(btn){
+      app.confirmRemove = null;
+      redraw(btn.getAttribute('data-kind'));
+    },
+    // Items: move to another category, sell.
+    'inv-move': function(btn, id){
+      app.confirmMove = app.confirmMove===id ? null : id;
+      app.confirmRemove = null;
+      app.confirmSell = null;
+      renderInventory();
+      var firstChoice = document.querySelector('[data-action="move-to"]');
+      if (firstChoice) firstChoice.focus();
+    },
+    'move-to': function(btn, id, key){
+      app.confirmMove = null;
+      if (ST.moveItem(id, key)) scheduleSave();
+      renderInventory();
+    },
+    'move-no': function(){
+      app.confirmMove = null;
+      renderInventory();
+    },
+    'sell': function(btn, id){
+      app.confirmSell = id;
+      app.confirmRemove = null;
+      app.confirmMove = null;
+      renderInventory();
+      var amountBox = el('sell-amount-'+id);
+      if (amountBox) amountBox.focus();
+    },
+    'sell-yes': function(btn, id){ confirmSale(id); },
+    'sell-no': function(){
+      app.confirmSell = null;
+      renderInventory();
+    }
+  };
+  // Buttons known by their id.
+  var BUTTONS = {
+    'add-main-btn': addMainQuest,
+    'add-quest-btn': addSideQuest,
+    'add-daily-btn': addDailyQuest,
+    'add-item-btn': addInventoryItem,
+    'add-wallet-btn': addHolding,
+    'analyze-btn': analyzeEntry,
+    'accept-proposal-btn': acceptProposal,
+    'reject-proposal-btn': rejectProposal,
+    'tilt-btn': function(){ if (ST.tilt) ST.tilt.toggle(); },
+    'sound-btn': function(){ if (ST.sfx) ST.sfx.toggleSound(); },
+    'power-btn': function(){ if (ST.sfx) ST.sfx.togglePowerScreen(); },
+    'sounds-btn': function(){ if (ST.sfxCustom) ST.sfxCustom.open(); },
+    'export-btn': exportData,
+    'import-btn': function(){ el('import-file').click(); },
+    'import-confirm-btn': confirmImport,
+    'import-cancel-btn': cancelImport,
+    'reset-btn': showResetConfirm,
+    'reset-confirm-btn': doReset,
+    'reset-cancel-btn': function(){ el('reset-confirm-area').innerHTML = ''; }
+  };
+  function onClick(e){
+    var tabBtn = e.target.closest('[data-tab]');
+    if (tabBtn){
+      var tab = tabBtn.getAttribute('data-tab');
+      R.switchTab(tab);
+      if (tab==='map' && ST.map) ST.map.show();
+      if (ST.mascot) ST.mascot.onTab(tab);
+      return;
+    }
+    var actionBtn = e.target.closest('[data-action]');
+    if (actionBtn){
+      // Taps in the quest list wait for a check's animation to end.
+      if (checkPlaying && actionBtn.closest('#tab-quests')) return;
+      var run = ACTIONS[actionBtn.getAttribute('data-action')];
+      if (run) run(actionBtn, actionBtn.getAttribute('data-id'), actionBtn.getAttribute('data-key'));
+      return;
+    }
+    if (e.target.closest('#wallet-toggle-btn')){ app.walletExpanded = !app.walletExpanded; renderInventory(); return; }
+    var button = Object.prototype.hasOwnProperty.call(BUTTONS, e.target.id) ? BUTTONS[e.target.id] : null;
+    if (button) button();
+  }
+
   // ---------- events ----------
   function setupEvents(){
-    document.body.addEventListener('click', function(e){
-      var tabBtn = e.target.closest('[data-tab]');
-      if (tabBtn){
-        var tab = tabBtn.getAttribute('data-tab');
-        R.switchTab(tab);
-        if (tab==='map' && ST.map) ST.map.show();
-        if (ST.mascot) ST.mascot.onTab(tab);
-        return;
-      }
-
-      var state = app.state;
-      var actionBtn = e.target.closest('[data-action]');
-      if (actionBtn){
-        if (checkPlaying && actionBtn.closest('#tab-quests')) return;
-        var action = actionBtn.getAttribute('data-action');
-        var key = actionBtn.getAttribute('data-key');
-        var id = actionBtn.getAttribute('data-id');
-        var dir = parseInt(actionBtn.getAttribute('data-dir')||'0',10);
-        if (action==='special-assign'){
-          if ((state.unspentSpecialPoints||0)>0 && ST.STAT_KEYS.indexOf(key)!==-1 && state.stats[key]<10){
-            app.confirmSpecial = key;
-            renderStatus();
-            focusStatus('[data-action="special-no"]');
-          }
-        } else if (action==='special-yes'){
-          var statKey = app.confirmSpecial;
-          app.confirmSpecial = null;
-          if (statKey && (state.unspentSpecialPoints||0)>0 && state.stats[statKey]<10){
-            grantStat(statKey, 1);
-            state.unspentSpecialPoints -= 1;
-            scheduleSave();
-          }
-          renderStatus();
-          focusStatus('[data-action="special-assign"][data-key="'+statKey+'"]');
-        } else if (action==='special-no'){
-          var askedKey = app.confirmSpecial;
-          app.confirmSpecial = null;
-          renderStatus();
-          focusStatus('[data-action="special-assign"][data-key="'+askedKey+'"]');
-        } else if (action==='skill'){
-          grantSkill(key, dir);
-          renderStatus(); scheduleSave();
-        } else if (action==='quest-complete'){
-          var q = findQuest('side', id);
-          var reward = q && ST.completeSide(q);
-          if (reward){ showXp(reward.xp, reward.leveled, reward.skillGains); afterCheck(actionBtn); }
-        } else if (action==='quest-remove'){
-          askRemove('side', id);
-        } else if (action==='daily-toggle'){
-          var d = findQuest('daily', id);
-          if (d && !ST.dailyDoneToday(d)){ d.lastDate=todayStr(); addXp(d.xp); afterCheck(actionBtn); }
-        } else if (action==='daily-remove'){
-          askRemove('daily', id);
-        } else if (action==='inv-remove'){
-          askRemove('item', id);
-        } else if (action==='remove-yes'){
-          remove(actionBtn.getAttribute('data-kind'), id);
-        } else if (action==='remove-no'){
-          app.confirmRemove = null;
-          redraw(actionBtn.getAttribute('data-kind'));
-        } else if (action==='inv-move'){
-          app.confirmMove = app.confirmMove===id ? null : id;
-          app.confirmRemove = null;
-          app.confirmSell = null;
-          renderInventory();
-          var firstChoice = document.querySelector('[data-action="move-to"]');
-          if (firstChoice) firstChoice.focus();
-        } else if (action==='move-to'){
-          app.confirmMove = null;
-          if (ST.moveItem(id, key)) scheduleSave();
-          renderInventory();
-        } else if (action==='move-no'){
-          app.confirmMove = null;
-          renderInventory();
-        } else if (action==='sell'){
-          app.confirmSell = id;
-          app.confirmRemove = null;
-          app.confirmMove = null;
-          renderInventory();
-          var amountBox = el('sell-amount-'+id);
-          if (amountBox) amountBox.focus();
-        } else if (action==='sell-yes'){
-          confirmSale(id);
-        } else if (action==='sell-no'){
-          app.confirmSell = null;
-          renderInventory();
-        } else if (action==='wallet-remove'){
-          askRemove('wallet', id);
-        } else if (action==='bonus-toggle'){
-          var owner = findMain(actionBtn.getAttribute('data-quest'));
-          var b = owner && (owner.bonus||[]).filter(function(x){return x.id===id;})[0];
-          if (b && !b.done){ b.done = true; addXp(b.xp||0); afterCheck(actionBtn); }
-        } else if (action==='main-checkin'){
-          var sq = findMain(id);
-          if (sq && checkIn(sq)) afterCheck(actionBtn);
-        } else if (action==='main-remove'){
-          app.confirmRemoveMain = id;
-          renderQuests();
-          var cancel = document.querySelector('[data-action="main-remove-no"]');
-          if (cancel) cancel.focus();
-        } else if (action==='main-remove-yes'){
-          state.quests.mains = state.quests.mains.filter(function(x){return x.id!==id;});
-          app.confirmRemoveMain = null;
-          renderQuests(); scheduleSave();
-        } else if (action==='main-remove-no'){
-          app.confirmRemoveMain = null;
-          renderQuests();
-        } else if (action==='rename'){
-          startRename(actionBtn);
-        }
-        return;
-      }
-
-      if (e.target.closest('#wallet-toggle-btn')){ app.walletExpanded = !app.walletExpanded; renderInventory(); return; }
-
-      if (e.target.id==='add-main-btn') addMainQuest();
-      else if (e.target.id==='add-quest-btn') addSideQuest();
-      else if (e.target.id==='add-daily-btn') addDailyQuest();
-      else if (e.target.id==='add-item-btn') addInventoryItem();
-      else if (e.target.id==='add-wallet-btn') addHolding();
-      else if (e.target.id==='analyze-btn') analyzeEntry();
-      else if (e.target.id==='accept-proposal-btn') acceptProposal();
-      else if (e.target.id==='reject-proposal-btn') rejectProposal();
-      else if (e.target.id==='tilt-btn'){ if (ST.tilt) ST.tilt.toggle(); }
-      else if (e.target.id==='sound-btn'){ if (ST.sfx) ST.sfx.toggleSound(); }
-      else if (e.target.id==='power-btn'){ if (ST.sfx) ST.sfx.togglePowerScreen(); }
-      else if (e.target.id==='sounds-btn'){ if (ST.sfxCustom) ST.sfxCustom.open(); }
-      else if (e.target.id==='export-btn') exportData();
-      else if (e.target.id==='import-btn') el('import-file').click();
-      else if (e.target.id==='import-confirm-btn') confirmImport();
-      else if (e.target.id==='import-cancel-btn') cancelImport();
-      else if (e.target.id==='reset-btn') showResetConfirm();
-      else if (e.target.id==='reset-confirm-btn') doReset();
-      else if (e.target.id==='reset-cancel-btn') el('reset-confirm-area').innerHTML='';
-    });
+    document.body.addEventListener('click', onClick);
 
     // A main quest's objective and a holding's rate go into the state as
     // they're typed, so closing the app mid-edit keeps them; leaving the box
