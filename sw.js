@@ -31,7 +31,7 @@
 'use strict';
 
 var CACHE_PREFIX = 'status-terminal-';
-var CACHE = CACHE_PREFIX + 'v9';
+var CACHE = CACHE_PREFIX + 'v10';
 var TILE_CACHE = CACHE_PREFIX + 'vector-tiles';     // kept across versions
 var TILE_HOST = 'tiles.openfreemap.org';
 var TILE_MAX = 800;                                 // about 50 MB at most
@@ -46,7 +46,7 @@ var APP_SHELL = [
   'js/state.js', 'js/storage.js', 'js/ai.js', 'js/places.js', 'js/sfx.js', 'js/sfx-custom.js', 'js/render.js', 'js/mascot.js', 'js/crt.js', 'js/tilt.js', 'js/fog.js', 'js/map.js', 'js/bulk.js', 'js/events.js', 'js/main.js',
   'vendor/maplibre/maplibre-gl.mjs', 'vendor/maplibre/maplibre-gl-shared.mjs', 'vendor/maplibre/maplibre-gl-worker.mjs', 'vendor/maplibre/maplibre-gl.css',
   'data/map-style.json', 'data/places.txt',
-  'images/mascot.png', 'images/mascot-hand.svg',
+  'images/mascot.png',
   'fonts/vt323.woff2', 'fonts/ibm-plex-mono.woff2',
   'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png'

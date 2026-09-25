@@ -10,7 +10,7 @@
   'use strict';
 
   var WALK_MIN_MS = 10000, WALK_MAX_MS = 20000;
-  var GESTURES = {status:'nod', quests:'stroll', items:'hop', map:'lookout', log:'write'};
+  var GESTURES = {status:'nod', quests:'stroll', items:'hop', map:'scout', log:'write'};
 
   var mover = null;             // .mascot-move: its data-move attribute plays a move
   var walkTimer = null;

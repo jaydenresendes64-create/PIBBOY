@@ -33,7 +33,7 @@ js/events.js        user actions
 js/main.js          startup
 sw.js               service worker: offline use (network first for the app, so updates show right away)
 manifest.webmanifest name, colours and icons (icons/) for installing on a phone
-images/mascot.png   the amber mascot in the top-right corner (mascot-hand.svg: his raised hand on MAP)
+images/mascot.png   the amber mascot in the top-right corner
 data/map-style.json MAP: the map's own amber Pip-Boy style (colours, line widths, labels, by zoom)
 data/places.txt     MAP: every country, region and city (15,000 people or more), for searching
 data/regions/       MAP: one file per country with the shapes of its regions
