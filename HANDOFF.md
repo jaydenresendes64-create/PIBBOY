@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
-State as of the `safety-fixes` PR (2026-09-25, after PR #10). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-209/209 tests pass locally. `sw.js` cache: `v17`.
+State as of the `trophies` PR (2026-09-25, after PR #11). Live: https://jaydenresendes64-create.github.io/PIBBOY/
+210/210 tests pass locally. `sw.js` cache: `v18`.
 
 ## 1. What it is
 
@@ -96,7 +96,9 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   render.js `perksHtml()`; migration gives old saves level-2 perk points.
   Bobbleheads (state.js `BOBBLEHEADS`, `findBobbleheads()` +50 XP each; `lifetimeDailies` counter):
   checked after every change through `storage.onChange` (events.js `checkBobbleheads`) and once after
-  the boot screens (main.js `afterBoot`). Render test allows only the app's own icon <svg>s.
+  the boot screens (main.js `afterBoot`). Each has its own trophy (render.js `TROPHIES`, by id, on a shared
+  `TROPHY_STAND`; the owner found the old smiley figure ugly), shown on the shelf and in the FOUND
+  banner. Render test allows only the app's own icon <svg>s.
   Holotapes (holotapes.js): MediaRecorder (audio/mp4 on iPhone), recordings in IndexedDB
   `status_terminal_holotapes` (NOT in state/backups; Share per tape), state keeps `lifetimeHolotapes`;
   CSP `media-src 'self' blob:` for playback.
@@ -131,8 +133,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 - Each change: edit → `node --test` → browser check → on a **feature branch**, commit (with the
   Co-Authored-By line) → push → open a PR with GitHub CLI (`C:Program FilesGitHub CLIgh.exe`,
   installed 2026-09-25, owner signed in) → the owner merges it on GitHub (= deploy to Pages in ~1 min)
-  → `git checkout main && git pull`. PRs #8 (bobbleheads + holotapes), #9 (event core), #10 (settings)
-  were done this way. Earlier features were pushed straight to main.
+  → `git checkout main && git pull`. PRs #8 (bobbleheads + holotapes), #9 (event core), #10 (settings),
+  #11 (safety fixes) were done this way. Earlier features were pushed straight to main.
 - The working copy now has CRLF line endings (git autocrlf after pulls): scripted text edits must
   normalize `
 ` first (the Edit tool is fine).

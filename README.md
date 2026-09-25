@@ -25,13 +25,16 @@ when the app goes to the background; what was recorded is kept). Each tape plays
 first). The recordings stay on this device only, in their own storage: they are not in the backup
 file (too big), so use a tape's Share button to keep a copy.
 
-**Bobbleheads** (STATUS tab): 16 collectibles for real milestones, found by themselves the moment one
-is reached (a banner, a springy sound, +50 XP each): Vault Dweller (level 5), Wasteland Veteran
-(level 10), Devotion (a day-streak quest completed), Capitalist (a Caps goal completed), Merchant (an
-item sold), Errand Runner (10 side quests), Creature of Routine (30 daily quests), Explorer (10
-cities), Globetrotter (places in 5 countries), Road Warrior (1,000 km of routes), Scribe (25 journal
-entries), Specialist (a skill at 50), S.P.E.C.I.A.L.ist (a stat at 10), Perk Collector (3 perks),
-Rad-Free (a backup made), Archivist (5 holotapes). Tap one to see what it is and when it was found; the ones still hidden say
+**Bobbleheads** (STATUS tab): 16 collectibles for real milestones, each with its own trophy on the
+shelf, found by themselves the moment one is reached (a banner showing the trophy, a springy sound,
++50 XP each): Vault Dweller (level 5: a vault door), Wasteland Veteran (level 10: a medal), Devotion
+(a day-streak quest completed: an eternal flame), Capitalist (a Caps goal completed: a money bag),
+Merchant (an item sold: scales), Errand Runner (10 side quests: a running boot), Creature of Routine
+(30 daily quests: an alarm clock), Explorer (10 cities: a compass), Globetrotter (places in 5
+countries: a globe), Road Warrior (1,000 km of routes: the road to the horizon), Scribe (25 journal
+entries: a quill and inkwell), Specialist (a skill at 50: a bullseye), S.P.E.C.I.A.L.ist (a stat at
+10: the atom), Perk Collector (3 perks: perk cards), Rad-Free (a backup made: RadAway), Archivist (5
+holotapes: a tape). The ones not found yet are dim outlines. Tap one to see what it is and when it was found; the ones still hidden say
 how to find them. A save from before them finds the ones it already earned, all at once.
 
 Main quests track their progress three ways: a **percentage** slider, a **day streak** (one check-in a
