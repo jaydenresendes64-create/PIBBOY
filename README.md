@@ -134,8 +134,9 @@ in backups.
 A crisp vector map of the whole world, down to street level (street names, buildings, shops and
 places, train and metro lines and stations), drawn in the app's own amber Pip-Boy style. Drag and
 pinch on the phone (drag and the mouse wheel on a computer); the map always stays north up and flat,
-and goes from the whole world to zoom 19 (a few houses). The round buttons on the map: **⌖** recenters
-on your latest place (the whole world when there's none yet), **⛶** zooms to show all your places.
+and goes from the whole world to zoom 19 (a few houses). It opens on Montréal. The round buttons on the
+map: **⌖** recenters on your latest place (Montréal when there's none yet), **⛶** zooms to show all
+your places.
 
 - **Map library:** [MapLibre GL JS](https://maplibre.org) 6.11.2, kept in `vendor/maplibre/` (no CDN;
   the files are the package's, with only the source-map comment line removed). It draws the map with

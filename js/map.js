@@ -28,7 +28,8 @@
 
   var MAPLIBRE = 'vendor/maplibre/';
   var STYLE_URL = 'data/map-style.json';
-  var WORLD = [[-170, -60], [175, 75]];         // [[west, south], [east, north]]
+  // Where the map opens, and "Recenter" with no place yet: Montréal, home.
+  var HOME = [[-73.95, 45.40], [-73.40, 45.72]];   // [[west, south], [east, north]]
   var MAX_ZOOM = 19;
   var LONG_PRESS_MS = 550, LONG_PRESS_SLOP_PX = 10;
 
@@ -119,7 +120,7 @@
     map = new ml.Map({
       container: 'map-view',
       style: withFonts(style),
-      bounds: WORLD,
+      bounds: HOME,
       minZoom: 0, maxZoom: MAX_ZOOM,
       renderWorldCopies: false,
       // North up, flat.
@@ -670,7 +671,7 @@
 
   // ---------- the round buttons ----------
   // Recenter: the place opened or added last, else the newest one, else
-  // the whole world.
+  // Montréal (HOME).
   function newestPlace(){
     if (lastPlace && P.findPlace(lastPlace.type, lastPlace.id)) return lastPlace;
     var m = app.state.map, best = null;
@@ -686,14 +687,14 @@
     if (!map) return;
     var newest = newestPlace();
     if (newest) focusPlace(newest.type, P.findPlace(newest.type, newest.id));
-    else fitBox(WORLD, MAX_ZOOM, 0);
+    else fitBox(HOME, 14, 0);
   }
   // All my places: every circle, and every region whose shape is loaded.
   function fitAll(){
     if (!map) return;
     var box = P.placesBounds();
     if (box) fitBox(box, 12, 20);
-    else fitBox(WORLD, MAX_ZOOM, 0);
+    else fitBox(HOME, 14, 0);
   }
 
   // ---------- taps and typing in the tab ----------

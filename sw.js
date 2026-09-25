@@ -7,8 +7,13 @@
  * 10-minute cache ('no-cache'), so a new version shows up on the next
  * open, with all its files from the same version. Each response is copied
  * into the cache on the way through, and the cached copy is only used when
- * the network fails. So this file doesn't need to change when the app does;
- * bump CACHE only to throw the old copies away.
+ * the network fails or takes longer than NET_MS (a weak signal): the app
+ * then opens from the cache at once, and the network's answer, when it
+ * comes, refreshes the copy for the next open. (Just after an update on a
+ * weak signal, that one open may mix old and new files.) So this file
+ * doesn't need to change when the app does; bump CACHE only to throw the
+ * old copies away. At install, a big file (HEAVY) that can't be downloaded
+ * is skipped rather than stopping the install; it's kept on first use.
  *
  * The fonts are the app's own files too (fonts/), so they're there offline
  * from the first visit.
@@ -31,12 +36,13 @@
 'use strict';
 
 var CACHE_PREFIX = 'status-terminal-';
-var CACHE = CACHE_PREFIX + 'v11';
+var CACHE = CACHE_PREFIX + 'v12';
 var TILE_CACHE = CACHE_PREFIX + 'vector-tiles';     // kept across versions
 var TILE_HOST = 'tiles.openfreemap.org';
 var TILE_MAX = 800;                                 // about 50 MB at most
 var TILE_REFRESH_MS = 30*864e5;                     // OpenFreeMap's data changes every week
 var KEPT_AT = 'x-kept-at';
+var NET_MS = 2500;                                  // give up on GitHub Pages and use the cache
 
 // Cached at install, so the app opens offline after the first visit.
 var APP_SHELL = [
@@ -54,11 +60,28 @@ var APP_SHELL = [
 ];
 var API_URL = new URL('api/', self.location).href;
 
+// Heavy files: one failure must not block install (addAll is all-or-nothing).
+var HEAVY = {
+  'data/places.txt': 1,
+  'vendor/maplibre/maplibre-gl.mjs': 1,
+  'vendor/maplibre/maplibre-gl-shared.mjs': 1,
+  'vendor/maplibre/maplibre-gl-worker.mjs': 1,
+  'vendor/maplibre/maplibre-gl.css': 1,
+  'vendor/three/three.pibboy.min.js': 1
+};
+
 self.addEventListener('install', function(event){
   event.waitUntil(
     caches.open(CACHE).then(function(cache){
+      function req(url){ return new Request(url, {cache:'reload'}); }
       // 'reload' skips the browser's HTTP cache, so the copies are current.
-      return cache.addAll(APP_SHELL.map(function(url){ return new Request(url, {cache:'reload'}); }));
+      var core = APP_SHELL.filter(function(url){ return !HEAVY[url]; });
+      var heavy = APP_SHELL.filter(function(url){ return HEAVY[url]; });
+      return cache.addAll(core.map(req)).then(function(){
+        return Promise.all(heavy.map(function(url){
+          return cache.add(req(url)).catch(function(){});
+        }));
+      });
     }).then(function(){ return self.skipWaiting(); })
   );
 });
@@ -96,15 +119,28 @@ function networkFirst(event){
   var fresh = navigating
     ? new Request(request.url, {credentials:'same-origin', cache:'no-cache'})
     : new Request(request, {cache:'no-cache'});
-  return fetch(fresh).then(function(response){
+  var timedOut = false;
+  var clock = new Promise(function(resolve){
+    setTimeout(function(){ timedOut = true; resolve(null); }, NET_MS);
+  });
+  var live = fetch(fresh).then(function(response){
     // A page may not be answered with a redirected response: pass its body on.
     if (navigating && response.redirected){
       response = new Response(response.body, {status:response.status, statusText:response.statusText, headers:response.headers});
     }
     return keep(event, request, response);
-  }).catch(function(){
+  });
+  // Offline, the network fails at once: the cached copy, like a slow network.
+  var quick = live.catch(function(){ return null; });
+  return Promise.race([quick, clock]).then(function(response){
+    if (response) return response;
     return fromCache(request, {ignoreSearch:navigating}).then(function(cached){
-      return cached || (navigating ? fromCache('index.html') : undefined);
+      if (cached){
+        // Network still running: refresh the cache for the next open.
+        if (timedOut) event.waitUntil(quick);
+        return cached;
+      }
+      return live.catch(function(){ return navigating ? fromCache('index.html') : undefined; });
     }).then(function(response){
       return response || Response.error();
     });
@@ -142,6 +178,7 @@ function tile(event){
 }
 function trim(cache){
   return cache.keys().then(function(keys){
+    // keys() lists them oldest kept first (put() moves a refreshed one last).
     return Promise.all(keys.slice(0, Math.max(0, keys.length-TILE_MAX)).map(function(key){ return cache.delete(key); }));
   });
 }

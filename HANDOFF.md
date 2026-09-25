@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of commit `8d299ab` (2026-09-24). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-149/149 tests pass locally and on GitHub Actions. `sw.js` cache: `v11`.
+154/154 tests pass locally and on GitHub Actions. `sw.js` cache: `v12`.
 
 ## 1. What it is
 
@@ -29,7 +29,7 @@ Plain scripts (not ES modules, so `index.html` still opens from disk) sharing
 | `js/crt.js`, `js/tilt.js` | CRT flicker; 3D tilt (DeviceOrientation/mouse) incl. glass glare parallax |
 | `js/events.js` | All user actions → state change → re-render → debounced save |
 | `js/main.js` | Boot: load → setup events → render → `syncCaps()` → SW registration |
-| `sw.js` | Service worker: network-first app files, APP_SHELL precache, vector tiles cache (≤800) |
+| `sw.js` | Service worker: network-first app files with a 2.5 s timeout (then the cached copy, refreshed in the background), APP_SHELL precache (big `HEAVY` files may fail without stopping the install), vector tiles cache (≤800); tested in `tests/sw.test.js` with a fake network |
 | `css/terminal.css` | All styles (palette variables in `:root`) |
 | `vendor/three/three.pibboy.min.js` | Three.js r186, tree-shaken (parts in `tools/three-entry.mjs`, built by `tools/build-three.mjs`) |
 | `tests/*.test.js` | `node --test` (Node built-in runner, vm harness in `tests/helpers.js`, no deps) |
@@ -80,6 +80,10 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 - Each change: edit → `node --test` → browser check → commit (with the Co-Authored-By line) →
   `git push origin main` (= deploy to Pages in ~1 min) → confirm Actions "Tests" + "pages build" green.
 - Bump `CACHE` in `sw.js` when files are added/removed; add new app files to `APP_SHELL`.
+- Code the owner brings from other AIs (Grok, ChatGPT): diff it against the repo, test it, and take
+  only the good parts; never paste whole files over newer ones. Grok's first `sw.js` broke opening
+  offline (fixed before merging); its later "places worker" and "PER/LUK + quest skillGains" passes
+  weren't merged (files not provided; PER/LUK and automatic skill gains change features → owner's call).
 - Local-only, never pushed: `.claude/` (test server `serve.ps1` on port 8766 with a PUT helper that
   saves to `.claude/out/`; copies of the source video/mp3), `PIBBOY-upload.zip`, `.env.example`
   (excluded via `.git/info/exclude`). The owner's sound pack is at `Desktop\pibboy-sound-pack.json`
@@ -95,6 +99,9 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   the bar is correct but completion waits for the next wallet change or reload.
 - Scroll ticks only follow window scrolling (not inner scroll areas such as the custom-sounds panel).
 - Several level-ups in a row play the level-up music overlapping.
+- Right after a deploy, one open on a weak signal (>2.5 s) may mix old cached and new files; the next
+  open is whole again.
+- The MAP opens on Montréal (`HOME` in `map.js`), not on the whole world.
 - 3D models: canvases are small (78×44 CSS px) and weren't reviewed on a real phone yet; after a
   WebGL context loss they stay hidden until reload.
 - Custom sounds and 3D tilt choice are per device/origin; on iPhone the Home Screen app and Safari
