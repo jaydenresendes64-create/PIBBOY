@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
-State as of commit `e7c10e2` (2026-09-25, PR #10 merged). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-205/205 tests pass locally and on GitHub Actions. `sw.js` cache: `v16`.
+State as of the `safety-fixes` PR (2026-09-25, after PR #10). Live: https://jaydenresendes64-create.github.io/PIBBOY/
+209/209 tests pass locally. `sw.js` cache: `v17`.
 
 ## 1. What it is
 
@@ -69,7 +69,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   skills (CONCENTRATION, KNOWLEDGE, SPEECH, SURVIVAL, COOKING, FINANCE, MUSIC, BUSINESS; −/+ allowed),
   Lifetime stats.
 - QUESTS: several main quests (types **percent** slider, **streak** daily check-in, **caps** goal
-  that follows the wallet and self-completes), bonus objectives, side quests (XP + one skill +3)
+  that follows the wallet; a percent or caps quest at 100% shows a **COMPLETE QUEST** button and only
+  its tap pays, `mainReady()`), bonus objectives, side quests (XP + one skill +3)
   and daily quests (XP), quest names
   (tap to rename), completion animation + banners, confirmations before removing.
 - ITEMS: categories SELL ("THINGS TO SELL", price + Sold → CASH + 25 XP + journal line), APPAREL,
@@ -118,6 +119,10 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
    main quests, and **side quests** (+3 of one skill, `SIDE_SKILL_GAIN`, paid once by
    `completeSide()`; s1–s4 got theirs by migration). **Daily quests give XP only** (owner's choice
    2026-09-24: +1/day would max skills in months).
+9. **No big reward without a deliberate tap** (audit, 2026-09-25): there is no undo, so a main quest
+   never completes from a slider slip or a wallet typo (the Complete button), and a backup export runs
+   one at a time (a double tap on iPhone used to be able to drain the rads with no file saved).
+   Holotapes and custom sounds are not in backups nor erased by Reset, and the UI says so.
 
 ## 5. Workflow
 
@@ -129,7 +134,7 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   → `git checkout main && git pull`. PRs #8 (bobbleheads + holotapes), #9 (event core), #10 (settings)
   were done this way. Earlier features were pushed straight to main.
 - The working copy now has CRLF line endings (git autocrlf after pulls): scripted text edits must
-  normalize `
+  normalize `
 ` first (the Edit tool is fine).
 - Bump `CACHE` in `sw.js` when files are added/removed; add new app files to `APP_SHELL`.
 - Code the owner brings from other AIs (Grok, ChatGPT): diff it against the repo, test it, and take
@@ -169,7 +174,14 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 - After the feedback, one small step at a time; top candidate: a weekly summary (`historySummary(7)`)
   as a line in the RobCo boot. Then, if wanted, event-driven quest objectives.
 - The owner brings prompts from ChatGPT/Grok: review them against the code and keep only what fits
-  (ChatGPT's 8-phase "event OS" rewrite was declined in favour of the light event core, PR #9).
+  (ChatGPT's 8-phase "event OS" rewrite was declined in favour of the light event core, PR #9; a
+  forensic "PIBBOY 2.0" audit prompt was answered with a short read-only audit instead, which found
+  the data layer solid and led to the `safety-fixes` PR).
+- **The mascot**: the owner plans to remove it completely (said 2026-09-25), so mascot reactions to
+  rewards were declined. If confirmed, removing it touches: `index.html` (`#mascot`), `js/mascot.js`,
+  `images/mascot.png`, the `.mascot*` rules and keyframes in `css/terminal.css`, `js/tilt.js`
+  (its `mascot` layer), `js/events.js` (`ST.mascot.onTab`), `js/main.js` (`ST.mascot.init`),
+  `sw.js` `APP_SHELL`, README/HANDOFF.
 - Deferred: "PIBBOY 2.0" roadmap (reward engine, custom skills with XP, weekly/auto quests,
   achievements, dashboard). Owner chose to polish V1 first.
 
@@ -180,9 +192,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
    (e.g. a line in the RobCo boot), bobbleheads based on events.
 
 1. Collect the owner's phone feedback and adjust: `canvas.item-model` size in `css/terminal.css`,
-   `.crt-glare` opacity, `.device-plate` opacity, `mascotScout` keyframes.
-2. If approved, build the **SETTINGS** section (render.js + events.js + css), keeping the element ids
-   `tilt-btn`, `sound-btn`, `power-btn`, `sounds-btn` so `tilt.js`/`sfx.js` keep working; add tests.
+   `.crt-glare` opacity, `.device-plate` opacity.
+2. (Done: the SETTINGS panel, PR #10.)
 3. Extend `CAPS_OBJECTIVE` in `state.js` with French verbs (obtenir|avoir|atteindre|gagner) — a new
    one-time migration flag is needed since `capsQuestsLinked` is already set on existing saves.
 4. (Done: caps quests re-sync after import, reset and another window's save.)

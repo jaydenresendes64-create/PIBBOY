@@ -66,6 +66,36 @@ test('the bar follows the wallet, and reaching the target completes the quest on
   assert.equal(quest.progress, 100);
 });
 
+test('a main quest at 100% waits for its Complete button; a streak quest never does', () => {
+  const { ST } = loadApp();
+  ST.app.state = ST.defaultState();
+  const caps = ST.app.state.quests.mains[0];
+  const percent = { id: 'm2', progressType: 'percent', progress: 99, xp: 500, completed: false, skillGains: [], bonus: [] };
+  const streak = { id: 'm3', progressType: 'streak', progress: 0, streakTarget: 1, streakDays: 1, xp: 100, completed: false, skillGains: [], bonus: [] };
+  ST.app.state.quests.mains.push(percent, streak);
+
+  assert.equal(ST.mainReady(percent), false);
+  percent.progress = 100;                             // the slider slipped to the end
+  assert.equal(ST.mainReady(percent), true);
+  assert.equal(percent.completed, false);             // reaching 100% pays nothing by itself
+  assert.equal(ST.app.state.lifetimeXp, 0);
+
+  assert.equal(ST.mainReady(caps), false);
+  ST.app.state.finances.holdings = [{ id: 'h1', label: 'CASH', amount: 50000, rateToCAD: 1 }];   // a zero too many
+  assert.equal(ST.syncCapsQuests().length, 1);
+  assert.equal(ST.mainReady(caps), true);
+  assert.equal(caps.completed, false);
+  ST.app.state.finances.holdings[0].amount = 500;     // fixed before any tap: not ready any more
+  ST.syncCapsQuests();
+  assert.equal(ST.mainReady(caps), false);
+  assert.equal(ST.app.state.lifetimeXp, 0);
+
+  assert.ok(ST.completeMain(percent));                // the tap on Complete
+  assert.equal(ST.mainReady(percent), false);         // done: no button any more
+  assert.equal(ST.mainReady(streak), false);          // completes with its last check-in instead
+  assert.equal(ST.mainReady(null), false);
+});
+
 test('a caps quest survives a backup round trip; a broken target falls back to 5', () => {
   const { ST } = loadApp();
   const s = ST.defaultState();

@@ -30,7 +30,8 @@ const FILES = {
   radar: ['js/state.js', 'js/places.js', 'js/radar.js'],
   holotapes: ['js/state.js', 'js/holotapes.js'],
   storage: ['js/state.js', 'js/storage.js'],
-  render: ['js/state.js', 'js/storage.js', 'js/ai.js', 'js/render.js']
+  render: ['js/state.js', 'js/storage.js', 'js/ai.js', 'js/render.js'],
+  events: ['js/state.js', 'js/storage.js', 'js/ai.js', 'js/render.js', 'js/events.js']
 };
 
 // ---------- fake localStorage, shared between windows ----------

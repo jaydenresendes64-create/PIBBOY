@@ -73,6 +73,25 @@ test('hostile ids and numbers that skipped sanitizeImported stay inert', () => {
   assert.ok(html.includes('data-id="&quot;&gt;&lt;img src=x onerror=alert(1)&gt;"'));
 });
 
+test('a main quest at 100% shows its Complete button; below 100%, done or a streak: none to tap', () => {
+  const quest = (id, fields) => Object.assign({ id, questName: id, title: 'Objective', progressType: 'percent',
+    progress: 0, xp: 700, completed: false, skillGains: [], bonus: [] }, fields);
+  const html = renderEverything(ST => {
+    const s = ST.defaultState();
+    s.quests.mains.push(quest('full', { progress: 100 }), quest('half', { progress: 50 }),
+      quest('done', { progress: 100, completed: true }),
+      quest('days', { progressType: 'streak', streakTarget: 7, streakDays: 0, lastCheckIn: null }));
+    return s;
+  });
+  const button = id => (html.match(new RegExp('<button class="main-complete-btn" data-action="main-complete" data-id="' + id + '"[^>]*>')) || [null])[0];
+  assert.doesNotMatch(button('full'), / hidden/);
+  assert.match(button('half'), / hidden/);           // there, for the slider to show at 100%
+  assert.match(button('m1'), / hidden/);             // the Caps goal, with an empty wallet
+  assert.equal(button('done'), null);
+  assert.equal(button('days'), null);
+  assert.ok(html.includes('Complete quest &middot; +700 XP'));
+});
+
 test('a normal state renders its numbers as before', () => {
   const html = renderEverything(ST => {
     const s = ST.defaultState();

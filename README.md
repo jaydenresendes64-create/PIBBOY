@@ -36,8 +36,11 @@ how to find them. A save from before them finds the ones it already earned, all 
 
 Main quests track their progress three ways: a **percentage** slider, a **day streak** (one check-in a
 day; missing a day starts it over), or a **Caps goal**: the bar follows the wallet by itself (`1.50 / 5 CAPS`)
-and the quest completes on its own when the wallet reaches the target. A quest saved before Caps goals
-existed whose objective is a Caps amount ("Obtain 5 Caps") switches to one automatically, once.
+up to the target. A quest saved before Caps goals existed whose objective is a Caps amount ("Obtain 5
+Caps") switches to one automatically, once. A percentage or Caps quest at 100% never completes by
+itself: a **COMPLETE QUEST · +XP** button appears, and its tap pays the reward. A slip of the finger on
+the slider, or a typo in the wallet, pays nothing (slide back, or fix the wallet, and the button goes).
+A streak quest completes with the check-in that reaches its target.
 
 Side quests can raise a skill too: **+3** of the skill picked when adding one (the first four: KNOWLEDGE,
 FINANCE, SURVIVAL, MUSIC), given once with the XP. Daily quests give XP only. Skills otherwise come from
@@ -121,7 +124,8 @@ in the app to bring it over.
 
 The **⚙** in the topbar (beside the date) opens Settings, over the app: **Display** (3D tilt, the
 power-on screen and its RobCo boot), **Sound** (sound on/off, Custom sounds), **Data** (Export backup
-= RadAway, with the last backup's date; Import backup; Reset everything, which asks first) and
+= RadAway, with the last backup's date; Import backup; Reset progress, which asks first; holotapes and
+custom sounds are in neither the backup nor the reset, they stay on the device, and it says so) and
 **About** (the journal's analysis mode and the credits). Each setting is a whole row to tap, its
 state shown as `[ ON ]` / `[ OFF ]`. × , Escape or a tap outside closes it.
 
