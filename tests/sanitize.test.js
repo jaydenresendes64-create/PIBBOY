@@ -22,7 +22,8 @@ function fullState() {
     completed: false, skillGains: [{ skill: 'SURVIVAL', amount: 3 }], bonus: [], streakTarget: 30, streakDays: 12, lastCheckIn: '2026-9-23' });
   s.quests.mains.push({ id: 'xdone', questName: '', title: 'Old', progressType: 'percent', progress: 100, xp: 50, completed: true, skillGains: [], bonus: [] });
   s.quests.side[0].done = true;
-  s.quests.side.push({ id: 'xlong', questName: 'Q'.repeat(60), name: 'objective '.repeat(80), xp: 500, done: false });
+  s.quests.side.push({ id: 'xlong', questName: 'Q'.repeat(60), name: 'objective '.repeat(80), xp: 500, done: false,
+    skillGains: [{ skill: 'COOKING', amount: 3 }] });
   s.quests.daily[1].lastDate = '2026-9-24';
   s.inventory.push({ id: 'xitem', name: 'item '.repeat(200), category: 'AID' });
   s.finances.holdings = [{ id: 'xh', label: 'A wallet label much longer than sixty characters, to be sure nothing is cut', amount: -12.345, rateToCAD: 0.0071 }];
@@ -155,6 +156,15 @@ test('unknown categories, skills in gains, and junk list entries', () => {
   assert.equal(out.inventory.length, s.inventory.length - 4);
   assert.deepEqual(out.quests.mains[0].skillGains.map(g => g.skill), ['FINANCE', 'BUSINESS']);   // no S.P.E.C.I.A.L., no junk
   assert.equal(out.quests.side.length, 5);
+});
+
+test('side quests: skill gains cleaned like a main quest\'s', () => {
+  const s = fullState();
+  s.quests.side[1].skillGains = [{ skill: 'MUSIC', amount: '2' }, { skill: 'AGI', amount: 1 }, { skill: '<b>', amount: 1 }, null, 'x'];
+  s.quests.side[4].skillGains = 'lots';                 // not a list: none (it isn't one of the first four)
+  const out = sanitize(s);
+  assert.deepEqual(out.quests.side[1].skillGains, [{ skill: 'MUSIC', amount: 2 }]);
+  assert.deepEqual(out.quests.side[4].skillGains, []);
 });
 
 test('log: only the latest 200 kept, lifetime counter counts all of them', () => {

@@ -490,7 +490,8 @@ button{ cursor:pointer; }
 /* A very long word (a pasted link, a name without spaces) wraps instead of
    pushing the XP, the amount or the remove button out of its row. */
 .quest-name, .inv-item > span, .wallet-label, .log-text, .log-xp{ min-width:0; overflow-wrap:anywhere; }
-.quest-xp{ font-size:0.72rem; color:var(--text-dim); white-space:nowrap; }
+.quest-xp{ font-size:0.72rem; color:var(--text-dim); white-space:nowrap; text-align:right; }
+.quest-gain{ display:block; font-size:0.66rem; color:var(--amber-dim); }
 .complete-btn{
   width:30px; height:30px; border:1px solid var(--phosphor-dim); border-radius:50%;
   color:var(--phosphor);
@@ -566,7 +567,7 @@ button{ cursor:pointer; }
 .add-row input#new-wallet-amount{ width:96px; }                /* "Amount" shows in full at 375px */
 .add-row input[hidden]{ display:none; }
 .add-row select{ flex:0 0 auto; }
-.add-row select#new-main-type{ flex:1 1 120px; }
+.add-row select#new-main-type, .add-row select#new-quest-skill{ flex:1 1 120px; }
 .add-row input#new-main-xp, .add-row input#new-main-days{ width:72px; }
 .days-field{ display:flex; align-items:center; gap:6px; }
 .days-field[hidden]{ display:none; }

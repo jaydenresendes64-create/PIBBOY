@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of commit `8d299ab` (2026-09-24). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-154/154 tests pass locally and on GitHub Actions. `sw.js` cache: `v12`.
+158/158 tests pass locally and on GitHub Actions. `sw.js` cache: `v12`.
 
 ## 1. What it is
 
@@ -45,7 +45,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   skills (CONCENTRATION, KNOWLEDGE, SPEECH, SURVIVAL, COOKING, FINANCE, MUSIC, BUSINESS; −/+ allowed),
   Lifetime stats.
 - QUESTS: several main quests (types **percent** slider, **streak** daily check-in, **caps** goal
-  that follows the wallet and self-completes), bonus objectives, side and daily quests, quest names
+  that follows the wallet and self-completes), bonus objectives, side quests (XP + one skill +3)
+  and daily quests (XP), quest names
   (tap to rename), completion animation + banners, confirmations before removing.
 - ITEMS: categories SELL ("THINGS TO SELL", price + Sold → CASH + 25 XP + journal line), APPAREL,
   AID, MISC, IMPORTANT (WEAPONS migrated to MISC); move between categories; wallet holdings with
@@ -73,9 +74,10 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 6. Heavy libraries (MapLibre, Three.js) are vendored, pinned, and loaded only when their tab opens.
 7. Plain scripts rather than ES modules so the app still runs from `file://`.
 8. S.P.E.C.I.A.L. keeps its 5 stats: **no LUK** (the owner doesn't believe in luck); PER only if the
-   owner asks (maybe later). Skills come only from Analyze, the −/+ buttons and main quests'
-   `skillGains`; side and daily quests give **XP only** (owner declined automatic skill gains,
-   2026-09-24).
+   owner asks (maybe later). Skills come from Analyze, the −/+ buttons and quests' `skillGains`:
+   main quests, and **side quests** (+3 of one skill, `SIDE_SKILL_GAIN`, paid once by
+   `completeSide()`; s1–s4 got theirs by migration). **Daily quests give XP only** (owner's choice
+   2026-09-24: +1/day would max skills in months).
 
 ## 5. Workflow
 
@@ -87,7 +89,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 - Code the owner brings from other AIs (Grok, ChatGPT): diff it against the repo, test it, and take
   only the good parts; never paste whole files over newer ones. Grok's first `sw.js` broke opening
   offline (fixed before merging); its later "places worker" and "PER/LUK + quest skillGains" passes
-  weren't merged (the owner declined both; see decision 8).
+  weren't merged as files (the owner declined PER/LUK and daily skill gains; side-quest skill gains
+  were rewritten here, see decision 8).
 - Local-only, never pushed: `.claude/` (test server `serve.ps1` on port 8766 with a PUT helper that
   saves to `.claude/out/`; copies of the source video/mp3), `PIBBOY-upload.zip`, `.env.example`
   (excluded via `.git/info/exclude`). The owner's sound pack is at `Desktop\pibboy-sound-pack.json`

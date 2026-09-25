@@ -77,7 +77,8 @@ test('a normal state renders its numbers as before', () => {
     s.finances.holdings = [{ id: 'h1', label: 'USDT', amount: 855.8, rateToCAD: 1.406 }];
     return s;
   });
-  assert.ok(html.includes('+150 XP'));
+  assert.ok(html.includes('+150 XP<span class="quest-gain">+3 KNOWLEDGE</span>'));
+  assert.ok(html.includes('<option value="MUSIC">+3 MUSIC</option>'));        // the add row's skill menu
   assert.ok(html.includes('value="1.406"'));
   assert.ok(html.includes('$1,203.25'));
   assert.ok(html.includes('1.20 CAPS'));

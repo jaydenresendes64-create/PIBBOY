@@ -179,6 +179,13 @@
     '</div>';
   }
 
+  // A side quest's skill gains, under its XP: "+3 KNOWLEDGE".
+  function gainsHtml(gains){
+    return (gains || []).map(function(g){
+      return '<span class="quest-gain">+'+num(g.amount)+' '+escapeHtml(g.skill)+'</span>';
+    }).join('');
+  }
+
   function mainQuestHtml(m){
     var bonus = m.bonus || [];
     var streak = m.progressType==='streak';
@@ -259,7 +266,7 @@
         html += '<div class="quest-item">'+
           '<button class="complete-btn" data-action="quest-complete" data-id="'+attr(q.id)+'" aria-label="Complete: '+about(q.questName, q.name)+'">&#10003;</button>'+
           questTextHtml('side', q)+
-          '<span class="quest-xp">+'+num(q.xp)+' XP</span>'+
+          '<span class="quest-xp">+'+num(q.xp)+' XP'+gainsHtml(q.skillGains)+'</span>'+
           '<button class="remove-btn" data-action="quest-remove" data-id="'+attr(q.id)+'" aria-label="Remove: '+about(q.questName, q.name)+'">&times;</button>'+
         '</div>'+
         removeConfirmHtml('side', q.id, 'Remove this quest?');
@@ -270,6 +277,10 @@
       '<input type="text" class="field-full" id="new-quest-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
       '<input type="text" class="field-objective" id="new-quest-objective" placeholder="Objective..." required aria-label="Objective">'+
       '<input type="number" id="new-quest-xp" value="100" min="5" max="500" aria-label="XP reward">'+
+      '<select id="new-quest-skill" aria-label="Skill it raises">'+
+        '<option value="">No skill</option>'+
+        ST.SKILL_KEYS.map(function(k){ return '<option value="'+k+'">+'+ST.SIDE_SKILL_GAIN+' '+k+'</option>'; }).join('')+
+      '</select>'+
       '<button id="add-quest-btn">Add</button>'+
     '</div>';
 
@@ -492,7 +503,12 @@
   // Sounds (js/sfx.js) are decoration: the app runs without them.
   function sound(name, delay){ if (ST.sfx) ST.sfx.play(name, delay); }
 
-  function showXpToast(amount){ toast('xp-toast', '+'+amount+' XP', 1400); }
+  // "+150 XP", and a quest's skill gains after it: "+150 XP · +3 KNOWLEDGE".
+  function showXpToast(amount, skillGains){
+    var gains = (skillGains || []).map(function(g){ return ' · +'+num(g.amount)+' '+g.skill; }).join('');
+    if (!gains){ toast('xp-toast', '+'+amount+' XP', 1400); return; }
+    toast('xp-toast', '+'+amount+' XP'+gains, 2200).style.animationDuration = '2.2s';   // longer to read
+  }
   // After the check's blip, so the two don't sound on top of each other.
   function showLevelUp(){ sound('levelUp', 0.2); toast('levelup-banner', 'LEVEL UP — '+app.state.level, 2200); }
   // The name in its own box: when the banner needs two lines, it breaks

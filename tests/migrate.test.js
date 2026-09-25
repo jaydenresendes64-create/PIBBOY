@@ -114,6 +114,24 @@ test('streak version (still SCIENCE): streak fields kept', () => {
   assert.deepEqual(m.skillGains, [{ skill: 'CONCENTRATION', amount: 1 }]);
 });
 
+test('side quests from before skill gains: the first four get theirs, others none, nothing paid', () => {
+  const doc = JSON.parse(JSON.stringify(V1_SINGLE_FILE));
+  doc.quests.side.push({ id: 's2', name: 'Build up savings', xp: 100, done: true },
+    { id: 's3', name: 'Get back into consistent training', xp: 100, done: false },
+    { id: 's4', name: 'Push the music project forward', xp: 100, done: false });
+  const s = load(doc);
+  const gain = skill => [{ skill, amount: 3 }];
+  assert.deepEqual(s.quests.side.map(q => [q.id, q.done, q.skillGains]), [
+    ['s1', false, gain('KNOWLEDGE')], ['x1abc', true, []], ['s2', true, gain('FINANCE')],
+    ['s3', false, gain('SURVIVAL')], ['s4', false, gain('MUSIC')]]);
+  assert.deepEqual([s.skills.KNOWLEDGE, s.skills.FINANCE, s.skills.SURVIVAL, s.skills.MUSIC], [0, 17, 23, 35]);
+  assert.equal('skillGains' in s.quests.daily[0], false);          // daily quests: XP only
+
+  // Once: a side quest that has its list keeps it as it is.
+  s.quests.side[0].skillGains = [];
+  assert.deepEqual(load(s).quests.side[0].skillGains, []);
+});
+
 test('current version passes through unchanged', () => {
   const current = app.plain(ST.defaultState());
   current.quests.mains[0].progress = 30;

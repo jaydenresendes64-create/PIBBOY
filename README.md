@@ -14,6 +14,10 @@ day; missing a day starts it over), or a **Caps goal**: the bar follows the wall
 and the quest completes on its own when the wallet reaches the target. A quest saved before Caps goals
 existed whose objective is a Caps amount ("Obtain 5 Caps") switches to one automatically, once.
 
+Side quests can raise a skill too: **+3** of the skill picked when adding one (the first four: KNOWLEDGE,
+FINANCE, SURVIVAL, MUSIC), given once with the XP. Daily quests give XP only. Skills otherwise come from
+Analyze and the − / + buttons.
+
 Plain HTML, CSS and JavaScript: no framework, no build step.
 
 **Hosted on GitHub Pages:** https://jaydenresendes64-create.github.io/PIBBOY/

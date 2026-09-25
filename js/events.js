@@ -21,8 +21,8 @@
   function addXp(amount){
     showXp(amount, ST.gainXp(amount));
   }
-  function showXp(amount, leveled){
-    R.showXpToast(Number(amount)||0);
+  function showXp(amount, leveled, skillGains){
+    R.showXpToast(Number(amount)||0, skillGains);
     if (leveled) R.showLevelUp();
     renderHeader();
   }
@@ -68,7 +68,9 @@
     var q = readNewQuest('new-quest');
     if (!q) return;
     var xp = readWhole('new-quest-xp', 100, 5, 500);
-    app.state.quests.side.push({id:genId(),questName:q.questName,name:q.objective,xp:xp,done:false});
+    var skill = el('new-quest-skill').value;
+    var gains = ST.SKILL_KEYS.indexOf(skill)!==-1 ? [{skill:skill, amount:ST.SIDE_SKILL_GAIN}] : [];
+    app.state.quests.side.push({id:genId(),questName:q.questName,name:q.objective,xp:xp,done:false,skillGains:gains});
     R.clearTyped('new-quest-');
     renderQuests(); scheduleSave();
   }
@@ -121,7 +123,7 @@
     var reward = ST.completeMain(m);
     if (!reward) return;
     R.showQuestCompleted(m.questName || m.title);
-    showXp(reward.xp, reward.leveled);
+    showXp(reward.xp, reward.leveled, reward.skillGains);
     renderStatus();
   }
   // A streak quest's check-in, once a day; reaching the target completes it.
@@ -441,7 +443,8 @@
           renderStatus(); scheduleSave();
         } else if (action==='quest-complete'){
           var q = findQuest('side', id);
-          if (q && !q.done){ q.done=true; addXp(q.xp); afterCheck(actionBtn); }
+          var reward = q && ST.completeSide(q);
+          if (reward){ showXp(reward.xp, reward.leveled, reward.skillGains); afterCheck(actionBtn); }
         } else if (action==='quest-remove'){
           askRemove('side', id);
         } else if (action==='daily-toggle'){

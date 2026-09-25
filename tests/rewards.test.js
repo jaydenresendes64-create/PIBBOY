@@ -85,7 +85,8 @@ test('completeMain: XP and skill gains once', () => {
   const s = fresh();
   const m = s.quests.mains[0];                     // 1000 XP, FINANCE +8, BUSINESS +2
   const reward = ST.completeMain(m);
-  assert.deepEqual(app.plain(reward), { xp: 1000, leveled: true });
+  assert.deepEqual(app.plain(reward), { xp: 1000, leveled: true,
+    skillGains: [{ skill: 'FINANCE', amount: 8 }, { skill: 'BUSINESS', amount: 2 }] });
   assert.equal(m.completed, true);
   assert.deepEqual([s.skills.FINANCE, s.skills.BUSINESS, s.lifetimeXp], [25, 7, 1000]);
   assert.equal(ST.completeMain(m), null);          // a second time: nothing
@@ -95,8 +96,29 @@ test('completeMain: XP and skill gains once', () => {
 test('completeMain: a quest without XP or gains', () => {
   const s = fresh();
   const reward = ST.completeMain({ completed: false });
-  assert.deepEqual(app.plain(reward), { xp: 0, leveled: false });
+  assert.deepEqual(app.plain(reward), { xp: 0, leveled: false, skillGains: [] });
   assert.equal(s.lifetimeXp, 0);
+});
+
+test('completeSide: XP and its skill once; daily quests stay XP only', () => {
+  const s = fresh();
+  const q = s.quests.side[0];                      // Paper Trail: 150 XP, KNOWLEDGE +3
+  const reward = ST.completeSide(q);
+  assert.deepEqual(app.plain(reward), { xp: 150, leveled: false, skillGains: [{ skill: 'KNOWLEDGE', amount: 3 }] });
+  assert.equal(q.done, true);
+  assert.deepEqual([s.skills.KNOWLEDGE, s.lifetimeXp], [13, 150]);
+  assert.equal(ST.completeSide(q), null);          // a second time: nothing
+  assert.deepEqual([s.skills.KNOWLEDGE, s.lifetimeXp], [13, 150]);
+  assert.ok(s.quests.daily.every(d => !('skillGains' in d)));
+});
+
+test('completeSide: a side quest without skill gains gives its XP only', () => {
+  const s = fresh();
+  const skills = JSON.stringify(s.skills);
+  assert.deepEqual(app.plain(ST.completeSide({ xp: 100, done: false, skillGains: [] })), { xp: 100, leveled: false, skillGains: [] });
+  assert.deepEqual(app.plain(ST.completeSide({ xp: 40, done: false })), { xp: 40, leveled: false, skillGains: [] });
+  assert.equal(JSON.stringify(s.skills), skills);
+  assert.equal(s.lifetimeXp, 140);
 });
 
 test('addLogEntry: log capped at 200, lifetime counter keeps counting', () => {

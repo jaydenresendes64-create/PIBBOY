@@ -14,7 +14,8 @@
  *                                           // CONCENTRATION was SCIENCE: see migrate()
  *   quests: {
  *     mains: [ MainQuest ],                  // older saves had one, as `main`: see migrate()
- *     side:  [ { id, questName, name, xp, done } ],  // done ones stay, hidden, for the Lifetime count
+ *     side:  [ { id, questName, name, xp, done,      // done ones stay, hidden, for the Lifetime count
+ *                skillGains: [SkillGain] } ],        // paid once with the XP (completeSide); see migrate()
  *     daily: [ { id, questName, name, xp, lastDate:'YYYY-M-D'|null } ]  // done today: dailyDoneToday()
  *   },
  *   inventory: [ { id, name, category: one of CATS,     // WEAPONS is gone: see migrate()
@@ -61,8 +62,8 @@
  *
  * Every reward path (quest completion, bonus objective, journal proposal)
  * should express its reward as XP plus zero or more SkillGains, and apply
- * them through grantSkill()/gainXp() (completeMain() does both for a main
- * quest) rather than touching state.skills / state.xp directly — that's
+ * them through grantSkill()/gainXp() (completeMain() and completeSide() do
+ * both for a quest) rather than touching state.skills / state.xp directly — that's
  * what keeps the bounds checks and lifetime counters in one place instead
  * of duplicated at each call site. events.js adds the toasts (addXp()).
  * Selling an item (sellItem()) is one of them too: SALE_XP, plus the money
@@ -102,6 +103,7 @@
   var CAT_LABELS = {SELL:'THINGS TO SELL'};
   var SALE_XP = 25;
   var CAD_PER_CAP = 1000;
+  var SIDE_SKILL_GAIN = 3;      // the skill points a side quest gives (its skill picked when added)
   var QUEST_NAME_MAX = 60;
   var STREAK_MAX_DAYS = 1000;
   var LOG_MAX = 200;
@@ -140,10 +142,10 @@
         ]}
       ],
       side:[
-        {id:'s1',questName:'Paper Trail',name:'Earn a certification',xp:150,done:false},
-        {id:'s2',questName:'Pennies from Heaven',name:'Build up savings',xp:100,done:false},
-        {id:'s3',questName:'Back in the Saddle',name:'Get back into consistent training',xp:100,done:false},
-        {id:'s4',questName:'Sing, Sing, Sing',name:'Push the music project forward',xp:100,done:false}
+        {id:'s1',questName:'Paper Trail',name:'Earn a certification',xp:150,done:false,skillGains:[{skill:'KNOWLEDGE',amount:3}]},
+        {id:'s2',questName:'Pennies from Heaven',name:'Build up savings',xp:100,done:false,skillGains:[{skill:'FINANCE',amount:3}]},
+        {id:'s3',questName:'Back in the Saddle',name:'Get back into consistent training',xp:100,done:false,skillGains:[{skill:'SURVIVAL',amount:3}]},
+        {id:'s4',questName:'Sing, Sing, Sing',name:'Push the music project forward',xp:100,done:false,skillGains:[{skill:'MUSIC',amount:3}]}
       ],
       daily:[
         {id:'d1',questName:'Shake, Rattle and Roll',name:'Move your body',xp:20,lastDate:null},
@@ -223,10 +225,24 @@
     if (!doc || typeof doc!=='object') return doc;
     migrateMainQuests(doc.quests);
     linkCapsQuests(doc);
+    migrateSideQuests(doc.quests);
     migrateSkills(doc);
     migrateInventory(doc);
     migrateMap(doc);
     return doc;
+  }
+  // Side quests from before their skill gains: the app's first four (s1-s4,
+  // whose objectives can't be edited: certification, savings, training,
+  // music) get theirs, any other none. Once a quest has the list, it's left
+  // alone. One already done isn't paid again.
+  var FIRST_SIDE_SKILLS = {s1:'KNOWLEDGE', s2:'FINANCE', s3:'SURVIVAL', s4:'MUSIC'};
+  function migrateSideQuests(quests){
+    var side = quests && typeof quests==='object' && Array.isArray(quests.side) ? quests.side : [];
+    side.forEach(function(q){
+      if (!q || typeof q!=='object' || Array.isArray(q.skillGains)) return;
+      var skill = has(FIRST_SIDE_SKILLS, q.id) ? FIRST_SIDE_SKILLS[q.id] : null;
+      q.skillGains = skill ? [{skill:skill, amount:SIDE_SKILL_GAIN}] : [];
+    });
   }
   // Main quests from before "caps" quests whose objective is a Caps amount
   // ("Obtain 5 Caps") start following the wallet, once: after that the
@@ -495,9 +511,20 @@
   function completeMain(m){
     if (m.completed) return null;
     m.completed = true;
-    (m.skillGains||[]).forEach(function(g){ grantSkill(g.skill, g.amount); });
-    var xp = Number(m.xp)||0;
-    return {xp:xp, leveled:gainXp(xp)};
+    return payQuest(m);
+  }
+  // Completes a side quest the same way: its XP and skill gains, once.
+  function completeSide(q){
+    if (q.done) return null;
+    q.done = true;
+    return payQuest(q);
+  }
+  // {xp, leveled, skillGains} for the toasts.
+  function payQuest(q){
+    var gains = q.skillGains || [];
+    gains.forEach(function(g){ grantSkill(g.skill, g.amount); });
+    var xp = Number(q.xp)||0;
+    return {xp:xp, leveled:gainXp(xp), skillGains:gains};
   }
 
   // ---------- checking a document ----------
@@ -532,6 +559,10 @@
   }
   function fixDoneQuest(q){ fixQuest(q); q.done = q.done===true; }
   function fixQuestName(q){ q.questName = text(q.questName, QUEST_NAME_MAX).trim(); }
+  function fixGains(list){
+    return records(list, function(g){ g.amount = num(g.amount, 0); })
+      .filter(function(g){ return SKILL_KEYS.indexOf(g.skill)!==-1; });
+  }
 
   // Returns a clean state document, or null when `raw` isn't a state document
   // of this app (a backup, or a saved copy).
@@ -561,11 +592,14 @@
       }
       m.xp = Math.max(0, num(m.xp, 0));
       m.completed = m.completed===true;
-      m.skillGains = records(m.skillGains, function(g){ g.amount = num(g.amount, 0); })
-        .filter(function(g){ return SKILL_KEYS.indexOf(g.skill)!==-1; });
+      m.skillGains = fixGains(m.skillGains);
       m.bonus = records(m.bonus, fixDoneQuest);
     });
-    s.quests.side = records(s.quests.side, function(q){ fixDoneQuest(q); fixQuestName(q); });
+    s.quests.side = records(s.quests.side, function(q){
+      fixDoneQuest(q);
+      fixQuestName(q);
+      q.skillGains = fixGains(q.skillGains);
+    });
     s.quests.daily = records(s.quests.daily, function(q){
       fixQuest(q);
       fixQuestName(q);
@@ -661,6 +695,7 @@
   ST.SKILL_KEYS = SKILL_KEYS;
   ST.CATS = CATS;
   ST.SALE_XP = SALE_XP;
+  ST.SIDE_SKILL_GAIN = SIDE_SKILL_GAIN;
   ST.CAD_PER_CAP = CAD_PER_CAP;
   ST.QUEST_NAME_MAX = QUEST_NAME_MAX;
   ST.STREAK_MAX_DAYS = STREAK_MAX_DAYS;
@@ -703,6 +738,7 @@
   ST.grantStat = grantStat;
   ST.gainXp = gainXp;
   ST.completeMain = completeMain;
+  ST.completeSide = completeSide;
   ST.sellItem = sellItem;
   ST.moveItem = moveItem;
   ST.foldName = foldName;
