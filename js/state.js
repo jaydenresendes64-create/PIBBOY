@@ -14,6 +14,8 @@
  *   unspentPerkPoints: number,              // a perk point comes with each level-up too
  *   bobbleheads: { [bobblehead id]: 'YYYY-M-D' },   // the ones found (BOBBLEHEADS), and when
  *   lifetimeDailies: number,                // daily quests done, ever (a bobblehead counts them)
+ *   lifetimeHolotapes: number,              // holotapes recorded, ever (the recordings themselves
+ *                                           // stay on the device: js/holotapes.js)
  *   stats:  { STR,END,CHA,INT,AGI: number(0-10) },   // SPECIAL — see "S.P.E.C.I.A.L." below
  *   skills: { CONCENTRATION,KNOWLEDGE,SPEECH,SURVIVAL,COOKING,FINANCE,MUSIC,BUSINESS: number(0-100) },
  *                                           // CONCENTRATION was SCIENCE: see migrate()
@@ -146,6 +148,7 @@
     unspentPerkPoints:0,
     bobbleheads:{},
     lifetimeDailies:0,
+    lifetimeHolotapes:0,
     stats:{STR:4,END:3,CHA:4,INT:5,AGI:2},
     skills:{CONCENTRATION:21,KNOWLEDGE:10,SPEECH:42,SURVIVAL:23,COOKING:8,FINANCE:17,MUSIC:35,BUSINESS:5},
     quests:{
@@ -625,7 +628,8 @@
     {id:'specialist', name:'Specialist', how:'A skill at 50', found:function(s){ return highest(s.skills)>=50; }},
     {id:'special', name:'S.P.E.C.I.A.L.ist', how:'A S.P.E.C.I.A.L. stat at 10', found:function(s){ return highest(s.stats)>=10; }},
     {id:'perks', name:'Perk Collector', how:'Take 3 perks', found:function(s){ return Object.keys(s.perks||{}).length>=3; }},
-    {id:'radfree', name:'Rad-Free', how:'Make a backup (RadAway)', found:function(s){ return !!s.lastBackup; }}
+    {id:'radfree', name:'Rad-Free', how:'Make a backup (RadAway)', found:function(s){ return !!s.lastBackup; }},
+    {id:'archivist', name:'Archivist', how:'Record 5 holotapes', found:function(s){ return (s.lifetimeHolotapes||0)>=5; }}
   ];
   // The bobbleheads found by this change: {found: [bobblehead], xp, leveled},
   // or null when there's none new.
@@ -771,6 +775,7 @@
     });
     s.bobbleheads = bobbleheads;
     s.lifetimeDailies = Math.max(0, Math.round(num(s.lifetimeDailies, 0)));
+    s.lifetimeHolotapes = Math.max(0, Math.round(num(s.lifetimeHolotapes, 0)));
     STAT_KEYS.forEach(function(k){ s.stats[k] = clamp(Math.round(num(s.stats[k], 0)), 0, 10); });
     SKILL_KEYS.forEach(function(k){ s.skills[k] = clamp(Math.round(num(s.skills[k], 0)), 0, 100); });
 

@@ -23,6 +23,7 @@
  *   ping      a soft sonar ping: the scanner's sweep crossing a blip (js/radar.js)
  *   perk      a card stamped, then a chord: a perk taken
  *   bobble    a head on a spring, then a jingle: a bobblehead found
+ *   tape      a clack and a motor whir: a holotape recorded or played
  *
  * Browsers only allow sound after a tap: the audio starts on the first one,
  * and anything asked before that is simply skipped. While the app is in the
@@ -280,6 +281,13 @@
       wobble.connect(depth); depth.connect(spring.frequency);
       wobble.start(t); wobble.stop(t+0.92);
       [784, 988, 1175].forEach(function(f, i){ tone('triangle', f, null, t+0.5+i*0.08, 0.3, 0.06); });
+    },
+    tape: function(t){                                                   // a holotape in the deck: clack, whir
+      hiss(t, 0.02, 0.45, 'bandpass', 1300, 1.3, 0.001);
+      tone('sine', 140, 70, t, 0.06, 0.3, 0.002);
+      hiss(t+0.07, 0.02, 0.35, 'bandpass', 2100, 1.3, 0.001);
+      tone('sawtooth', 90, 120, t+0.1, 0.35, 0.03, 0.05);
+      hiss(t+0.1, 0.35, 0.05, 'bandpass', 700, 0.8, 0.05);
     },
     ping: function(t){                                                   // the scanner's sweep crossing a blip
       tone('sine', 1320, null, t, 0.16, 0.05, 0.002);

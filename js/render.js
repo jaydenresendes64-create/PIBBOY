@@ -519,6 +519,7 @@
       '<textarea id="log-input" rows="4" placeholder="What did you do today?" aria-label="Journal entry"></textarea>'+
       '<button id="analyze-btn">Analyze</button>'+
       '<div id="proposal-area"></div>'+
+      '<div id="holotapes"></div>'+                        // js/holotapes.js draws it
       '<div class="panel-title">History</div><div class="log-history">';
     if (state.log.length===0){
       html += '<div class="empty-note">No entries yet.</div>';
@@ -534,6 +535,7 @@
     html += '</div>';
     var tab = el('tab-log');
     keepTyped(tab, function(){ tab.innerHTML = html; });
+    if (ST.holotapes) ST.holotapes.render();
   }
 
   function renderProposal(source){

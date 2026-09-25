@@ -18,13 +18,20 @@ quest · **Creature of Habit** (STR 3) daily quests +5 XP a rank · **Comprehens
 entries +20% a rank · **Quick Hands** (AGI 3) bonus objectives +25% a rank. A save from before perks
 got the points its level-ups would have given.
 
-**Bobbleheads** (STATUS tab): 15 collectibles for real milestones, found by themselves the moment one
+**Holotapes** (LOG tab): journal entries in your own voice. **Record a holotape** asks for the
+microphone the first time, shows a level meter and the time, and stops by itself after 5 minutes (or
+when the app goes to the background; what was recorded is kept). Each tape plays back on the Pip-Boy
+(its reels turn), can be renamed, shared (the share sheet: Save to Files, AirDrop...) or erased (asks
+first). The recordings stay on this device only, in their own storage: they are not in the backup
+file (too big), so use a tape's Share button to keep a copy.
+
+**Bobbleheads** (STATUS tab): 16 collectibles for real milestones, found by themselves the moment one
 is reached (a banner, a springy sound, +50 XP each): Vault Dweller (level 5), Wasteland Veteran
 (level 10), Devotion (a day-streak quest completed), Capitalist (a Caps goal completed), Merchant (an
 item sold), Errand Runner (10 side quests), Creature of Routine (30 daily quests), Explorer (10
 cities), Globetrotter (places in 5 countries), Road Warrior (1,000 km of routes), Scribe (25 journal
 entries), Specialist (a skill at 50), S.P.E.C.I.A.L.ist (a stat at 10), Perk Collector (3 perks),
-Rad-Free (a backup made). Tap one to see what it is and when it was found; the ones still hidden say
+Rad-Free (a backup made), Archivist (5 holotapes). Tap one to see what it is and when it was found; the ones still hidden say
 how to find them. A save from before them finds the ones it already earned, all at once.
 
 Main quests track their progress three ways: a **percentage** slider, a **day streak** (one check-in a
@@ -63,6 +70,7 @@ js/map.js           the MAP tab (loads MapLibre the first time it's opened)
 js/bulk.js          MAP: "Add several places" (paste a list, review it, reveal it all)
 js/routes.js        MAP: routes (road trips): stops, the road traced once (OSRM), its line and card
 js/radar.js         MAP: the scanner, a radar sweep whose blips are real undiscovered cities
+js/holotapes.js     LOG: holotapes, voice recordings kept on the device (their own IndexedDB)
 vendor/maplibre/    MapLibre GL JS 6.11.2, the map library (licence: vendor/maplibre/LICENSE.txt)
 vendor/three/       Three.js r186, only the parts ITEMS uses (licence: vendor/three/LICENSE)
 js/events.js        user actions

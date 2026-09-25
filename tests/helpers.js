@@ -28,6 +28,7 @@ const FILES = {
   routes: ['js/state.js', 'js/places.js', 'js/fog.js', 'js/routes.js'],
   boot: ['js/state.js', 'js/weather.js', 'js/boot.js'],
   radar: ['js/state.js', 'js/places.js', 'js/radar.js'],
+  holotapes: ['js/state.js', 'js/holotapes.js'],
   storage: ['js/state.js', 'js/storage.js'],
   render: ['js/state.js', 'js/storage.js', 'js/ai.js', 'js/render.js']
 };

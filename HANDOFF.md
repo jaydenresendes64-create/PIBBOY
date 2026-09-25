@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of commit `8d299ab` (2026-09-24). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-192/192 tests pass locally and on GitHub Actions. `sw.js` cache: `v15`.
+196/196 tests pass locally and on GitHub Actions. `sw.js` cache: `v16`.
 
 ## 1. What it is
 
@@ -84,6 +84,9 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   Bobbleheads (state.js `BOBBLEHEADS`, `findBobbleheads()` +50 XP each; `lifetimeDailies` counter):
   checked after every change through `storage.onChange` (events.js `checkBobbleheads`) and once after
   the boot screens (main.js `afterBoot`). Render test allows only the app's own icon <svg>s.
+  Holotapes (holotapes.js): MediaRecorder (audio/mp4 on iPhone), recordings in IndexedDB
+  `status_terminal_holotapes` (NOT in state/backups; Share per tape), state keeps `lifetimeHolotapes`;
+  CSP `media-src 'self' blob:` for playback.
 - PWA: installable, offline (fonts local, city list precached).
 
 ## 4. Important design decisions
