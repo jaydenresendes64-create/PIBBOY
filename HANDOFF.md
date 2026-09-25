@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of commit `8d299ab` (2026-09-24). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-196/196 tests pass locally and on GitHub Actions. `sw.js` cache: `v16`.
+203/203 tests pass locally and on GitHub Actions. `sw.js` cache: `v16`.
 
 ## 1. What it is
 
@@ -36,8 +36,17 @@ Plain scripts (not ES modules, so `index.html` still opens from disk) sharing
 | `.github/workflows/test.yml` | Runs the tests on every push |
 
 **Code rules (engineering pass, 2026-09-24):**
-- Every reward goes through state.js: `completeMain/Side/Bonus/Daily()` (once, `payQuest()` =
-  skills + `gainXp()`), `sellItem()`, `discoverPlace()`; events.js only shows toasts.
+- **Event core (2026-09-25):** every reward is an event paid through `award(type, data, xp, gains)` in
+  state.js: `withPerks()` applies the perk table, then skills + `gainXp()`, then `record()` appends
+  `{t, type, xp, data}` to `state.history` (EVENT_TYPES, last HISTORY_MAX = 2000; sanitized). The
+  reward functions only say what happened: completeMain/Side/Bonus/Daily, rewardCheckIn, rewardRoute,
+  acceptJournal, sellItem, discoverPlace, findBobbleheads. Milestones without XP call `record()`:
+  LEVEL_UP (in gainXp), PERK_TAKEN, SPECIAL_RAISED (`spendSpecialPoint`), BACKUP_MADE (`markBackup`),
+  HOLOTAPE_RECORDED (`countHolotape`). Queries: `recentEvents(days)`, `historySummary(days)`.
+  The history's XP always adds up to lifetimeXp (for events since it exists).
+- **Perks are data:** each PERKS entry says `on` (an event type) and `xpFlat` / `xpPercent` /
+  `skillFlat` per rank; `text` is generated from those numbers. A new perk = one table entry.
+- events.js never changes XP, skills or stats itself; it asks state.js and shows the toasts.
 - events.js dispatches taps through tables: `ACTIONS` (by `data-action`: `run(btn, id, key)`) and
   `BUTTONS` (by id). A new button = one entry. `replaceState()` (import/reset) and `adoptState()`
   both re-sync caps quests.
@@ -153,6 +162,10 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   achievements, dashboard). Owner chose to polish V1 first.
 
 ## 8. Exact next engineering steps
+
+0. Next on the event core (owner's call): event-driven quest objectives ("reveal 5 cities in Morocco"
+   progressing by themselves from PLACE_DISCOVERED events), a weekly summary from `historySummary(7)`
+   (e.g. a line in the RobCo boot), bobbleheads based on events.
 
 1. Collect the owner's phone feedback and adjust: `canvas.item-model` size in `css/terminal.css`,
    `.crt-glare` opacity, `.device-plate` opacity, `mascotScout` keyframes.

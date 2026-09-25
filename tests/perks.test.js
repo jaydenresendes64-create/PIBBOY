@@ -46,13 +46,16 @@ test('taking a perk: a point, the stat high enough, one rank at a time, up to it
 
 test('perk effects: each changes its own reward, nothing without the perk', () => {
   const s = fresh();
-  assert.equal(ST.rewardRoute(), null);
-  assert.equal(ST.rewardCheckIn(), null);
-  assert.equal(ST.journalXp(30), 30);
+  const route = { name: 'Toronto → Ottawa', km: 450 };
+  assert.equal(ST.rewardRoute(route).xp, 0);                  // recorded, but no XP without Wanderer
+  assert.equal(ST.rewardCheckIn(s.quests.mains[0]).xp, 0);
+  assert.equal(ST.withPerks('JOURNAL_ENTRY', 30).xp, 30);
   s.perks = { wanderer: 2, ironwill: 1, comprehension: 2, cartographer: 1, barter: 1, habit: 3, quickhands: 2, scholar: 1 };
-  assert.equal(ST.rewardRoute().xp, 50);
-  assert.equal(ST.rewardCheckIn().xp, 10);
-  assert.equal(ST.journalXp(30), 42);                         // +40%
+  assert.equal(ST.rewardRoute(route).xp, 50);
+  assert.equal(ST.rewardCheckIn(s.quests.mains[0]).xp, 10);
+  assert.equal(ST.withPerks('JOURNAL_ENTRY', 30).xp, 42);    // +40%
+  assert.equal(ST.acceptJournal({ text: 'Gym', xp: 30, reason: 'Physical activity', skillGains: [] }).xp, 42);
+  assert.equal(s.log[s.log.length - 1].xp, 42);              // the journal line says what it gave
   assert.equal(ST.discoverPlace('c:1', ST.CITY_XP).xp, 63);   // 50 +25%, rounded
   assert.equal(ST.completeDaily(s.quests.daily[0]).xp, 35);   // 20 + 15
   assert.equal(ST.completeBonus(s.quests.mains[0].bonus[0]).xp, 750);   // 500 +50%
@@ -63,6 +66,23 @@ test('perk effects: each changes its own reward, nothing without the perk', () =
   assert.deepEqual(app.plain(side.skillGains), [{ skill: 'KNOWLEDGE', amount: 4 }]);
   assert.equal(s.skills.KNOWLEDGE, 14);
   assert.deepEqual(app.plain(s.quests.side[0].skillGains), [{ skill: 'KNOWLEDGE', amount: 3 }]);   // the quest itself unchanged
+});
+
+test('the perk table: its texts follow its numbers; a perk only touches its own event type', () => {
+  fresh();
+  const perk = id => ST.perkById(id);
+  assert.equal(perk('wanderer').effect(2), 'Each new route: +50 XP');
+  assert.equal(perk('barter').effect(1), 'Selling an item: 2× the XP');
+  assert.equal(perk('barter').effect(2), 'Selling an item: 3× the XP');
+  assert.equal(perk('scholar').effect(2), 'Every skill gain from a quest: +2');
+  assert.equal(perk('comprehension').effect(1), 'Journal entries (Analyze): +20% XP');
+  ST.app.state.perks = { scholar: 2, cartographer: 2 };
+  assert.deepEqual(app.plain(ST.withPerks('QUEST_COMPLETED', 100, [{ skill: 'MUSIC', amount: 3 }, { skill: 'SPEECH', amount: -1 }])),
+    { xp: 100, gains: [{ skill: 'MUSIC', amount: 5 }, { skill: 'SPEECH', amount: -1 }] });   // only positive gains grow
+  assert.deepEqual(app.plain(ST.withPerks('JOURNAL_ENTRY', 20, [{ skill: 'MUSIC', amount: 3 }])),
+    { xp: 20, gains: [{ skill: 'MUSIC', amount: 3 }] });       // Scholar: quests only
+  assert.equal(ST.withPerks('PLACE_DISCOVERED', 100).xp, 150);
+  ST.PERKS.forEach(p => assert.ok(ST.EVENT_TYPES.includes(p.on), p.id + ' reacts to a real event type'));
 });
 
 test('sanitize: only the chart\'s perks, at whole ranks within their ranks', () => {

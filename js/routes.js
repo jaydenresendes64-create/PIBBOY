@@ -283,9 +283,9 @@
       var route = addRoute(p.stops, traced);
       ST.map.changed();
       ST.render.showDiscovered(route.name);
-      // Wanderer: XP for each new route.
-      var reward = ST.rewardRoute();
-      if (reward){
+      // A route is an event (history); Wanderer gives it XP.
+      var reward = ST.rewardRoute(route);
+      if (reward.xp>0){
         ST.render.showXpToast(reward.xp);
         if (reward.leveled) ST.render.showLevelUp();
         ST.render.renderHeader();
