@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of commit `8d299ab` (2026-09-24). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-182/182 tests pass locally and on GitHub Actions. `sw.js` cache: `v15`.
+187/187 tests pass locally and on GitHub Actions. `sw.js` cache: `v15`.
 
 ## 1. What it is
 
@@ -78,6 +78,9 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   (boot.js, `lines()` tested); weather from Open-Meteo for Montréal (weather.js, CSP + footer credit).
   MAP scanner (radar.js): 2D canvas over the map, blips = `candidates()` of the offline city list
   not `covered()` by a revealed place; runs only while on + on screen + app visible.
+  Perks (state.js `PERKS`, `takePerk`, effects inside each reward fn: discoverPlace, sellItem,
+  payQuest (Scholar), completeDaily/Bonus, `journalXp`, `rewardRoute`, `rewardCheckIn`); chart in
+  render.js `perksHtml()`; migration gives old saves level-2 perk points.
 - PWA: installable, offline (fonts local, city list precached).
 
 ## 4. Important design decisions

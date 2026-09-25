@@ -126,11 +126,15 @@
     showXp(reward.xp, reward.leveled, reward.skillGains);
     renderStatus();
   }
-  // A streak quest's check-in, once a day; reaching the target completes it.
+  // A streak quest's check-in, once a day (Iron Will's XP with it);
+  // reaching the target completes it.
   function checkIn(m){
     var result = ST.streakCheckIn(m);
+    if (!result) return false;
+    var bonus = ST.rewardCheckIn();
+    if (bonus) showXp(bonus.xp, bonus.leveled);
     if (result==='target') completeMainQuest(m);
-    return !!result;
+    return true;
   }
   // A price typed in a box: a number of 0 or more, null when the box is
   // empty, undefined when what's in it isn't a price.
@@ -169,7 +173,7 @@
     app.confirmSell = null;
     if (sale){
       R.showSold(sale.name);
-      showXp(ST.SALE_XP, sale.leveled);
+      showXp(sale.xp, sale.leveled);
       renderStatus(); renderLog();
       walletChanged();
       scheduleSave();
@@ -280,10 +284,10 @@
   // ---------- log analysis ----------
   function acceptProposal(){
     if (!app.pendingProposal) return;
-    var p = app.pendingProposal;
-    addXp(p.xp);
+    var p = app.pendingProposal, xp = ST.journalXp(p.xp);      // Comprehension adds to it
+    addXp(xp);
     p.skillGains.forEach(function(g){ grantSkill(g.skill, g.amount); });
-    ST.addLogEntry({date:todayDisplay(), text:p.text, xp:p.xp, reason:p.reason});
+    ST.addLogEntry({date:todayDisplay(), text:p.text, xp:xp, reason:p.reason});
     app.pendingProposal = null;
     renderStatus(); renderLog();
     scheduleSave();
@@ -341,6 +345,7 @@
     app.confirmRemove = null;
     app.confirmMove = null;
     app.confirmSpecial = null;
+    app.confirmPerk = null;
   }
   // A whole new state (a backup, a reset): drawn, caps quests brought up to
   // date with its wallet, and saved.
@@ -440,6 +445,33 @@
       app.confirmSpecial = null;
       renderStatus();
       focusStatus('[data-action="special-assign"][data-key="'+key+'"]');
+    },
+    // Perks: the chart, then a rank of one, only after "Yes".
+    'perk-chart': function(){
+      app.perkChart = !app.perkChart;
+      app.confirmPerk = null;
+      renderStatus();
+      var chart = document.querySelector('.perk-chart');
+      if (chart && chart.scrollIntoView) chart.scrollIntoView({block:'nearest', behavior:ST.stayStill() ? 'auto' : 'smooth'});
+    },
+    'perk-take': function(btn, id, key){
+      if (!ST.perkOpen(key) || (app.state.unspentPerkPoints||0)<=0) return;
+      app.confirmPerk = key;
+      renderStatus();
+      focusStatus('[data-action="perk-no"]');
+    },
+    'perk-yes': function(){
+      var key = app.confirmPerk, rank = key ? ST.takePerk(key) : 0;
+      app.confirmPerk = null;
+      if (rank){ R.showPerk(ST.perkById(key).name, rank); scheduleSave(); }
+      renderStatus();
+      focusStatus('.perk-chart-btn');
+    },
+    'perk-no': function(){
+      var key = app.confirmPerk;
+      app.confirmPerk = null;
+      renderStatus();
+      focusStatus('[data-action="perk-take"][data-key="'+key+'"]');
     },
     'skill': function(btn, id, key){
       grantSkill(key, parseInt(btn.getAttribute('data-dir')||'0', 10));

@@ -157,7 +157,7 @@ test('sellItem: removes the item, adds to CASH, 25 XP and a journal line', () =>
   s.inventory.push({ id: 'g1', name: 'Guitar', category: 'SELL', price: 120 });
   s.finances.holdings = [{ id: 'f1', label: 'USDT', amount: 10, rateToCAD: 1.4 }, { id: 'f2', label: 'Cash', amount: 160.1, rateToCAD: 1 }];
   const sale = ST.sellItem('g1', 110.2);
-  assert.deepEqual(app.plain(sale), { name: 'Guitar', amount: 110.2, leveled: false });
+  assert.deepEqual(app.plain(sale), { name: 'Guitar', amount: 110.2, xp: 25, leveled: false });
   assert.equal(s.inventory.some(i => i.id === 'g1'), false);
   assert.equal(s.finances.holdings[1].amount, 270.3);              // cents, no 270.29999
   assert.equal(s.finances.holdings[0].amount, 10);

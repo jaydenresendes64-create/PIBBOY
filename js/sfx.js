@@ -21,6 +21,7 @@
  *   radaway   a falling whir into a chime: a backup made, the rads drained
  *   key       a small keystroke: each line of the RobCo boot (js/boot.js)
  *   ping      a soft sonar ping: the scanner's sweep crossing a blip (js/radar.js)
+ *   perk      a card stamped, then a chord: a perk taken
  *
  * Browsers only allow sound after a tap: the audio starts on the first one,
  * and anything asked before that is simply skipped. While the app is in the
@@ -261,6 +262,12 @@
         hiss(at, 0.004, 0.45 + Math.random()*0.35, 'highpass', 2800, 0.8, 0.0005);
         tone('square', vary(3100, 0.1), null, at, 0.002, 0.035, 0.0005);
       }
+    },
+    perk: function(t){                                                   // a perk taken: a card stamped, a chord
+      tone('sine', 180, 70, t, 0.12, 0.45, 0.002);
+      hiss(t, 0.05, 0.35, 'lowpass', 900, 0.7, 0.001);
+      [587.33, 739.99, 880].forEach(function(f, i){ tone('square', f, null, t+0.1+i*0.07, 0.12, 0.08); });
+      [587.33, 880, 1174.66].forEach(function(f){ tone('triangle', f, null, t+0.34, 0.7, 0.06, 0.03); });
     },
     ping: function(t){                                                   // the scanner's sweep crossing a blip
       tone('sine', 1320, null, t, 0.16, 0.05, 0.002);

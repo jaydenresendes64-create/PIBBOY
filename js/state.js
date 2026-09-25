@@ -10,6 +10,8 @@
  *   capsQuestsLinked: true,                 // linkCapsQuests() has run on this document (see migrate())
  *   lastBackup: 'YYYY-M-D'|null,            // the day of the last Export backup (the footer's reminder)
  *   unspentSpecialPoints: number,           // level-up points not yet placed
+ *   perks: { [perk id]: rank(1-ranks) },    // the perks taken (PERKS); older saves: see migrate()
+ *   unspentPerkPoints: number,              // a perk point comes with each level-up too
  *   stats:  { STR,END,CHA,INT,AGI: number(0-10) },   // SPECIAL — see "S.P.E.C.I.A.L." below
  *   skills: { CONCENTRATION,KNOWLEDGE,SPEECH,SURVIVAL,COOKING,FINANCE,MUSIC,BUSINESS: number(0-100) },
  *                                           // CONCENTRATION was SCIENCE: see migrate()
@@ -138,6 +140,8 @@
     capsQuestsLinked:true,
     lastBackup:null,
     unspentSpecialPoints:0,
+    perks:{},
+    unspentPerkPoints:0,
     stats:{STR:4,END:3,CHA:4,INT:5,AGI:2},
     skills:{CONCENTRATION:21,KNOWLEDGE:10,SPEECH:42,SURVIVAL:23,COOKING:8,FINANCE:17,MUSIC:35,BUSINESS:5},
     quests:{
@@ -180,7 +184,9 @@
     confirmSell: null,          // id of the item whose sale awaits "Yes"
     confirmRemove: null,        // {kind:'side'|'daily'|'item'|'wallet', id} whose removal awaits "Yes, remove"
     confirmMove: null,          // id of the item whose "Move to" choice is open
-    confirmSpecial: null        // SPECIAL key whose level-up point awaits "Yes"
+    confirmSpecial: null,       // SPECIAL key whose level-up point awaits "Yes"
+    perkChart: false,           // the STATUS tab's perk chart is open
+    confirmPerk: null           // id of the perk whose rank awaits "Yes"
   };
 
   function el(id){ return document.getElementById(id); }
@@ -242,6 +248,7 @@
     migrateMainQuests(doc.quests);
     linkCapsQuests(doc);
     migrateSideQuests(doc.quests);
+    migratePerks(doc);
     migrateSkills(doc);
     migrateInventory(doc);
     migrateMap(doc);
@@ -251,6 +258,13 @@
   // whose objectives can't be edited: certification, savings, training,
   // music) get theirs, any other none. Once a quest has the list, it's left
   // alone. One already done isn't paid again.
+  // Perks came later: a save from before them gets the perk points its
+  // level-ups would have given (one per level since the start, level 2).
+  function migratePerks(doc){
+    if (doc.perks!==undefined) return;
+    doc.perks = {};
+    doc.unspentPerkPoints = Math.max(0, Math.round(Number(doc.level)||2) - 2);
+  }
   var FIRST_SIDE_SKILLS = {s1:'KNOWLEDGE', s2:'FINANCE', s3:'SURVIVAL', s4:'MUSIC'};
   function migrateSideQuests(quests){
     var side = quests && typeof quests==='object' && Array.isArray(quests.side) ? quests.side : [];
@@ -393,8 +407,9 @@
       state.finances.holdings.push(cash);
     }
     cash.amount = cents((Number(cash.amount)||0) + amount/(Number(cash.rateToCAD)||1));
-    addLogEntry({date:todayDisplay(), text:'Sold '+item.name+' for $'+money(amount), xp:SALE_XP, reason:'Item sold'});
-    return {name:item.name, amount:amount, leveled:gainXp(SALE_XP)};
+    var xp = SALE_XP*(1+perkRank('barter'));
+    addLogEntry({date:todayDisplay(), text:'Sold '+item.name+' for $'+money(amount), xp:xp, reason:'Item sold'});
+    return {name:item.name, amount:amount, xp:xp, leveled:gainXp(xp)};
   }
 
   // ---------- places on the map ----------
@@ -418,6 +433,7 @@
     var list = app.state.map.discovered;
     if (list.indexOf(key)!==-1) return null;
     list.push(key);
+    xp = Math.round(xp*(1+0.25*perkRank('cartographer')));
     return {xp:xp, leveled:gainXp(xp)};
   }
 
@@ -540,6 +556,7 @@
       state.level += 1;
       state.xpToNext += 400;
       state.unspentSpecialPoints = (state.unspentSpecialPoints||0) + 1;
+      state.unspentPerkPoints = (state.unspentPerkPoints||0) + 1;
       leveled = true;
     }
     return leveled;
@@ -557,26 +574,85 @@
     q.done = true;
     return payQuest(q);
   }
-  // A main quest's bonus objective: its XP, once.
+  // A main quest's bonus objective: its XP, once (Quick Hands adds to it).
   function completeBonus(b){
     if (b.done) return null;
     b.done = true;
-    return payQuest({xp:b.xp});
+    return payQuest({xp:Math.round((Number(b.xp)||0)*(1+0.25*perkRank('quickhands')))});
   }
   // A daily quest, once a day: its XP only (no skills, the owner's choice:
-  // a skill a day would reach 100 within months).
+  // a skill a day would reach 100 within months). Creature of Habit adds to it.
   function completeDaily(d){
     if (dailyDoneToday(d)) return null;
     d.lastDate = todayStr();
-    return payQuest({xp:d.xp});
+    return payQuest({xp:(Number(d.xp)||0)+5*perkRank('habit')});
   }
-  // {xp, leveled, skillGains} for the toasts.
+  // {xp, leveled, skillGains} for the toasts. Scholar adds to each skill
+  // gain (the gains given are returned, for the toast).
   function payQuest(q){
-    var gains = q.skillGains || [];
+    var scholar = perkRank('scholar');
+    var gains = (q.skillGains || []).map(function(g){
+      return {skill:g.skill, amount:Number(g.amount)>0 ? Number(g.amount)+scholar : g.amount};
+    });
     gains.forEach(function(g){ grantSkill(g.skill, g.amount); });
     var xp = Number(q.xp)||0;
     return {xp:xp, leveled:gainXp(xp), skillGains:gains};
   }
+
+  // ---------- perks ----------
+  // A perk point comes with each level-up, like the S.P.E.C.I.A.L. point;
+  // the player spends it on a perk of the chart (STATUS tab). Rank r of a
+  // perk needs its stat at `min`+r-1. Each perk changes one reward, in the
+  // function that pays it: effect(rank) says how, for the chart.
+  var PERKS = [
+    {id:'wanderer', name:'Wanderer', stat:'END', min:3, ranks:3, icon:'road',
+      effect:function(r){ return 'Each new route: +'+(25*r)+' XP'; }},
+    {id:'cartographer', name:'Cartographer', stat:'INT', min:4, ranks:2, icon:'map',
+      effect:function(r){ return 'Discovering a city or region: +'+(25*r)+'% XP'; }},
+    {id:'ironwill', name:'Iron Will', stat:'END', min:4, ranks:3, icon:'flame',
+      effect:function(r){ return 'Each streak check-in: +'+(10*r)+' XP'; }},
+    {id:'barter', name:'Barter', stat:'CHA', min:3, ranks:2, icon:'cap',
+      effect:function(r){ return 'Selling an item: '+(r+1)+'× the XP'; }},
+    {id:'scholar', name:'Scholar', stat:'INT', min:5, ranks:2, icon:'book',
+      effect:function(r){ return 'Every skill gain from a quest: +'+r; }},
+    {id:'habit', name:'Creature of Habit', stat:'STR', min:3, ranks:3, icon:'calendar',
+      effect:function(r){ return 'Daily quests: +'+(5*r)+' XP'; }},
+    {id:'comprehension', name:'Comprehension', stat:'INT', min:3, ranks:2, icon:'eye',
+      effect:function(r){ return 'Journal entries (Analyze): +'+(20*r)+'% XP'; }},
+    {id:'quickhands', name:'Quick Hands', stat:'AGI', min:3, ranks:2, icon:'bolt',
+      effect:function(r){ return 'Bonus objectives: +'+(25*r)+'% XP'; }}
+  ];
+  function perkById(id){ return PERKS.filter(function(p){ return p.id===id; })[0] || null; }
+  function perkRank(id){
+    var perks = app.state && app.state.perks;
+    return perks && Object.prototype.hasOwnProperty.call(perks, id) ? Number(perks[id])||0 : 0;
+  }
+  // The next rank of a perk can be taken: not maxed, and the stat is high enough.
+  function perkOpen(id){
+    var p = perkById(id);
+    if (!p) return false;
+    var next = perkRank(id)+1;
+    return next<=p.ranks && (Number(app.state.stats[p.stat])||0) >= p.min+next-1;
+  }
+  // Spends a perk point on the next rank of a perk. Returns the new rank, or
+  // 0 when it can't be taken (no point, stat too low, maxed).
+  function takePerk(id){
+    var s = app.state;
+    if ((s.unspentPerkPoints||0)<=0 || !perkOpen(id)) return 0;
+    s.perks[id] = perkRank(id)+1;
+    s.unspentPerkPoints -= 1;
+    return s.perks[id];
+  }
+  // XP from a perk alone (Wanderer's per route, Iron Will's per check-in):
+  // {xp, leveled}, or null without the perk.
+  function perkXp(id, perRank){
+    var xp = perRank*perkRank(id);
+    return xp>0 ? {xp:xp, leveled:gainXp(xp)} : null;
+  }
+  function rewardRoute(){ return perkXp('wanderer', 25); }
+  function rewardCheckIn(){ return perkXp('ironwill', 10); }
+  // A journal proposal's XP, with Comprehension.
+  function journalXp(xp){ return Math.round((Number(xp)||0)*(1+0.2*perkRank('comprehension'))); }
 
   // ---------- checking a document ----------
   // Every document the app takes in goes through sanitizeImported(): a
@@ -626,6 +702,14 @@
     s.xp = clamp(num(s.xp, 0), 0, 1e9);
     s.lifetimeXp = Math.max(0, num(s.lifetimeXp, 0));
     s.unspentSpecialPoints = Math.max(0, Math.round(num(s.unspentSpecialPoints, 0)));
+    // Perks: only the chart's, each at a whole rank within its ranks.
+    var perks = {};
+    PERKS.forEach(function(p){
+      var rank = s.perks && typeof s.perks==='object' && has(s.perks, p.id) ? Math.round(num(s.perks[p.id], 0)) : 0;
+      if (rank>0) perks[p.id] = Math.min(rank, p.ranks);
+    });
+    s.perks = perks;
+    s.unspentPerkPoints = Math.max(0, Math.round(num(s.unspentPerkPoints, 0)));
     STAT_KEYS.forEach(function(k){ s.stats[k] = clamp(Math.round(num(s.stats[k], 0)), 0, 10); });
     SKILL_KEYS.forEach(function(k){ s.skills[k] = clamp(Math.round(num(s.skills[k], 0)), 0, 100); });
 
@@ -865,6 +949,14 @@
   ST.completeMain = completeMain;
   ST.completeSide = completeSide;
   ST.completeBonus = completeBonus;
+  ST.PERKS = PERKS;
+  ST.perkById = perkById;
+  ST.perkRank = perkRank;
+  ST.perkOpen = perkOpen;
+  ST.takePerk = takePerk;
+  ST.rewardRoute = rewardRoute;
+  ST.rewardCheckIn = rewardCheckIn;
+  ST.journalXp = journalXp;
   ST.completeDaily = completeDaily;
   ST.sellItem = sellItem;
   ST.moveItem = moveItem;

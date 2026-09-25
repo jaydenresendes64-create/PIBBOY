@@ -46,6 +46,7 @@
       out.push('  '+(m.questName || m.title).toUpperCase()+': DAY '+ST.currentStreak(m)+' / '+m.streakTarget);
     });
     if ((state.unspentSpecialPoints||0)>0) out.push(dots('S.P.E.C.I.A.L.', 14)+state.unspentSpecialPoints+' POINT'+(state.unspentSpecialPoints>1 ? 'S' : '')+' TO ASSIGN');
+    if ((state.unspentPerkPoints||0)>0) out.push(dots('PERKS', 14)+state.unspentPerkPoints+' TO CHOOSE (PERK CHART)');
     var days = ST.backupDays(), rads = ST.rads();
     out.push(dots('RADS', 14)+rads+'  ('+(days===null ? 'NO BACKUP YET' : 'LAST BACKUP '+(days<=0 ? 'TODAY' : days+' DAY'+(days>1 ? 'S' : '')+' AGO'))+')');
     if (ST.backupDue()) out.push('>> RADAWAY ADVISED: TAP THE RAD METER');

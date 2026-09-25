@@ -9,6 +9,15 @@ Beside each ITEMS category, a small 3D model drawn in amber wireframe turns slow
 Fallout 4 Pip-Boy (a price tag, a vault jumpsuit, a first-aid kit, a crate, a key); drag one sideways
 to turn it by hand.
 
+**Perks** (STATUS tab): each level-up gives a perk point as well as its S.P.E.C.I.A.L. point. Open the
+**Perk chart** and take a perk (it asks first); each rank needs its stat a little higher. Every perk
+changes a real reward: **Wanderer** (END 3) +25 XP a rank for each new route · **Cartographer** (INT 4)
++25% a rank discovering a city or region · **Iron Will** (END 4) +10 XP a rank per streak check-in ·
+**Barter** (CHA 3) selling gives 2×/3× the XP · **Scholar** (INT 5) +1 a rank on every skill gain from a
+quest · **Creature of Habit** (STR 3) daily quests +5 XP a rank · **Comprehension** (INT 3) journal
+entries +20% a rank · **Quick Hands** (AGI 3) bonus objectives +25% a rank. A save from before perks
+got the points its level-ups would have given.
+
 Main quests track their progress three ways: a **percentage** slider, a **day streak** (one check-in a
 day; missing a day starts it over), or a **Caps goal**: the bar follows the wallet by itself (`1.50 / 5 CAPS`)
 and the quest completes on its own when the wallet reaches the target. A quest saved before Caps goals

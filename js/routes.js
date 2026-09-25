@@ -283,6 +283,14 @@
       var route = addRoute(p.stops, traced);
       ST.map.changed();
       ST.render.showDiscovered(route.name);
+      // Wanderer: XP for each new route.
+      var reward = ST.rewardRoute();
+      if (reward){
+        ST.render.showXpToast(reward.xp);
+        if (reward.leveled) ST.render.showLevelUp();
+        ST.render.renderHeader();
+        ST.render.renderStatus();
+      }
       openRoute(route.id);
     }, function(err){
       if (panel()!==p) return;

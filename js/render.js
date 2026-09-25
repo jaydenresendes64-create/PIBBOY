@@ -101,6 +101,7 @@
     }
     html += '<div class="panel-title">S.P.E.C.I.A.L.</div>';
     STAT_KEYS.forEach(function(k){ html += statRowHtml(k); });
+    html += perksHtml();
     html += '<div class="panel-title">Skills</div>';
     SKILL_KEYS.forEach(function(k){ html += skillRowHtml(k); });
     html += '<div class="panel-title">Lifetime</div><div class="stats-grid">'+
@@ -109,6 +110,62 @@
       '<div class="stats-cell"><div class="stats-num">'+commas(ST.logEntryCount())+'</div><div class="stats-label">Log entries</div></div>'+
     '</div>';
     el('tab-status').innerHTML = html;
+  }
+
+  // ---------- perks ----------
+  // Each perk's picture: amber line art (24×24), like the Pip-Boy's cards.
+  var PERK_ICONS = {
+    road: 'M9 21L11 3M15 21L13 3M12 6v2M12 11v2M12 16v2',
+    map: 'M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15M15 6v15',
+    flame: 'M12 22c-4 0-7-3-7-7 0-4 4-6 4-11 3 2 5 5 5 8 1-1 2-2 2-4 2 2 3 4 3 7 0 4-3 7-7 7z',
+    cap: 'M12 2l2 2.5h3l.5 3 2.5 2-1.5 2.5 1.5 2.5-2.5 2-.5 3h-3L12 22l-2-2.5H7l-.5-3-2.5-2L5.5 12 4 9.5l2.5-2 .5-3h3zM15 12a3 3 0 1 1-6 0 3 3 0 1 1 6 0',
+    book: 'M3 5c3-1 6-1 9 1 3-2 6-2 9-1v14c-3-1-6-1-9 1-3-2-6-2-9-1zM12 6v14',
+    calendar: 'M4 5h16v16H4zM4 9h16M8 3v4M16 3v4M8 15l3 3 5-6',
+    eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM15 12a3 3 0 1 1-6 0 3 3 0 1 1 6 0',
+    bolt: 'M13 2L4 14h7l-1 8 9-12h-7z'
+  };
+  function perkIconHtml(p){
+    return '<svg class="perk-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="'+PERK_ICONS[p.icon]+'"/></svg>';
+  }
+  // ●●○: the ranks taken of a perk.
+  function rankDots(p, rank){
+    var dots = '';
+    for (var i=1;i<=p.ranks;i++) dots += i<=rank ? '●' : '○';
+    return '<span class="perk-dots" aria-label="Rank '+rank+' of '+p.ranks+'">'+dots+'</span>';
+  }
+  // The perks taken, the button to the chart, and the chart when open: a
+  // card per perk with what its next rank needs and does. Taking one asks
+  // first, on its card.
+  function perksHtml(){
+    var s = app.state, pts = num(s.unspentPerkPoints);
+    var owned = ST.PERKS.filter(function(p){ return ST.perkRank(p.id)>0; });
+    var html = '<div class="panel-title">Perks'+(pts>0 ? ' <span class="panel-count">★ '+pts+' to choose</span>' : '')+'</div>';
+    html += owned.length ? '<div class="perk-owned">'+owned.map(function(p){
+      var rank = ST.perkRank(p.id);
+      return '<div class="perk-row">'+perkIconHtml(p)+
+        '<span class="perk-row-text"><span class="perk-name">'+escapeHtml(p.name)+'</span>'+rankDots(p, rank)+
+        '<span class="perk-effect">'+escapeHtml(p.effect(rank))+'</span></span></div>';
+    }).join('')+'</div>' : '<div class="empty-note">No perks yet: each level-up gives a perk point.</div>';
+    html += '<button class="perk-chart-btn'+(pts>0 ? ' due' : '')+'" data-action="perk-chart" aria-expanded="'+(app.perkChart ? 'true' : 'false')+'">'+
+      (app.perkChart ? 'Close the perk chart' : 'Perk chart'+(pts>0 ? ': choose a perk' : ''))+'</button>';
+    if (!app.perkChart) return html;
+    return html+'<div class="perk-chart">'+ST.PERKS.map(function(p){
+      var rank = ST.perkRank(p.id), maxed = rank>=p.ranks, open = ST.perkOpen(p.id);
+      var need = STAT_LABELS[p.stat]+' '+(p.min+rank);
+      var html = '<div class="perk-card'+(rank ? ' owned' : '')+(!maxed && !open ? ' locked' : '')+'">'+
+        perkIconHtml(p)+
+        '<div class="perk-name">'+escapeHtml(p.name)+'</div>'+rankDots(p, rank)+
+        '<div class="perk-effect">'+escapeHtml(p.effect(maxed ? rank : rank+1))+'</div>'+
+        '<div class="perk-need">'+(maxed ? 'Max rank' : (open ? '' : 'Needs ')+escapeHtml(need))+'</div>';
+      if (app.confirmPerk===p.id){
+        html += '<div class="perk-confirm"><span>Take '+escapeHtml(p.name)+(p.ranks>1 ? ', rank '+(rank+1) : '')+'?</span>'+
+          '<button class="assign-btn" data-action="perk-yes">Yes</button>'+
+          '<button class="assign-btn assign-cancel" data-action="perk-no">Cancel</button></div>';
+      } else if (pts>0 && open){
+        html += '<button class="assign-btn perk-take" data-action="perk-take" data-key="'+p.id+'">Take'+(rank ? ' rank '+(rank+1) : '')+'</button>';
+      }
+      return html+'</div>';
+    }).join('')+'</div>';
   }
 
   // A quest's name, which is tapped to rename it. A quest without one (saved
@@ -545,6 +602,12 @@
     toast('levelup-banner quest-banner', 'QUEST COMPLETED — ', 3200).appendChild(questName);
   }
   function showNotice(text){ toast('xp-toast', text, 2600).style.animationDuration = '2.6s'; }
+  function showPerk(name, rank){
+    var perkName = document.createElement('span');
+    perkName.textContent = name+(rank>1 ? ' (rank '+rank+')' : '');
+    sound('perk');
+    toast('levelup-banner quest-banner', 'PERK ACQUIRED: ', 3200).appendChild(perkName);
+  }
   function showSold(name){
     var itemName = document.createElement('span');
     itemName.textContent = name;
@@ -624,6 +687,7 @@
     showLevelUp: showLevelUp,
     showQuestCompleted: showQuestCompleted,
     showNotice: showNotice,
+    showPerk: showPerk,
     showSold: showSold,
     showDiscovered: showDiscovered,
     showSaveWarning: showSaveWarning,
