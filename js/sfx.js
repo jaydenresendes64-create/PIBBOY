@@ -17,6 +17,8 @@
  *   error     low double buzz
  *   step      a skill's - / + button
  *   mapSelect a place opened on the MAP (a city picked, a marker tapped)
+ *   geiger    a Geiger counter's crackle: rads, time to back up
+ *   radaway   a falling whir into a chime: a backup made, the rads drained
  *
  * Browsers only allow sound after a tap: the audio starts on the first one,
  * and anything asked before that is simply skipped. While the app is in the
@@ -250,6 +252,19 @@
     mapSelect: function(t){                                              // a place picked on the MAP
       hiss(t, 0.02, 0.25, 'bandpass', 1600, 1.2, 0.001);
       tone('square', 1480, null, t+0.01, 0.06, 0.08);
+    },
+    geiger: function(t){                                                 // rads: a Geiger counter's crackle
+      for (var i=0; i<28; i++){
+        var at = t + Math.pow(Math.random(), 1.7)*1.2;                  // dense first, thinning out
+        hiss(at, 0.004, 0.45 + Math.random()*0.35, 'highpass', 2800, 0.8, 0.0005);
+        tone('square', vary(3100, 0.1), null, at, 0.002, 0.035, 0.0005);
+      }
+    },
+    radaway: function(t){                                                // a backup: the rads drain away
+      tone('sine', 1500, 280, t, 0.75, 0.07, 0.05);                     // falling whir
+      hiss(t, 0.65, 0.07, 'bandpass', 1100, 0.6, 0.12);
+      tone('triangle', 1046.5, null, t+0.72, 0.3, 0.09);                // clean chime
+      tone('triangle', 1568, null, t+0.84, 0.5, 0.075);
     }
   };
 

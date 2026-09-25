@@ -47,6 +47,7 @@
     var pct = clamp((state.xp/state.xpToNext)*100,0,100);
     el('hdr-xp-fill').style.width = pct+'%';
     el('hdr-xp-text').textContent = commas(state.xp)+' / '+commas(state.xpToNext)+' XP';
+    renderBackup();             // the rad meter beside it (first XP without a backup: rads)
   }
 
   function statRowHtml(key){
@@ -478,11 +479,24 @@
   // The footer's backup line: "Last backup: 3 days ago", in the warning
   // colour when it's time for another one (ST.backupDue).
   function renderBackup(){
+    var d = ST.backupDays(), due = ST.backupDue();
+    var age = d===null ? 'No backup yet' : 'Last backup: '+(d<=0 ? 'today' : d===1 ? 'yesterday' : d+' days ago');
     var e = el('backup-age');
-    if (!e) return;
-    var d = ST.backupDays();
-    e.textContent = d===null ? 'No backup yet' : 'Last backup: '+(d<=0 ? 'today' : d===1 ? 'yesterday' : d+' days ago');
-    e.classList.toggle('due', ST.backupDue());
+    if (e){ e.textContent = age; e.classList.toggle('due', due); }
+    // The rad meter in the header: the same, in rads.
+    var meter = el('rad-meter'), rads = ST.rads();
+    if (!meter) return;
+    el('rad-text').textContent = rads+' RADS';
+    el('rad-fill').style.width = (rads/ST.RADS_MAX*100)+'%';
+    meter.classList.toggle('due', due);
+    meter.classList.toggle('critical', rads>=ST.RADS_MAX);
+    meter.setAttribute('aria-label', rads+' rads. '+age+'. Tap for RadAway: back up your data');
+  }
+  // A backup made: the RadAway (the rads drain), or just saved when there
+  // were none.
+  function showRadAway(hadRads){
+    if (hadRads){ sound('radaway'); toast('levelup-banner quest-banner', 'RADAWAY ADMINISTERED — backup saved', 3200); }
+    else showNotice('Backup saved');
   }
 
   function updateAiIndicator(){
@@ -604,6 +618,7 @@
     refreshIfNewDay: refreshIfNewDay,
     updateAiIndicator: updateAiIndicator,
     renderBackup: renderBackup,
+    showRadAway: showRadAway,
     renderAll: renderAll,
     showXpToast: showXpToast,
     showLevelUp: showLevelUp,

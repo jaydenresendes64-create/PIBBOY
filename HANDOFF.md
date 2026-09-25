@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of commit `8d299ab` (2026-09-24). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-172/172 tests pass locally and on GitHub Actions. `sw.js` cache: `v13`.
+173/173 tests pass locally and on GitHub Actions. `sw.js` cache: `v13`.
 
 ## 1. What it is
 
@@ -73,7 +73,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   step (skill ±), mapSelect; power-on screen; Sound / Power-on / Custom sounds footer links.
 - Data safety: dual storage, backups with dated file names (share sheet on phones), a "Last backup"
   footer line + a once-a-day notice when one is due (`lastBackup`, `backupDue()`), cross-tab conflict
-  handling, CSP.
+  handling, CSP. RADS meter in the header (`rads()`: 40/day since `lastBackup`, max 1000; tap =
+  export = RadAway). Live ONLINE/OFFLINE topbar (main.js).
 - PWA: installable, offline (fonts local, city list precached).
 
 ## 4. Important design decisions

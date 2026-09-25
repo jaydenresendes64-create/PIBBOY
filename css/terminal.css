@@ -332,6 +332,24 @@ button{ cursor:pointer; }
   width:0%; transition:width 0.5s ease-out;
 }
 .xp-text{ margin-top:5px; font-size:0.78rem; color:var(--text-dim); letter-spacing:0.04em; }
+/* The XP line, with the rad meter on its right (js/render.js renderBackup). */
+.xp-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:5px; }
+.xp-row .xp-text{ margin-top:0; }
+.rad-meter{
+  position:relative; display:flex; align-items:center; gap:6px; padding:2px 0;
+  font-size:0.7rem; letter-spacing:0.06em; color:var(--text-dim); white-space:nowrap;
+}
+.rad-meter::before{ content:''; position:absolute; inset:-12px -8px; }     /* a thumb-sized tap */
+.rad-icon{ font-size:0.95rem; line-height:1; }
+.rad-bar{ width:44px; height:6px; border:1px solid var(--line); border-radius:1px; overflow:hidden; background:var(--panel); }
+.rad-fill{ display:block; height:100%; width:0; background:linear-gradient(90deg,var(--amber-dim),var(--danger)); transition:width 1.4s ease-out; }
+.rad-meter.due{ color:var(--amber); }
+.rad-meter.due .rad-icon{ animation:radBlink 1.6s steps(2) infinite; }
+.rad-meter.critical{ color:var(--danger); }
+@keyframes radBlink{ 50%{ opacity:0.3; } }
+@media (prefers-reduced-motion:reduce){ .rad-meter.due .rad-icon{ animation:none; } }
+/* No signal: the topbar says OFFLINE, its dot still and red. */
+.net-status.offline .status-dot{ background:var(--danger); animation:none; }
 
 .tabs{
   display:grid; grid-template-columns:repeat(5,1fr); gap:6px;

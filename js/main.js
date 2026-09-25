@@ -66,9 +66,23 @@
     }catch(e){ return; }
     var d = ST.backupDays();
     setTimeout(function(){
-      ST.render.showNotice((d===null ? 'No backup yet' : 'Last backup '+d+' days ago')+' — Export backup, at the bottom');
+      if (ST.sfx) ST.sfx.play('geiger');
+      ST.render.showNotice('☢ '+ST.rads()+' RADS — '+(d===null ? 'no backup yet' : 'last backup '+d+' days ago')+
+        '. Tap the rad meter for RadAway');
     }, 1500);
   }
+
+  // The topbar's ONLINE, as it really is: OFFLINE with no signal (the app
+  // still works; only the map's new tiles, routes and weather need it).
+  function showNetwork(){
+    var on = navigator.onLine!==false;
+    var text = document.getElementById('net-text'), box = document.getElementById('net-status');
+    if (text) text.textContent = on ? 'ONLINE' : 'OFFLINE';
+    if (box) box.classList.toggle('offline', !on);
+  }
+  window.addEventListener('online', showNetwork);
+  window.addEventListener('offline', showNetwork);
+  document.addEventListener('DOMContentLoaded', showNetwork);
 
   document.addEventListener('DOMContentLoaded', boot);
 

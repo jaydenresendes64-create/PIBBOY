@@ -461,6 +461,16 @@
     var d = backupDays();
     return d===null ? (app.state.lifetimeXp||0)>0 : d>=BACKUP_DUE_DAYS;
   }
+  // Rads, the header's meter: the same reminder, the Fallout way. They build
+  // up RADS_PER_DAY a day since the last backup, up to RADS_MAX; never backed
+  // up with progress to lose is RADS_MAX. A backup is the RadAway: back to 0.
+  // (BACKUP_DUE_DAYS is 560 rads.)
+  var RADS_PER_DAY = 40, RADS_MAX = 1000;
+  function rads(){
+    var d = backupDays();
+    if (d===null) return (app.state.lifetimeXp||0)>0 ? RADS_MAX : 0;
+    return clamp(d*RADS_PER_DAY, 0, RADS_MAX);
+  }
 
   // ---------- once a day: daily quests and streak check-ins ----------
   // Done today, for a date saved when it was done. A date of tomorrow still
@@ -827,6 +837,8 @@
   ST.dateText = dateText;
   ST.backupDays = backupDays;
   ST.backupDue = backupDue;
+  ST.rads = rads;
+  ST.RADS_MAX = RADS_MAX;
   ST.motion = motion;
   ST.stayStill = stayStill;
   ST.commas = commas;

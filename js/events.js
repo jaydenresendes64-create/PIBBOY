@@ -321,12 +321,15 @@
   }
 
   // ---------- export / import / reset ----------
-  // The file handed over (not cancelled): today is the last backup.
+  // The file handed over (not cancelled): today is the last backup, and the
+  // rads drain (the RadAway).
   function exportData(){
     ST.storage.exportFile(app.state).then(function(done){
       if (!done) return;
+      var hadRads = ST.rads()>0;
       app.state.lastBackup = todayStr();
       R.renderBackup();
+      R.showRadAway(hadRads);
       scheduleSave();
     });
   }
@@ -513,6 +516,8 @@
       if (amountBox) amountBox.focus();
     },
     'sell-yes': function(btn, id){ confirmSale(id); },
+    // The header's rad meter: a backup (RadAway).
+    'radaway': function(){ exportData(); },
     'sell-no': function(){
       app.confirmSell = null;
       renderInventory();

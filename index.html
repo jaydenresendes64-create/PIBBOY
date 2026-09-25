@@ -56,7 +56,7 @@
     <!-- Everything you tap. With 3D tilt on it only shifts a few pixels, never turns (js/tilt.js). -->
     <div class="screen" id="screen">
       <div class="topbar">
-        <span><span class="status-dot"></span>ONLINE</span>
+        <span class="net-status" id="net-status"><span class="status-dot"></span><span id="net-text">ONLINE</span></span>
         <span class="device-plate" aria-hidden="true">PIBBOY 3000</span>
         <span id="hdr-date"></span>
       </div>
@@ -72,7 +72,15 @@
           <span class="level-num" id="hdr-level">07</span>
         </div>
         <div class="xp-bar-outer"><div class="xp-bar-fill" id="hdr-xp-fill"></div></div>
-        <div class="xp-text" id="hdr-xp-text"></div>
+        <div class="xp-row">
+          <div class="xp-text" id="hdr-xp-text"></div>
+          <!-- Rads: days without a backup (js/state.js rads()); a tap backs up (RadAway). -->
+          <button class="rad-meter" id="rad-meter" data-action="radaway" aria-label="Rads">
+            <span class="rad-icon" aria-hidden="true">&#9762;&#xFE0E;</span>
+            <span class="rad-bar" aria-hidden="true"><span class="rad-fill" id="rad-fill"></span></span>
+            <span class="rad-text" id="rad-text">0 RADS</span>
+          </button>
+        </div>
       </div>
 
       <nav class="tabs">

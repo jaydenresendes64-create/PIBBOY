@@ -238,3 +238,19 @@ test('backups: never made, then made today; due after 14 days or never with prog
   s.lastBackup = old.getFullYear() + '-' + (old.getMonth() + 1) + '-' + old.getDate();
   assert.deepEqual([ST.backupDays(), ST.backupDue()], [20, true]);
 });
+
+test('rads: 40 a day since the last backup, 1000 at most; never backed up with progress is 1000', () => {
+  const s = fresh();
+  assert.equal(ST.rads(), 0);                                // a new player: nothing to lose
+  ST.gainXp(10);
+  assert.equal(ST.rads(), ST.RADS_MAX);                      // progress, never backed up
+  const daysAgo = n => { const d = new Date(Date.now() - n * 864e5); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
+  s.lastBackup = daysAgo(0);
+  assert.equal(ST.rads(), 0);                                // RadAway
+  s.lastBackup = daysAgo(7);
+  assert.equal(ST.rads(), 280);
+  s.lastBackup = daysAgo(14);
+  assert.deepEqual([ST.rads(), ST.backupDue()], [560, true]); // due exactly when the reminder is
+  s.lastBackup = daysAgo(90);
+  assert.equal(ST.rads(), ST.RADS_MAX);
+});

@@ -283,8 +283,13 @@ next to a commit means a test failed.
 - **Backups on iPhone:** Export backup opens the share sheet (Save to Files, iCloud Drive, AirDrop...),
   since a Home Screen app can't download a file; on a computer it downloads. The footer shows the
   last one ("Last backup: 3 days ago", marked ▲ when it's been 14 days or more, or never with
-  progress to lose), and a notice says so once a day while one is due. Everything lives on the phone:
-  a backup file is the only other copy.
+  progress to lose), and a notice says so once a day while one is due, with a Geiger crackle.
+  Everything lives on the phone: a backup file is the only other copy.
+- **RADS** (beside the XP, in the header): the same reminder, the Fallout way. Rads build up 40 a day
+  since the last backup (560 at 14 days, 1000 at most; 1000 when never backed up with progress to
+  lose). Tap the meter for a **RadAway**: it makes the backup, and the rads drain back to 0.
+- The topbar's **ONLINE** is real: it says OFFLINE (red dot) with no signal. Everything still works
+  offline except loading new map tiles, tracing a route and the weather.
 - The MAP tab's places (cities, regions, pins, and which ones already gave XP) are part of the same
   data: saved in the browser and included in backups. A backup from before the MAP tab loads with an
   empty map and nothing else changed.
