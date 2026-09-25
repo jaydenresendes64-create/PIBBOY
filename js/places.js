@@ -63,6 +63,7 @@
       var shape = shapeOf(r.code, r.cc);
       if (shape) add([[shape.lonBox[0], shape.lonBox[1]], [shape.lonBox[2], shape.lonBox[3]]]);
     });
+    if (ST.routes) ST.routes.boxes().forEach(add);
     return box;
   }
 
@@ -432,12 +433,15 @@
   function counts(){
     var m = app.state.map, seen = {};
     m.cities.concat(m.regions, m.pins).forEach(function(p){ if (p.cc) seen[p.cc] = true; });
-    return {countries:Object.keys(seen).length, cities:m.cities.length, regions:m.regions.length, pins:m.pins.length};
+    return {countries:Object.keys(seen).length, cities:m.cities.length, regions:m.regions.length, pins:m.pins.length,
+      routes:(m.routes||[]).length};
   }
   function plural(n, one, many){ return n+' '+(n===1 ? one : many); }
+  // Routes only once there's one: most of the map is places.
   function countsText(c){
     return [plural(c.countries, 'country', 'countries'), plural(c.cities, 'city', 'cities'),
-      plural(c.regions, 'region', 'regions'), plural(c.pins, 'pin', 'pins')].join(' · ');
+      plural(c.regions, 'region', 'regions'), plural(c.pins, 'pin', 'pins')]
+      .concat(c.routes ? [plural(c.routes, 'route', 'routes')] : []).join(' · ');
   }
 
   // ---------- a pasted list (bulk add) ----------

@@ -786,6 +786,14 @@ button{ cursor:pointer; }
   min-height:44px; padding:8px 6px; border:1px solid var(--phosphor-dim); border-radius:3px;
   background:var(--panel-alt); color:var(--phosphor); font-size:0.8rem;
 }
+.map-actions .map-route-btn{ grid-column:1 / -1; border-color:var(--amber-dim); color:var(--amber); }
+
+/* "Add a route": the stops, in order. */
+.route-stops{ margin-top:10px; }
+.route-stop{ display:flex; align-items:center; gap:8px; min-height:40px; border-bottom:1px solid var(--line); font-size:0.85rem; }
+.route-stop-n{ width:1.6em; flex:0 0 auto; color:var(--text-dim); text-align:right; }
+.route-stop-name{ flex:1; min-width:0; color:var(--amber); overflow-wrap:anywhere; }
+.route-stop .bulk-link{ font-size:1.1rem; text-decoration:none; padding:4px 8px; }
 .panel-count{ color:var(--amber); margin-left:4px; }
 #map-lists{ margin-top:18px; }
 .place-list{ display:flex; flex-direction:column; }

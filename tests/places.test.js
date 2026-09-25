@@ -118,7 +118,7 @@ test('revealRegion and pins: 100 XP once per region, pins give none', () => {
   assert.equal(pin.radius, P.PIN_RADIUS);
   assert.equal(s.xp, ST.REGION_XP);
   P.revealCity({ name: 'Nowhere', cc: 'FR', lat: 1, lon: 2 }, 4000);    // placed by hand
-  assert.deepEqual(app.plain(P.counts()), { countries: 2, cities: 1, regions: 1, pins: 1 });
+  assert.deepEqual(app.plain(P.counts()), { countries: 2, cities: 1, regions: 1, pins: 1, routes: 0 });
   assert.equal(P.countsText(P.counts()), '2 countries · 1 city · 1 region · 1 pin');
   assert.deepEqual(app.plain(ST.sanitizeImported(app.plain(s)).map), app.plain(s.map));
 });

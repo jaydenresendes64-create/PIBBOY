@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of commit `8d299ab` (2026-09-24). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-158/158 tests pass locally and on GitHub Actions. `sw.js` cache: `v12`.
+169/169 tests pass locally and on GitHub Actions. `sw.js` cache: `v13`.
 
 ## 1. What it is
 
@@ -20,7 +20,7 @@ Plain scripts (not ES modules, so `index.html` still opens from disk) sharing
 | `js/state.js` | Data model (DATA MODEL comment at top), `DEFAULT_STATE`, `migrate()`, `sanitizeImported()`, rewards (`gainXp`, `grantSkill`, `grantStat`, `completeMain`), wallet/Caps (`capsValue`, `capsProgress`, `syncCapsQuests`), streaks, sales |
 | `js/storage.js` | Two copies of the state (IndexedDB + localStorage, `savedAt`), newest wins; cross-tab sync; flush on hide; backups export/import; `requestPersistence()` |
 | `js/ai.js` | Journal: offline EN/FR keyword rules (whole words, accents ignored) + optional `api/analyze.js` client (unused on Pages) |
-| `js/places.js`, `js/map.js`, `js/fog.js`, `js/bulk.js` | MAP tab: MapLibre GL 6.11.2 (`vendor/maplibre`, dynamic `import()`), OpenFreeMap vector tiles + custom amber style (`data/map-style.json`), WebGL fog-of-war custom layer, city search (GeoNames ≥15k, `data/places.txt`), regions (Natural Earth admin-1, Morocco from geoBoundaries, `data/regions/`), pins, "I'm here", bulk add with review |
+| `js/places.js`, `js/map.js`, `js/fog.js`, `js/bulk.js`, `js/routes.js` | MAP tab: MapLibre GL 6.11.2 (`vendor/maplibre`, dynamic `import()`), OpenFreeMap vector tiles + custom amber style (`data/map-style.json`), WebGL fog-of-war custom layer, city search (GeoNames ≥15k, `data/places.txt`), regions (Natural Earth admin-1, Morocco from geoBoundaries, `data/regions/`), pins, "I'm here", bulk add with review, **routes** (road trips: stops picked by the owner, road traced once by OSRM's public server `router.project-osrm.org` — in the CSP — simplified to 40 m and stored as an encoded polyline in `state.map.routes`; fog corridor 1.5 km each side, `routeOnScreen()` in fog.js; dotted GeoJSON line layers under the fog) |
 | `js/sfx.js` | Sounds, all synthesized (Web Audio, lo-fi chain); power-on screen; custom clip playback |
 | `js/sfx-custom.js` | "Custom sounds" panel: decode a video/audio file, detect sounds, trim, assign; clips in IndexedDB `status_terminal_sounds`; sound-pack JSON export/import |
 | `js/render.js` | Builds every tab's HTML (escapes everything), toasts/banners, `switchTab` |
@@ -51,7 +51,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 - ITEMS: categories SELL ("THINGS TO SELL", price + Sold → CASH + 25 XP + journal line), APPAREL,
   AID, MISC, IMPORTANT (WEAPONS migrated to MISC); move between categories; wallet holdings with
   manual CAD rates, **1000 CAD = 1 Cap**; 3D wireframe model per category.
-- MAP: see architecture; DISCOVERED banner + XP once per place (50 city / 100 region).
+- MAP: see architecture; DISCOVERED banner + XP once per place (50 city / 100 region). Routes
+  (road trips between nearby cities; the owner picks the stops, never auto-linked; no XP).
 - LOG: journal → proposal (XP + skills only, never SPECIAL) → Accept/Reject.
 - Look & feel: CRT vignette/flicker, scanlines, bezel with rounded corners (+ screws ≥600px), glass
   glare, physical tab keys, recessed panels, faint "PIBBOY 3000" plate, animated amber mascot
@@ -109,6 +110,9 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 - Right after a deploy, one open on a weak signal (>2.5 s) may mix old cached and new files; the next
   open is whole again.
 - The MAP opens on Montréal (`HOME` in `map.js`), not on the whole world.
+- Routes need a connection when added (OSRM's public demo server; if it ever goes away, another
+  OSRM/Valhalla server with CORS can replace `ROUTER` in `routes.js` and the CSP). Removing a city
+  doesn't remove the routes through it.
 - 3D models: canvases are small (78×44 CSS px) and weren't reviewed on a real phone yet; after a
   WebGL context loss they stay hidden until reload.
 - Custom sounds and 3D tilt choice are per device/origin; on iPhone the Home Screen app and Safari

@@ -41,6 +41,7 @@ js/places.js        the MAP tab's logic: positions, city and region lists, findi
 js/fog.js           MAP: the fog of war, drawn with WebGL in the same frame as the map
 js/map.js           the MAP tab (loads MapLibre the first time it's opened)
 js/bulk.js          MAP: "Add several places" (paste a list, review it, reveal it all)
+js/routes.js        MAP: routes (road trips): stops, the road traced once (OSRM), its line and card
 vendor/maplibre/    MapLibre GL JS 6.11.2, the map library (licence: vendor/maplibre/LICENSE.txt)
 vendor/three/       Three.js r186, only the parts ITEMS uses (licence: vendor/three/LICENSE)
 js/events.js        user actions
@@ -172,7 +173,8 @@ your places.
 different sizes, each drifting slowly its own way, a little brighter on their edges, with a fine
 grain. They're stuck to the world, so they move with the map when you drag and grow with it when you
 pinch. Only the exact places you've been are cut out of it: a circle around each city and pin, the
-exact shape of each region, with soft edges that billow gently like smoke pulling back. Sizes are
+exact shape of each region, a corridor along each route's road, with soft edges that billow gently
+like smoke pulling back. Sizes are
 real distances, so a 5 km circle stays 5 km whatever the zoom. A newly revealed place clears in
 over about a second and a half; a removed one fogs over again.
 
@@ -203,10 +205,20 @@ later. With **Reduce Motion** on, the fog stays still and changes appear at once
   name is ambiguous or only close names were found (Marrakech → Marrakesh), and lines not found,
   which you can fix and check again, skip, or place by hand with a tap on the map (a 3 km circle with
   that name). **Reveal all** adds them all at once: one DISCOVERED banner, XP once per new place.
+- **Add a route (a road trip):** the roads you drove between cities close to each other, like
+  Toronto → Ottawa → Montréal. Pick the stops in the order you travelled, from your cities and pins
+  (the nearest to the last stop first, with the distance) or by tapping them on the map, then
+  **Trace the road**. The fog clears in a corridor 3 km wide along the real road (the 401, the 417...),
+  from the first stop to the last, and the map draws it as an amber dotted line. Nothing is ever linked
+  by itself, so a flight (Vancouver → Toronto) is simply never added. The road is traced once, online,
+  by [OSRM](https://project-osrm.org)'s free public server (OpenStreetMap roads, for reasonable
+  non-commercial use, at most one request a second; only the stops' positions are sent), then kept
+  in your save (about 2 KB for 650 km), so it shows offline. Routes give no XP. Tap a route in the list
+  (or its line on the map) to see it whole, rename it, add a note or remove it.
 - Tap a place in the lists (or its mark on the map) to go there, rename it, resize it, add a note or
   remove it (asks first).
-- The line above the map counts your places: "3 countries · 14 cities · 5 regions · 8 pins". The
-  countries are the ones your cities, regions and pins are in.
+- The line above the map counts your places: "3 countries · 14 cities · 5 regions · 8 pins" (and
+  "· 2 routes" once you have some). The countries are the ones your cities, regions and pins are in.
 - A city or region revealed for the first time shows **DISCOVERED** and gives 50 XP (city) or
   100 XP (region), once per place: removing it and adding it back gives nothing again. Pins give no XP.
 

@@ -30,6 +30,9 @@
  *     regions: [ { id, name, cc, code, date, note } ],   // code: REGION_CODE, a region (or a group of
  *                                           // them, like a French region) of data/regions/<cc>.json
  *     pins:    [ { id, name, cc, lat, lon, radius, date, note } ],
+ *     routes:  [ { id, name, stops: [ { name, lat, lon } ], path, km, date, note } ],  // a road trip
+ *                                           // (js/routes.js): `path` is the road, as an encoded
+ *                                           // polyline (decodePath()), traced once; km its length
  *     discovered: [ key ]                   // every city and region that already gave its XP, even
  *   }                                       // once removed: 'c:<gid>', 'c:<cc>:<name>' or 'r:<code>'
  * }
@@ -84,7 +87,7 @@
  *
  * SCRIPTS — every file attaches to one namespace, window.StatusTerminal, and
  * index.html loads them in dependency order: state → storage → ai → places →
- * render → mascot → crt → tilt → fog → map → bulk → events → main (map.js loads
+ * render → mascot → crt → tilt → fog → map → bulk → routes → events → main (map.js loads
  * MapLibre, vendor/maplibre/, the first time MAP opens: the one module, needing
  * http(s) like the map's lists). They are plain scripts rather than ES modules so the app
  * still runs when index.html is opened straight from disk (file://), where
@@ -111,6 +114,7 @@
   var CITY_RADIUS_MIN = 1000, CITY_RADIUS_MAX = 30000;
   var PIN_RADIUS_MIN = 100, PIN_RADIUS_MAX = 5000;
   var PLACE_NAME_MAX = 80, PLACE_NOTE_MAX = 500;
+  var ROUTE_NAME_MAX = 120, ROUTE_STOPS_MAX = 25, ROUTE_PATH_MAX = 200000;
   var CITY_XP = 50, REGION_XP = 100;
   // Every country a place can be in (GeoNames' country list, as in data/places.txt).
   var COUNTRY_CODES = ('AD AE AF AG AI AL AM AN AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR '+
@@ -159,7 +163,7 @@
     ],
     finances:{ holdings:[] },   // starts empty: add your own in ITEMS → wallet
     log:[],
-    map:{ cities:[], regions:[], pins:[], discovered:[] }
+    map:{ cities:[], regions:[], pins:[], routes:[], discovered:[] }
   };
 
   // Shared runtime state. `state` is the persisted document described above;
@@ -302,10 +306,11 @@
     });
   }
   // The MAP tab came later: a save from before it gets an empty map (no
-  // city, region or pin), and nothing else changes.
+  // city, region or pin), and nothing else changes. Routes came after it:
+  // none yet.
   function migrateMap(doc){
     if (!doc.map || typeof doc.map!=='object' || Array.isArray(doc.map)) doc.map = {};
-    ['cities','regions','pins','discovered'].forEach(function(list){
+    ['cities','regions','pins','routes','discovered'].forEach(function(list){
       if (!Array.isArray(doc.map[list])) doc.map[list] = [];
     });
   }
@@ -666,6 +671,50 @@
       return true;
     });
   }
+  // A route's road, as an encoded polyline (Google's format, 5 decimals, the
+  // one road services answer with): a few characters a point. decodePath()
+  // gives [lat, lon, lat, lon, ...], or null when the text isn't one (a
+  // broken number, a point off the Earth).
+  function encodePath(points){
+    var out = '', lastLat = 0, lastLon = 0;
+    function part(v){
+      v = v<0 ? ~(v*2) : v*2;
+      var s = '';
+      while (v>=32){ s += String.fromCharCode((32 | (v & 31))+63); v = Math.floor(v/32); }
+      return s+String.fromCharCode(v+63);
+    }
+    for (var i=0;i+1<points.length;i+=2){
+      var lat = Math.round(points[i]*1e5), lon = Math.round(points[i+1]*1e5);
+      out += part(lat-lastLat)+part(lon-lastLon);
+      lastLat = lat; lastLon = lon;
+    }
+    return out;
+  }
+  function decodePath(text){
+    if (typeof text!=='string') return null;
+    var out = [], i = 0, n = text.length, lat = 0, lon = 0;
+    function part(){
+      var result = 0, factor = 1, b;
+      do {
+        if (i>=n) return null;
+        b = text.charCodeAt(i++)-63;
+        if (b<0 || b>63) return null;
+        result += (b & 31)*factor;
+        factor *= 32;
+      } while (b>=32 && factor<=Math.pow(32, 6));
+      if (b>=32) return null;
+      return result%2 ? -(result+1)/2 : result/2;
+    }
+    while (i<n){
+      var dLat = part(), dLon = dLat===null ? null : part();
+      if (dLat===null || dLon===null) return null;
+      lat += dLat; lon += dLon;
+      if (lat<-9000000 || lat>9000000 || lon<-18000000 || lon>18000000) return null;
+      out.push(lat/1e5, lon/1e5);
+    }
+    return out;
+  }
+
   function sanitizeMap(m){
     m.cities = once(records(m.cities, function(c){
       fixPlace(c);
@@ -682,6 +731,24 @@
       fixPlace(p);
       fixPosition(p, PIN_RADIUS_MIN, PIN_RADIUS_MAX);
     }).filter(onEarth);
+    // A route whose road can't be read (not a polyline, a point off the
+    // Earth, fewer than two points) is dropped.
+    m.routes = records(m.routes, function(r){
+      r.id = safeId(r.id);
+      r.name = text(r.name, ROUTE_NAME_MAX).trim() || 'Route';
+      r.stops = records(r.stops, function(s){
+        s.name = text(s.name, PLACE_NAME_MAX).trim() || 'Stop';
+        s.lat = coordinate(s.lat);
+        s.lon = coordinate(s.lon);
+      }).filter(onEarth).slice(0, ROUTE_STOPS_MAX).map(function(s){ return {name:s.name, lat:s.lat, lon:s.lon}; });
+      r.path = typeof r.path==='string' && r.path.length<=ROUTE_PATH_MAX ? r.path : '';
+      r.km = Math.max(0, num(r.km, 0));
+      r.date = normalizeDate(r.date);
+      r.note = text(r.note, PLACE_NOTE_MAX);
+    }).filter(function(r){
+      var points = decodePath(r.path);
+      return !!points && points.length>=4;
+    });
     var keys = {};
     m.discovered = (Array.isArray(m.discovered) ? m.discovered : []).filter(function(k){
       if (typeof k!=='string' || !/^[cr]:\S{1,120}$/.test(k) || keys[k]) return false;
@@ -704,6 +771,10 @@
   ST.PIN_RADIUS_MIN = PIN_RADIUS_MIN;
   ST.PIN_RADIUS_MAX = PIN_RADIUS_MAX;
   ST.PLACE_NAME_MAX = PLACE_NAME_MAX;
+  ST.ROUTE_NAME_MAX = ROUTE_NAME_MAX;
+  ST.ROUTE_STOPS_MAX = ROUTE_STOPS_MAX;
+  ST.encodePath = encodePath;
+  ST.decodePath = decodePath;
   ST.PLACE_NOTE_MAX = PLACE_NOTE_MAX;
   ST.CITY_XP = CITY_XP;
   ST.REGION_XP = REGION_XP;

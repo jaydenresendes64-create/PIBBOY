@@ -9,8 +9,10 @@
  *  - the reveal mask: every revealed region filled in its exact shape (the
  *    stencil buffer fills each ring, holes and islands included), softened
  *    by a blur sized in real metres; every city and pin as a circle of its
- *    radius in real metres, soft across its edge. A new place clears in, a
- *    removed one fogs over (makeReveals).
+ *    radius in real metres, soft across its edge; every route (js/routes.js)
+ *    as a corridor along its road, ROUTE_HALF_M each side. A new place
+ *    clears in (a new route from its first stop to its last), a removed one
+ *    fogs over (makeReveals).
  *  - the clouds: three layers of fractal noise at different sizes, each
  *    drifting its own way, gently warped into smoke, lit a little on their
  *    edges, and stuck to the world (cloudFrame). Where they meet the mask,
@@ -38,6 +40,11 @@
   var CIRCLE_SOFT = 0.25;             // a circle's soft edge: this share of its radius, each side of it
   var REGION_EDGE_M = 2500;           // how far a region's soft edge reaches, each side of its border
   var REGION_EDGE_MIN_PX = 2, REGION_EDGE_MAX_PX = 28;
+  var ROUTE_HALF_M = 1500;            // a route clears a corridor 3 km wide along its road...
+  var ROUTE_MIN_PX = 2.5;             // ...never thinner than 5 pixels, so a trip shows zoomed far out
+  var ROUTE_SOFT = 0.3;               // its soft edge: this share of its half-width, each side
+  var ROUTE_STEP_PX = 1.5;            // points closer than this on the screen are drawn as one
+  var ROUTE_REVEAL_MS = 2600;         // a new route clears from its first stop to its last, like a drive
 
   // ---------- where things are on the screen ----------
   // The view: the map's centre on the 0-1 world (P.mercX/mercY), the
@@ -93,6 +100,38 @@
     var a = toScreen(view, box[0], box[1]), b = toScreen(view, box[2], box[3]);
     return !(b[0] < -pad || b[1] < -pad || a[0] > view.width+pad || a[1] > view.height+pad);
   }
+  // A route's corridor on the screen: {half: its half-width in CSS pixels,
+  // segs: [x1, y1, x2, y2, ...]}, or null when none of it is on the screen.
+  // `shown` (0-1): how much of the road, from its first stop, is cleared
+  // (a new route clears along it). Points closer than ROUTE_STEP_PX are
+  // merged, and pieces off the screen skipped, so a long road zoomed out or
+  // in costs few segments.
+  function routeOnScreen(view, g, shown){
+    var half = Math.max(ROUTE_MIN_PX, ROUTE_HALF_M*P.pixelsPerMetre(g.lat, view.world));
+    var pad = half*(1+ROUTE_SOFT)+2;
+    if (!boxOnScreen(view, g.box, pad) || g.cum.length<2) return null;
+    var n = g.cum.length, limit = clamp(shown, 0, 1)*g.cum[n-1], segs = [];
+    var last = toScreen(view, g.merc[0], g.merc[1]);
+    function add(to){
+      var x1 = last[0], y1 = last[1], x2 = to[0], y2 = to[1];
+      if (!(Math.max(x1, x2) < -pad || Math.max(y1, y2) < -pad || Math.min(x1, x2) > view.width+pad || Math.min(y1, y2) > view.height+pad)){
+        segs.push(x1, y1, x2, y2);
+      }
+      last = to;
+    }
+    for (var i=1;i<n;i++){
+      if (g.cum[i] > limit){
+        var span = g.cum[i]-g.cum[i-1], t = span>0 ? (limit-g.cum[i-1])/span : 0;
+        var mx = g.merc[i*2-2]+(g.merc[i*2]-g.merc[i*2-2])*t, my = g.merc[i*2-1]+(g.merc[i*2+1]-g.merc[i*2-1])*t;
+        if (limit>0) add(toScreen(view, mx, my));
+        break;
+      }
+      var at = toScreen(view, g.merc[i*2], g.merc[i*2+1]);
+      if (i<n-1 && Math.abs(at[0]-last[0]) < ROUTE_STEP_PX && Math.abs(at[1]-last[1]) < ROUTE_STEP_PX) continue;
+      add(at);
+    }
+    return segs.length ? {half:half, segs:segs} : null;
+  }
 
   // ---------- the clouds, stuck to the world ----------
   // The clouds are a repeating noise picture, laid on the world at two
@@ -116,11 +155,11 @@
   }
 
   // ---------- revealing and removing, smoothly ----------
-  // Tracks the revealed places across frames. Each is {key, item}: the
+  // Tracks the revealed places across frames. Each is {key, item, ms}: the
   // item is what's drawn (a circle, a region's shape, or null while that
-  // shape loads). A place that appears clears in over REVEAL_MS; one that's
-  // removed fogs over in REMOVE_MS (its last item is kept for that). What's
-  // there the first time is simply there.
+  // shape loads). A place that appears clears in over REVEAL_MS (or its own
+  // `ms`); one that's removed fogs over in REMOVE_MS (its last item is kept
+  // for that). What's there the first time is simply there.
   var REVEAL_MS = 1400, REMOVE_MS = 900;
   function makeReveals(){
     var known = null;           // key -> {item, from, to, start, ms}
@@ -138,7 +177,7 @@
         seen[e.key] = true;
         var k = known[e.key];
         if (!k){
-          known[e.key] = {item:e.item, from:first || instant ? 1 : 0, to:1, start:now, ms:first || instant ? 0 : REVEAL_MS};
+          known[e.key] = {item:e.item, from:first || instant ? 1 : 0, to:1, start:now, ms:first || instant ? 0 : e.ms || REVEAL_MS};
         } else {
           if (e.item) k.item = e.item;
           if (k.to!==1){ k.from = value(k, now); k.to = 1; k.start = now; k.ms = instant ? 0 : REVEAL_MS; }
@@ -206,6 +245,15 @@
       'void main(){ float soft = max('+CIRCLE_SOFT.toFixed(2)+', 1.5/v_circle.z);\n'+
       '  float d = distance(v_pos, v_circle.xy)/v_circle.z;\n'+
       '  color = vec4(0.0, v_circle.w*(1.0-smoothstep(1.0-soft, 1.0+soft, d)), 0.0, 0.0); }',
+    // A route: a box around each piece of road, clear within its half-width
+    // of the piece (round at the ends, so pieces join smoothly), soft at the edge.
+    routeVs: 'in vec2 a_pos; in vec4 a_seg; in float a_half; uniform vec2 u_size; out vec2 v_pos; out vec4 v_seg; out float v_half;\n'+
+      'void main(){ v_pos = a_pos; v_seg = a_seg; v_half = a_half; gl_Position = vec4(a_pos.x/u_size.x*2.0-1.0, 1.0-a_pos.y/u_size.y*2.0, 0.0, 1.0); }',
+    routeFs: 'in vec2 v_pos; in vec4 v_seg; in float v_half; out vec4 color;\n'+
+      'void main(){ vec2 a = v_seg.xy, ba = v_seg.zw-a, pa = v_pos-a;\n'+
+      '  float h = clamp(dot(pa, ba)/max(dot(ba, ba), 1e-4), 0.0, 1.0);\n'+
+      '  float d = length(pa-ba*h)/v_half, soft = max('+ROUTE_SOFT.toFixed(2)+', 1.5/v_half);\n'+
+      '  color = vec4(0.0, 1.0-smoothstep(1.0-soft, 1.0+soft, d), 0.0, 0.0); }',
     // The whole screen (one triangle covering it).
     screenVs: 'const vec2 P[3] = vec2[3](vec2(-1.0,-1.0), vec2(3.0,-1.0), vec2(-1.0,3.0));\n'+
       'out vec2 v_uv; void main(){ vec2 p = P[gl_VertexID]; v_uv = p*0.5+0.5; gl_Position = vec4(p, 0.0, 1.0); }',
@@ -303,12 +351,13 @@
   }
 
   // The layer. `places()` returns {circles: [{key, lat, lon, radius}],
-  // regions: [{key, shape or null}]}. setActive(false) (the map off the
+  // regions: [{key, shape or null}], routes: [{key, route}]} (a route: its
+  // road from js/routes.js geometry()). setActive(false) (the map off the
   // screen) stops the drift; so does the app going to the background.
   function createLayer(map, places){
     var gl = null, prog = null, res = null;
     var meshes = typeof WeakMap==='function' ? new WeakMap() : null;
-    var circleData = new Float32Array(0);
+    var circleData = new Float32Array(0), routeData = new Float32Array(0);
     var size = {w:0, h:0};            // the fog's textures, in texels
     var view = null, scale = 1;       // texels per CSS pixel
     var reveals = makeReveals(), quality = makeQuality();
@@ -320,6 +369,7 @@
       prog = {
         region: compile(gl, SHADERS.regionVs, SHADERS.regionFs),
         circle: compile(gl, SHADERS.circleVs, SHADERS.circleFs),
+        route: compile(gl, SHADERS.routeVs, SHADERS.routeFs),
         blur: compile(gl, SHADERS.screenVs, SHADERS.blurFs),
         noise: compile(gl, SHADERS.screenVs, SHADERS.noiseFs),
         cloud: compile(gl, SHADERS.screenVs, SHADERS.cloudFs),
@@ -328,6 +378,7 @@
       res = {
         regionVao: gl.createVertexArray(),
         circleVao: gl.createVertexArray(), circleBuf: gl.createBuffer(),
+        routeVao: gl.createVertexArray(), routeBuf: gl.createBuffer(),
         screenVao: gl.createVertexArray(),
         tex: {}, fbo: {}, stencil: gl.createRenderbuffer(), noise: null
       };
@@ -340,6 +391,13 @@
       gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 24, 0);
       gl.enableVertexAttribArray(circle);
       gl.vertexAttribPointer(circle, 4, gl.FLOAT, false, 24, 8);
+      gl.bindVertexArray(res.routeVao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, res.routeBuf);
+      [['a_pos', 2, 0], ['a_seg', 4, 8], ['a_half', 1, 24]].forEach(function(a){
+        var loc = gl.getAttribLocation(prog.route.program, a[0]);
+        gl.enableVertexAttribArray(loc);
+        gl.vertexAttribPointer(loc, a[1], gl.FLOAT, false, 28, a[2]);
+      });
       gl.bindVertexArray(null);
       size = {w:0, h:0};
     }
@@ -457,6 +515,41 @@
       gl.drawArrays(gl.TRIANGLES, 0, list.length*6);
       gl.colorMask(true, true, true, true);
     }
+    // Each route's corridor: a box (two triangles) around each piece of road,
+    // 7 numbers a corner: where it is, the piece's two ends, the half-width.
+    function drawRoutes(routes){
+      var parts = [], count = 0;
+      routes.forEach(function(r){
+        var s = routeOnScreen(view, r.item, r.value);
+        if (s){ parts.push(s); count += s.segs.length/4; }
+      });
+      if (!count) return;
+      if (routeData.length < count*42) routeData = new Float32Array(count*42*2);
+      var k = 0;
+      parts.forEach(function(s){
+        var e = s.half*(1+ROUTE_SOFT)+2;
+        for (var i=0;i<s.segs.length;i+=4){
+          var x1 = s.segs[i], y1 = s.segs[i+1], x2 = s.segs[i+2], y2 = s.segs[i+3];
+          var dx = x2-x1, dy = y2-y1, len = Math.sqrt(dx*dx+dy*dy);
+          var ux = len>1e-6 ? dx/len*e : e, uy = len>1e-6 ? dy/len*e : 0;       // along the piece
+          var corners = [x1-ux-uy, y1-uy+ux, x1-ux+uy, y1-uy-ux, x2+ux+uy, y2+uy-ux,
+            x1-ux-uy, y1-uy+ux, x2+ux+uy, y2+uy-ux, x2+ux-uy, y2+uy+ux];
+          for (var c=0;c<12;c+=2){
+            routeData[k++] = corners[c]; routeData[k++] = corners[c+1];
+            routeData[k++] = x1; routeData[k++] = y1; routeData[k++] = x2; routeData[k++] = y2; routeData[k++] = s.half;
+          }
+        }
+      });
+      var p = prog.route;
+      gl.useProgram(p.program);
+      gl.uniform2f(p.u.u_size, view.width, view.height);
+      gl.bindVertexArray(res.routeVao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, res.routeBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, routeData.subarray(0, k), gl.DYNAMIC_DRAW);
+      gl.colorMask(false, true, false, false);
+      gl.drawArrays(gl.TRIANGLES, 0, count*6);
+      gl.colorMask(true, true, true, true);
+    }
     // The regions' soft edge: blurred across, then down, back into the mask.
     function blur(){
       var p = prog.blur;
@@ -476,8 +569,8 @@
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
     function drawMask(list){
-      var circles = [], regions = [];
-      list.forEach(function(s){ (s.item.box ? regions : circles).push(s); });
+      var circles = [], regions = [], routes = [];
+      list.forEach(function(s){ (s.item.isRoute ? routes : s.item.box ? regions : circles).push(s); });
       gl.bindFramebuffer(gl.FRAMEBUFFER, res.fbo.mask);
       gl.viewport(0, 0, size.w, size.h);
       gl.clearColor(0, 0, 0, 0);
@@ -490,6 +583,7 @@
       if (drawRegions(regions)) blur();
       gl.enable(gl.BLEND);
       drawCircles(circles);
+      drawRoutes(routes);
       gl.blendEquation(gl.FUNC_ADD);
     }
 
@@ -568,6 +662,7 @@
         var what = places(), entries = [];
         what.circles.forEach(function(c){ entries.push({key:c.key, item:{lat:c.lat, lon:c.lon, radius:c.radius}}); });
         what.regions.forEach(function(r){ entries.push({key:r.key, item:r.shape}); });
+        (what.routes || []).forEach(function(r){ entries.push({key:r.key, item:r.route, ms:ROUTE_REVEAL_MS}); });
         var state = reveals.update(entries, now, still);
         moving = state.moving;
         gl.disable(gl.DEPTH_TEST);
@@ -620,6 +715,10 @@
     regionEdgePx: regionEdgePx,
     regionMesh: regionMesh,
     boxOnScreen: boxOnScreen,
+    ROUTE_HALF_M: ROUTE_HALF_M,
+    ROUTE_MIN_PX: ROUTE_MIN_PX,
+    ROUTE_REVEAL_MS: ROUTE_REVEAL_MS,
+    routeOnScreen: routeOnScreen,
     latOf: latOf,
     cloudFrame: cloudFrame,
     cloudFade: cloudFade,

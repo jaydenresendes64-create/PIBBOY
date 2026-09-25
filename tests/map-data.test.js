@@ -13,7 +13,7 @@ const fresh = () => { ST.app.state = ST.defaultState(); return ST.app.state; };
 
 function withMap(map) {
   const s = app.plain(ST.defaultState());
-  s.map = Object.assign({ cities: [], regions: [], pins: [], discovered: [] }, map);
+  s.map = Object.assign({ cities: [], regions: [], pins: [], routes: [], discovered: [] }, map);
   return s;
 }
 const MONTREAL = { id: 'xc1', name: 'Montréal', cc: 'CA', lat: 45.509, lon: -73.588, radius: 14000, date: '2026-9-24', note: '', gid: 6077243 };

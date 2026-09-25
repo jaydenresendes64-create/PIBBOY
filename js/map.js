@@ -16,7 +16,8 @@
  * the map is still, hidden, or the app is in the background.
  *
  * Under the map: the place that's open (rename, resize, note, remove), the
- * city search, "I'm here", pins, marking a region, and the lists. Revealing
+ * city search, "I'm here", pins, marking a region, routes (js/routes.js),
+ * and the lists. Revealing
  * and the XP are in js/places.js; this file changes state.map only through
  * it, apart from a place's name, radius and note typed here.
  */
@@ -135,12 +136,13 @@
     map.touchZoomRotate.disableRotation();
     map.keyboard.disableRotation();
     if (still) map.dragPan.enable({maxSpeed: 0.001});
-    map.addControl(new ml.AttributionControl({compact: false}), 'bottom-right');
+    map.addControl(new ml.AttributionControl({compact: false, customAttribution: 'Routes: OSRM'}), 'bottom-right');
     map.setMissingStyleImageResolver(function(id){
       if (id==='pipboy-grid' && !map.hasImage(id)) map.addImage(id, gridImage(), {pixelRatio: 2});
     });
     map.on('load', function(){
       status('');
+      if (ST.routes) ST.routes.attach(map);      // the routes' lines, under the fog
       fog = ST.fog.createLayer(map, revealed);
       map.addLayer(fog);
       fog.setActive(onScreen);
@@ -167,20 +169,22 @@
     showLabels();
     syncMarkers();
   }
-  // What the fog opens: every city and pin as a circle, and every region
-  // by its shape (null until loaded: P.regionShapes() starts loading it,
-  // and the fog is drawn again once it's there). Each has its own key, so
-  // the fog can clear a new place smoothly and fog over a removed one.
+  // What the fog opens: every city and pin as a circle, every region by
+  // its shape (null until loaded: P.regionShapes() starts loading it, and
+  // the fog is drawn again once it's there), and every route's road. Each
+  // has its own key, so the fog can clear a new place smoothly and fog over
+  // a removed one.
   function revealed(){
     var m = app.state && app.state.map;
-    if (!m) return {circles: [], regions: []};
+    if (!m) return {circles: [], regions: [], routes: []};
     P.regionShapes();
     function circle(prefix){
       return function(p){ return {key: prefix+p.id, lat: p.lat, lon: p.lon, radius: p.radius}; };
     }
     return {
       circles: m.cities.map(circle('c:')).concat(m.pins.map(circle('p:'))),
-      regions: m.regions.map(function(r){ return {key: 'r:'+r.code, shape: P.shapeOf(r.code, r.cc)}; })
+      regions: m.regions.map(function(r){ return {key: 'r:'+r.code, shape: P.shapeOf(r.code, r.cc)}; }),
+      routes: ST.routes ? ST.routes.fogItems() : []
     };
   }
   // Something revealed changed (a place added, resized, removed, a region's
@@ -252,9 +256,11 @@
     mark.title = p.name;
     mark.innerHTML = '<span class="mk-dot"></span><span class="mk-label">'+escapeHtml(p.name)+'</span>';
     if (selected) mark.style.zIndex = '1';
-    mark.addEventListener('click', function(e){ e.stopPropagation(); openPlace(type, p.id, false); });
+    // While a route is being added, a tap on a city or pin makes it the next stop.
+    function tap(){ if (!(ST.routes && ST.routes.takeStop(p))) openPlace(type, p.id, false); }
+    mark.addEventListener('click', function(e){ e.stopPropagation(); tap(); });
     mark.addEventListener('keydown', function(e){
-      if (e.key==='Enter' || e.key===' '){ e.preventDefault(); openPlace(type, p.id, false); }
+      if (e.key==='Enter' || e.key===' '){ e.preventDefault(); tap(); }
     });
     markers.push(new ml.Marker({element: mark, anchor: 'center'}).setLngLat([p.lon, p.lat]).addTo(map));
   }
@@ -303,6 +309,7 @@
         '<button data-map="drop-pin">Drop pin</button>'+
         '<button data-map="region">Mark a region</button>'+
         '<button data-map="bulk">Add several places</button>'+
+        '<button class="map-route-btn" data-map="route-new">Add a route (a road trip)</button>'+
       '</div>'+
       '<div id="map-lists"></div>';
   }
@@ -378,7 +385,8 @@
     lists.innerHTML =
       listHtml('city', 'Cities', m.cities, 'No cities yet: search one above.')+
       listHtml('region', 'Regions', m.regions, 'No regions yet: Mark a region.')+
-      listHtml('pin', 'Pins', m.pins, 'No pins yet: long-press the map, or Drop pin.');
+      listHtml('pin', 'Pins', m.pins, 'No pins yet: long-press the map, or Drop pin.')+
+      (ST.routes ? ST.routes.listHtml() : '');
   }
 
   // An open place: rename, resize (cities and pins), a note, remove.
@@ -463,10 +471,12 @@
     var area = el('map-panel');
     if (!area) return;
     if (panel && panel.kind==='place' && !P.findPlace(panel.type, panel.id)) panel = null;
+    if (panel && panel.kind==='route' && !(ST.routes && ST.routes.find(panel.id))) panel = null;
     if (!panel){ area.innerHTML = ''; return; }
     area.innerHTML = panel.kind==='place' ? placeCardHtml()
       : panel.kind==='region' ? regionCardHtml()
       : panel.kind==='here' ? hereCardHtml()
+      : panel.kind.indexOf('route')===0 ? (ST.routes ? ST.routes.html(panel) : '')
       : ST.bulk ? ST.bulk.html(panel) : '';
   }
   function closePanel(){
@@ -474,6 +484,7 @@
     placing = null;
     showHint();
     clearHere();
+    if (ST.routes) ST.routes.closed();
     renderPanel();
     renderLists();
     syncMarkers();
@@ -486,6 +497,7 @@
     renderPanel();
     renderLists();
     syncMarkers();
+    if (ST.routes) ST.routes.sync();
     redrawFog();
   }
   // After a place was added, changed or removed here.
@@ -493,6 +505,7 @@
     renderCounts();
     renderLists();
     syncMarkers();
+    if (ST.routes) ST.routes.sync();
     redrawFog();
     ST.storage.scheduleSave();
   }
@@ -525,6 +538,7 @@
     placing = null;
     showHint();
     clearHere();
+    if (ST.routes) ST.routes.closed();
     panel = {kind:'place', type:type, id:id, confirm:false};
     lastPlace = {type:type, id:id};
     renderPanel();
@@ -718,6 +732,7 @@
     else if (action==='here-pin'){ var asked = panel; closePanel(); dropPin(asked.lat, asked.lon, 'Here, '+dateText(ST.todayStr())); }
     else if (action==='region') openRegionPicker();
     else if (action==='region-add') addPickedRegion();
+    else if (action.indexOf('route')===0){ if (ST.routes) ST.routes.onAction(action, btn); }
     else if (ST.bulk) ST.bulk.onAction(action, btn);
   }
   function focusIn(selector){
@@ -741,6 +756,8 @@
     } else if (t.id==='place-note' && p){
       p.note = t.value.slice(0, ST.PLACE_NOTE_MAX);
       ST.storage.scheduleSave();
+    } else if (ST.routes && ST.routes.onInput(t)){
+      // a route's name or note
     } else if (ST.bulk) ST.bulk.onInput(t);
   }
   function onChange(e){
@@ -748,7 +765,9 @@
     if (t.id==='place-name' && p) t.value = p.name;          // emptied: the name stays as it was
     else if (t.id==='place-radius' && p) renderLists();
     else if (t.id==='region-country' && panel && panel.kind==='region'){ panel.cc = t.value; renderPanel(); focusIn('#region-pick'); }
-    else if (ST.bulk) ST.bulk.onChange(t);
+    else if (ST.routes && ST.routes.onChange(t)){
+      // a stop picked, or a route's name
+    } else if (ST.bulk) ST.bulk.onChange(t);
   }
   function onKeyDown(e){
     if (e.key!=='Enter') return;
@@ -793,10 +812,20 @@
     scrollToMap();
   }
 
+  // For js/routes.js: show a box [[west, south], [east, north]]; waiting
+  // for a tap on the map (then a tap on a route doesn't open it).
+  function focusBox(box){
+    if (!map){ scrollToMap(); return; }
+    fitBox(box, 12, 24);
+    scrollToMap();
+  }
+  function isPlacing(){ return !!placing; }
+
   ST.map = {
     show: show, render: render, redrawFog: redrawFog,
-    // for js/bulk.js
+    // for js/bulk.js and js/routes.js
     renderPanel: renderPanel, openPanel: openPanel, closePanel: closePanel, currentPanel: currentPanel,
-    placeOnMap: placeOnMap, changed: changed, celebrate: celebrate, fitAll: fitAll
+    placeOnMap: placeOnMap, changed: changed, celebrate: celebrate, fitAll: fitAll,
+    renderLists: renderLists, focusBox: focusBox, isPlacing: isPlacing
   };
 })(window.StatusTerminal);
