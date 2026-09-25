@@ -23,6 +23,7 @@
   var PREF_KEY = 'status_terminal_tilt';        // '1': on, on this device
   var MAX_SHIFT_PX = 4;
   var MAX_TURN_DEG = 3;
+  var GLARE_SHIFT_PX = 14;      // how far the glass's reflection slides at full tilt
   var PHONE_RANGE_DEG = 20;     // turning the phone this far gives the full effect
   var MOUSE_SCALE = 0.5;        // the mouse only gives half of it
   var REST_FOLLOW = 0.01;       // how fast the resting position follows the phone
@@ -36,7 +37,7 @@
   var rest = null;              // how the phone is held when still
   var frame = null;
   var lastTime = 0;
-  var screenLayer = null, glass = [], mascot = null, button = null;
+  var screenLayer = null, glass = [], glare = null, mascot = null, button = null;
   var motion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
 
   function stayStill(){ return !!(motion && motion.matches); }
@@ -67,12 +68,19 @@
     var turn = 'perspective(800px) rotateX('+(-current.y*MAX_TURN_DEG).toFixed(3)+'deg) rotateY('+(current.x*MAX_TURN_DEG).toFixed(3)+'deg)';
     screenLayer.style.transform = shift;
     glass.forEach(function(layer){ layer.style.transform = turn; });
+    // The reflection on the glass slides the other way, a little, so the
+    // glass looks like it has depth (css: .crt-glare).
+    if (glare){
+      glare.style.setProperty('--glare-x', (-current.x*GLARE_SHIFT_PX).toFixed(1)+'px');
+      glare.style.setProperty('--glare-y', (-current.y*GLARE_SHIFT_PX).toFixed(1)+'px');
+    }
     // The mascot stays beside the name (it shifts with the page) and turns.
     if (mascot) mascot.style.transform = shift+' '+turn;
   }
   function clear(){
     screenLayer.style.transform = '';
     glass.forEach(function(layer){ layer.style.transform = ''; });
+    if (glare){ glare.style.removeProperty('--glare-x'); glare.style.removeProperty('--glare-y'); }
     if (mascot) mascot.style.transform = '';
   }
   // One frame: a step towards the target. Stops once it's there; the next
@@ -195,6 +203,7 @@
     if (!screenLayer) return;
     glass = [document.getElementById('crt'), document.querySelector('.scan-overlay')].filter(Boolean);
     mascot = document.getElementById('mascot');
+    glare = document.querySelector('.crt-glare');
     on = readChoice();
     showChoice();
     if (motion){
