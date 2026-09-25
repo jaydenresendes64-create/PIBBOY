@@ -1,6 +1,6 @@
 # PIBBOY — technical handoff
 
-State as of commit `8d299ab` (2026-09-24). Live: https://jaydenresendes64-create.github.io/PIBBOY/
+State as of commit `e7c10e2` (2026-09-25, PR #10 merged). Live: https://jaydenresendes64-create.github.io/PIBBOY/
 205/205 tests pass locally and on GitHub Actions. `sw.js` cache: `v16`.
 
 ## 1. What it is
@@ -123,8 +123,14 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 
 - Working copy: `C:\Users\ibra6\Desktop\PIBBOY` (git remote `origin`, credentials in Git Credential
   Manager). Node v24 at `C:\Program Files\nodejs`. Git at `C:\Program Files\Git\cmd`.
-- Each change: edit → `node --test` → browser check → commit (with the Co-Authored-By line) →
-  `git push origin main` (= deploy to Pages in ~1 min) → confirm Actions "Tests" + "pages build" green.
+- Each change: edit → `node --test` → browser check → on a **feature branch**, commit (with the
+  Co-Authored-By line) → push → open a PR with GitHub CLI (`C:Program FilesGitHub CLIgh.exe`,
+  installed 2026-09-25, owner signed in) → the owner merges it on GitHub (= deploy to Pages in ~1 min)
+  → `git checkout main && git pull`. PRs #8 (bobbleheads + holotapes), #9 (event core), #10 (settings)
+  were done this way. Earlier features were pushed straight to main.
+- The working copy now has CRLF line endings (git autocrlf after pulls): scripted text edits must
+  normalize `
+` first (the Edit tool is fine).
 - Bump `CACHE` in `sw.js` when files are added/removed; add new app files to `APP_SHELL`.
 - Code the owner brings from other AIs (Grok, ChatGPT): diff it against the repo, test it, and take
   only the good parts; never paste whole files over newer ones. Grok's first `sw.js` broke opening
@@ -156,10 +162,14 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 
 ## 7. Pending / waiting on the owner
 
-- Owner feedback on the latest pushes: 3D model size/readability, bezel/glare/plate, MAP "scout"
-  gesture, caps quest on the real wallet.
-- Proposal awaiting an answer: move Sound / Power-on / Custom sounds / 3D tilt into a proper
-  **⚙ SETTINGS** section.
+- **Agreed pause (2026-09-25):** the owner uses the app for a week (first RadAway backup, real data:
+  wallet, routes, dailies, perks) and keeps a list of what bothers him on the iPhone. Next work comes
+  from that list, not new features. Never seen on a real iPhone yet: ITEMS 3D models, the radar, the
+  perk chart, holotape recording (real microphone), the RobCo boot, the Settings panel.
+- After the feedback, one small step at a time; top candidate: a weekly summary (`historySummary(7)`)
+  as a line in the RobCo boot. Then, if wanted, event-driven quest objectives.
+- The owner brings prompts from ChatGPT/Grok: review them against the code and keep only what fits
+  (ChatGPT's 8-phase "event OS" rewrite was declined in favour of the light event core, PR #9).
 - Deferred: "PIBBOY 2.0" roadmap (reward engine, custom skills with XP, weekly/auto quests,
   achievements, dashboard). Owner chose to polish V1 first.
 
