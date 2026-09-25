@@ -72,6 +72,10 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
    (`pointer-events:none`); everything respects `prefers-reduced-motion` and stops in background.
 6. Heavy libraries (MapLibre, Three.js) are vendored, pinned, and loaded only when their tab opens.
 7. Plain scripts rather than ES modules so the app still runs from `file://`.
+8. S.P.E.C.I.A.L. keeps its 5 stats: **no LUK** (the owner doesn't believe in luck); PER only if the
+   owner asks (maybe later). Skills come only from Analyze, the −/+ buttons and main quests'
+   `skillGains`; side and daily quests give **XP only** (owner declined automatic skill gains,
+   2026-09-24).
 
 ## 5. Workflow
 
@@ -83,7 +87,7 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 - Code the owner brings from other AIs (Grok, ChatGPT): diff it against the repo, test it, and take
   only the good parts; never paste whole files over newer ones. Grok's first `sw.js` broke opening
   offline (fixed before merging); its later "places worker" and "PER/LUK + quest skillGains" passes
-  weren't merged (files not provided; PER/LUK and automatic skill gains change features → owner's call).
+  weren't merged (the owner declined both; see decision 8).
 - Local-only, never pushed: `.claude/` (test server `serve.ps1` on port 8766 with a PUT helper that
   saves to `.claude/out/`; copies of the source video/mp3), `PIBBOY-upload.zip`, `.env.example`
   (excluded via `.git/info/exclude`). The owner's sound pack is at `Desktop\pibboy-sound-pack.json`
