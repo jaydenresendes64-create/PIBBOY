@@ -103,12 +103,12 @@
     renderQuests(); scheduleSave();
   }
   // Caps quests follow the wallet: after any change to it (a row added,
-  // removed or re-rated, a sale), their bars move and the ones that reached
-  // their target are completed, with their reward, once.
+  // removed or re-rated, a sale), their bars move. One that reached its
+  // target shows its Complete button: the reward waits for that tap
+  // (ST.mainReady), so a typo in the wallet pays nothing. Returns how many
+  // are at their target.
   function syncCaps(){
-    var reached = ST.syncCapsQuests();
-    reached.forEach(completeMainQuest);
-    return reached.length;
+    return ST.syncCapsQuests().length;
   }
   function walletChanged(){
     syncCaps();
@@ -117,7 +117,8 @@
   function findMain(id){
     return app.state.quests.mains.filter(function(x){ return x.id===id; })[0] || null;
   }
-  // Grants a main quest's XP and skill gains, once (ST.completeMain).
+  // Grants a main quest's XP and skill gains, once (ST.completeMain): its
+  // Complete button, or a streak's last check-in.
   function completeMainQuest(m){
     var reward = ST.completeMain(m);
     if (!reward) return;
@@ -323,16 +324,21 @@
 
   // ---------- export / import / reset ----------
   // The file handed over (not cancelled): today is the last backup, and the
-  // rads drain (the RadAway).
+  // rads drain (the RadAway). One at a time: a second tap while the share
+  // sheet opens is refused by the phone, and must not count as a backup.
+  var exporting = false;
   function exportData(){
+    if (exporting) return;
+    exporting = true;
     ST.storage.exportFile(app.state).then(function(done){
+      exporting = false;
       if (!done) return;
       var hadRads = ST.rads()>0;
       ST.markBackup();
       R.renderBackup();
       R.showRadAway(hadRads);
       scheduleSave();
-    });
+    }, function(){ exporting = false; });
   }
   // Every question left open under a row or in a banner is dropped (the
   // data under it changed as a whole).
@@ -408,7 +414,7 @@
   function showResetConfirm(){
     pendingImport = null;
     el('reset-confirm-area').innerHTML =
-      '<span class="reset-warning">Erase all data?</span>'+
+      '<span class="reset-warning">Erase all progress? Holotapes and custom sounds stay on this device.</span>'+
       '<button id="reset-confirm-btn">Yes, erase</button>'+
       '<button id="reset-cancel-btn">Cancel</button>';
   }
@@ -518,6 +524,15 @@
     'main-checkin': function(btn, id){
       var m = findMain(id);
       if (m && checkIn(m)) afterCheck(btn);
+    },
+    // A main quest at 100% (its slider, or the wallet for a Caps goal): its
+    // reward only with this tap.
+    'main-complete': function(btn, id){
+      var m = findMain(id);
+      if (!ST.mainReady(m)) return;
+      completeMainQuest(m);
+      renderQuests();
+      ST.storage.saveNow();
     },
     'main-remove': function(btn, id){
       app.confirmRemoveMain = id;
@@ -697,13 +712,13 @@
         // A completed quest's slider is locked (render.js disables it).
         if (m.completed){ e.target.value = m.progress; return; }
         m.progress = parseInt(e.target.value,10);
-        if (m.progress>=100 && !m.completed){
-          completeMainQuest(m);
-          renderQuests();
-        } else {
-          var pctEl = e.target.parentNode.querySelector('.progress-pct');
-          if (pctEl) pctEl.textContent = m.progress+'%';
-        }
+        var pctEl = e.target.parentNode.querySelector('.progress-pct');
+        if (pctEl) pctEl.textContent = m.progress+'%';
+        // At 100% its Complete button shows (not redrawn: the finger is
+        // still on the slider); slid back, it hides again.
+        var card = e.target.closest('.main-quest-card');
+        var completeBtn = card && card.querySelector('[data-action="main-complete"]');
+        if (completeBtn) completeBtn.hidden = !ST.mainReady(m);
         scheduleSave();
       }
     });

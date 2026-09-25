@@ -263,6 +263,8 @@
     } else {
       html += '<button class="tape-btn tape-record" data-tape="record">&#9679; Record a holotape</button>';
     }
+    // Said where they're made: the RadAway backup doesn't hold them.
+    html += '<p class="tape-note">Kept on this device only, not in backups (RadAway). A tape’s &#8599; Share saves a copy.</p>';
     if (message) html += '<div class="empty-note reset-warning">'+escapeHtml(message)+'</div>';
     if (failed) html += '<div class="empty-note">Holotapes can’t be kept in this browser.</div>';
     else if (tapes && !tapes.length && !rec) html += '<div class="empty-note">No holotapes yet: tell the Pip-Boy about your day.</div>';

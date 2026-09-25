@@ -292,6 +292,11 @@
           '<input type="range" min="0" max="100" value="'+num(m.progress)+'" class="main-progress-input" data-id="'+attr(m.id)+'" aria-label="Progress"'+(m.completed?' disabled':'')+'>'+
           '<span class="progress-pct">'+num(m.progress)+'%</span>'+
         '</div>')+
+      // At 100% (slider or wallet) the reward waits for this tap (ST.mainReady);
+      // it's there, hidden, below that, so the slider can show it as it moves.
+      (streak || m.completed ? '' :
+        '<button class="main-complete-btn" data-action="main-complete" data-id="'+attr(m.id)+'"'+(ST.mainReady(m) ? '' : ' hidden')+
+          ' aria-label="Complete quest: '+about(m.questName, m.title)+'">Complete quest &middot; +'+num(m.xp)+' XP</button>')+
       '<div class="main-xp-note">'+(streak && !m.completed ? '<span>'+streakNote(m)+' ·</span> ' : '')+
         (caps && !m.completed ? '<span>Follows your wallet ·</span> ' : '')+
         '<span>'+(m.completed?'Completed — ':'On completion: ')+'+'+num(m.xp)+' XP</span></div>';

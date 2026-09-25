@@ -58,7 +58,8 @@
  *   skillGains: [SkillGain],
  *   bonus: [ { id, name, xp, done } ],             // bonus objectives
  *   progressType: 'percent'|'streak'|'caps',       // saves from before streaks: 'percent'
- *   progress: number(0-100),                       // percent: the slider, 100 completes it; caps: follows the wallet
+ *   progress: number(0-100),                       // percent: the slider; caps: follows the wallet; at 100 the
+ *                                                  // quest waits for its Complete button (mainReady)
  *   capsTarget: number,                            // caps quests only: the wallet's CAPS to reach (syncCapsQuests)
  *   // streak quests only: a check-in a day; reaching streakTarget completes it
  *   streakTarget: number(1-STREAK_MAX_DAYS),
@@ -378,7 +379,8 @@
     return Math.floor(clamp(capsValue()/target*100, 0, 100));
   }
   // Brings every open caps quest's progress up to date with the wallet and
-  // returns the ones that reached their target (events.js completes them).
+  // returns the ones that reached their target (their Complete button shows:
+  // mainReady).
   function syncCapsQuests(){
     var reached = [];
     app.state.quests.mains.forEach(function(m){
@@ -657,6 +659,14 @@
     r.gains.forEach(function(g){ grantSkill(g.skill, g.amount); });
     record(type, data, r.xp);
     return {xp:r.xp, leveled:gainXp(r.xp), skillGains:r.gains};
+  }
+  // A main quest whose bar is full (a percentage or a Caps goal at 100%)
+  // waits for the player's tap on its Complete button: a slip of the finger
+  // on the slider, or a typo in the wallet, never pays its reward by itself.
+  // A streak quest completes with the check-in that reaches its target.
+  function mainReady(m){
+    if (!m || m.completed || m.progressType==='streak') return false;
+    return (m.progressType==='caps' ? capsProgress(m) : Number(m.progress)||0) >= 100;
   }
   // Completes a main quest: its XP and skill gains, once. Returns null when
   // it was completed already, else award()'s result.
@@ -1134,6 +1144,7 @@
   ST.grantSkill = grantSkill;
   ST.grantStat = grantStat;
   ST.gainXp = gainXp;
+  ST.mainReady = mainReady;
   ST.completeMain = completeMain;
   ST.completeSide = completeSide;
   ST.completeBonus = completeBonus;

@@ -36,7 +36,7 @@
 'use strict';
 
 var CACHE_PREFIX = 'status-terminal-';
-var CACHE = CACHE_PREFIX + 'v16';
+var CACHE = CACHE_PREFIX + 'v17';
 var TILE_CACHE = CACHE_PREFIX + 'vector-tiles';     // kept across versions
 var TILE_HOST = 'tiles.openfreemap.org';
 var TILE_MAX = 800;                                 // about 50 MB at most

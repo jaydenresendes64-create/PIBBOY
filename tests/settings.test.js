@@ -25,6 +25,15 @@ test('every setting the scripts look for is in the panel, once', () => {
   assert.match(panel, /Open-Meteo\.com/);                      // the weather's credit (CC BY)
 });
 
+test('what a backup and a reset leave out is said where it matters', () => {
+  assert.match(panel, /Holotapes and custom sounds stay on this device only/);
+  assert.match(panel, /id="reset-btn">Reset progress</);
+  const events = fs.readFileSync(path.join(ROOT, 'js/events.js'), 'utf8');
+  const holotapes = fs.readFileSync(path.join(ROOT, 'js/holotapes.js'), 'utf8');
+  assert.match(events, /Erase all progress\? Holotapes and custom sounds stay on this device\./);
+  assert.match(holotapes, /Kept on this device only, not in backups \(RadAway\)/);
+});
+
 test('each switch shows its label and [ ON ] / [ OFF ] from aria-pressed', () => {
   const toggles = panel.match(/<button class="set-toggle"[^>]*>/g);
   assert.equal(toggles.length, 3);
