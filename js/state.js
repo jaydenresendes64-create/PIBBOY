@@ -12,6 +12,10 @@
  *   unspentSpecialPoints: number,           // level-up points not yet placed
  *   perks: { [perk id]: rank(1-ranks) },    // the perks taken (PERKS); older saves: see migrate()
  *   unspentPerkPoints: number,              // a perk point comes with each level-up too
+ *   bobbleheads: { [bobblehead id]: 'YYYY-M-D' },   // the ones found (BOBBLEHEADS), and when
+ *   lifetimeDailies: number,                // daily quests done, ever (a bobblehead counts them)
+ *   lifetimeHolotapes: number,              // holotapes recorded, ever (the recordings themselves
+ *                                           // stay on the device: js/holotapes.js)
  *   stats:  { STR,END,CHA,INT,AGI: number(0-10) },   // SPECIAL — see "S.P.E.C.I.A.L." below
  *   skills: { CONCENTRATION,KNOWLEDGE,SPEECH,SURVIVAL,COOKING,FINANCE,MUSIC,BUSINESS: number(0-100) },
  *                                           // CONCENTRATION was SCIENCE: see migrate()
@@ -142,6 +146,9 @@
     unspentSpecialPoints:0,
     perks:{},
     unspentPerkPoints:0,
+    bobbleheads:{},
+    lifetimeDailies:0,
+    lifetimeHolotapes:0,
     stats:{STR:4,END:3,CHA:4,INT:5,AGI:2},
     skills:{CONCENTRATION:21,KNOWLEDGE:10,SPEECH:42,SURVIVAL:23,COOKING:8,FINANCE:17,MUSIC:35,BUSINESS:5},
     quests:{
@@ -186,6 +193,7 @@
     confirmMove: null,          // id of the item whose "Move to" choice is open
     confirmSpecial: null,       // SPECIAL key whose level-up point awaits "Yes"
     perkChart: false,           // the STATUS tab's perk chart is open
+    bobbleOpen: null,           // id of the bobblehead whose details show
     confirmPerk: null           // id of the perk whose rank awaits "Yes"
   };
 
@@ -585,7 +593,56 @@
   function completeDaily(d){
     if (dailyDoneToday(d)) return null;
     d.lastDate = todayStr();
+    app.state.lifetimeDailies = (app.state.lifetimeDailies||0) + 1;
     return payQuest({xp:(Number(d.xp)||0)+5*perkRank('habit')});
+  }
+
+  // ---------- bobbleheads ----------
+  // Collectibles for real milestones, found once each (with BOBBLEHEAD_XP)
+  // as soon as their condition holds: findBobbleheads() looks after every
+  // change (events.js). A save from before them finds the ones it already
+  // earned, all at once, the first time.
+  var BOBBLEHEAD_XP = 50;
+  function countries(s){
+    var seen = {};
+    s.map.cities.concat(s.map.regions, s.map.pins).forEach(function(p){ if (p.cc) seen[p.cc] = true; });
+    return Object.keys(seen).length;
+  }
+  function routeKm(s){ return (s.map.routes||[]).reduce(function(sum, r){ return sum+(Number(r.km)||0); }, 0); }
+  function doneMain(s, type){ return s.quests.mains.some(function(m){ return m.completed && m.progressType===type; }); }
+  function highest(values){ return Math.max.apply(null, Object.keys(values).map(function(k){ return Number(values[k])||0; })); }
+  var BOBBLEHEADS = [
+    {id:'vault', name:'Vault Dweller', how:'Reach level 5', found:function(s){ return s.level>=5; }},
+    {id:'veteran', name:'Wasteland Veteran', how:'Reach level 10', found:function(s){ return s.level>=10; }},
+    {id:'devotion', name:'Devotion', how:'Complete a day-streak main quest', found:function(s){ return doneMain(s, 'streak'); }},
+    {id:'capitalist', name:'Capitalist', how:'Complete a Caps goal', found:function(s){ return doneMain(s, 'caps'); }},
+    {id:'merchant', name:'Merchant', how:'Sell an item', found:function(s){
+      return s.log.some(function(e){ return e.reason==='Item sold'; }); }},
+    {id:'errands', name:'Errand Runner', how:'Complete 10 side quests', found:function(s){
+      return s.quests.side.filter(function(q){ return q.done; }).length>=10; }},
+    {id:'routine', name:'Creature of Routine', how:'Do 30 daily quests', found:function(s){ return (s.lifetimeDailies||0)>=30; }},
+    {id:'explorer', name:'Explorer', how:'Reveal 10 cities', found:function(s){ return s.map.cities.length>=10; }},
+    {id:'globetrotter', name:'Globetrotter', how:'Places in 5 countries', found:function(s){ return countries(s)>=5; }},
+    {id:'roadwarrior', name:'Road Warrior', how:'1,000 km of routes', found:function(s){ return routeKm(s)>=1000; }},
+    {id:'scribe', name:'Scribe', how:'25 journal entries', found:function(s){ return logEntryCount()>=25; }},
+    {id:'specialist', name:'Specialist', how:'A skill at 50', found:function(s){ return highest(s.skills)>=50; }},
+    {id:'special', name:'S.P.E.C.I.A.L.ist', how:'A S.P.E.C.I.A.L. stat at 10', found:function(s){ return highest(s.stats)>=10; }},
+    {id:'perks', name:'Perk Collector', how:'Take 3 perks', found:function(s){ return Object.keys(s.perks||{}).length>=3; }},
+    {id:'radfree', name:'Rad-Free', how:'Make a backup (RadAway)', found:function(s){ return !!s.lastBackup; }},
+    {id:'archivist', name:'Archivist', how:'Record 5 holotapes', found:function(s){ return (s.lifetimeHolotapes||0)>=5; }}
+  ];
+  // The bobbleheads found by this change: {found: [bobblehead], xp, leveled},
+  // or null when there's none new.
+  function findBobbleheads(){
+    var s = app.state, found = [];
+    BOBBLEHEADS.forEach(function(b){
+      if (has(s.bobbleheads, b.id) || !b.found(s)) return;
+      s.bobbleheads[b.id] = todayStr();
+      found.push(b);
+    });
+    if (!found.length) return null;
+    var xp = BOBBLEHEAD_XP*found.length;
+    return {found:found, xp:xp, leveled:gainXp(xp)};
   }
   // {xp, leveled, skillGains} for the toasts. Scholar adds to each skill
   // gain (the gains given are returned, for the toast).
@@ -710,6 +767,15 @@
     });
     s.perks = perks;
     s.unspentPerkPoints = Math.max(0, Math.round(num(s.unspentPerkPoints, 0)));
+    // Bobbleheads: only the known ones, each with the day it was found.
+    var bobbleheads = {};
+    BOBBLEHEADS.forEach(function(b){
+      var date = s.bobbleheads && typeof s.bobbleheads==='object' && has(s.bobbleheads, b.id) ? normalizeDate(s.bobbleheads[b.id]) : null;
+      if (date) bobbleheads[b.id] = date;
+    });
+    s.bobbleheads = bobbleheads;
+    s.lifetimeDailies = Math.max(0, Math.round(num(s.lifetimeDailies, 0)));
+    s.lifetimeHolotapes = Math.max(0, Math.round(num(s.lifetimeHolotapes, 0)));
     STAT_KEYS.forEach(function(k){ s.stats[k] = clamp(Math.round(num(s.stats[k], 0)), 0, 10); });
     SKILL_KEYS.forEach(function(k){ s.skills[k] = clamp(Math.round(num(s.skills[k], 0)), 0, 100); });
 
@@ -950,6 +1016,9 @@
   ST.completeSide = completeSide;
   ST.completeBonus = completeBonus;
   ST.PERKS = PERKS;
+  ST.BOBBLEHEADS = BOBBLEHEADS;
+  ST.BOBBLEHEAD_XP = BOBBLEHEAD_XP;
+  ST.findBobbleheads = findBobbleheads;
   ST.perkById = perkById;
   ST.perkRank = perkRank;
   ST.perkOpen = perkOpen;

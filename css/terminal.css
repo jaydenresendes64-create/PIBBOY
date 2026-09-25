@@ -436,6 +436,52 @@ button{ cursor:pointer; }
 .perk-need{ font-size:0.68rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.06em; }
 .perk-card .perk-take{ margin-top:auto; align-self:stretch; }
 .perk-confirm{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:0.76rem; color:var(--phosphor); }
+
+/* Bobbleheads (js/render.js bobbleheadsHtml): a shelf of little figures. */
+.bobble-shelf{ display:grid; grid-template-columns:repeat(auto-fill, minmax(72px, 1fr)); gap:8px; }
+.bobble{
+  display:flex; flex-direction:column; align-items:center; gap:4px; min-height:84px; padding:8px 4px 6px;
+  border:1px solid var(--line); border-radius:3px; background:var(--panel-alt); color:var(--phosphor-dim);
+}
+.bobble-svg{ width:34px; height:42px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; opacity:0.45; }
+.bobble-name{ font-size:0.62rem; line-height:1.2; text-align:center; overflow-wrap:anywhere; }
+.bobble.found{ border-color:var(--amber-dim); color:var(--amber); }
+.bobble.found .bobble-svg{ opacity:1; filter:drop-shadow(0 0 4px rgba(255,154,46,0.55)); transform-origin:50% 60%; }
+.bobble.found.open .bobble-svg{ animation:bobble 0.9s ease-out; }       /* its head wobbles when tapped */
+.bobble.open{ background:var(--bg); }
+@keyframes bobble{ 20%{ transform:rotate(-9deg); } 45%{ transform:rotate(7deg); } 70%{ transform:rotate(-4deg); } 100%{ transform:none; } }
+@media (prefers-reduced-motion:reduce){ .bobble.found.open .bobble-svg{ animation:none; } }
+.bobble-detail{ margin-top:8px; padding:8px 10px; border:1px solid var(--line); border-radius:3px; font-size:0.78rem; color:var(--phosphor); }
+
+/* Holotapes (js/holotapes.js), in the LOG tab: the deck, then the tapes. */
+#holotapes{ margin-top:10px; }
+.tape-btn{
+  position:relative; min-width:40px; min-height:40px; padding:6px 10px; border:1px solid var(--line); border-radius:3px;
+  background:var(--panel-alt); color:var(--phosphor); font-size:0.85rem;
+}
+.tape-record{ display:block; width:100%; margin-top:4px; border-color:var(--amber-dim); color:var(--amber); letter-spacing:0.06em; }
+.tape-deck{ display:flex; align-items:center; gap:10px; margin-top:4px; padding:8px 10px; border:1px solid var(--danger); border-radius:3px; background:var(--panel-alt); }
+.tape-rec{ color:var(--danger); font-family:'VT323',ui-monospace,monospace; font-size:1.2rem; animation:pulse 1s steps(1) infinite; }
+.tape-meter{ flex:1; display:flex; align-items:flex-end; gap:2px; height:24px; }
+.tape-meter i{ flex:1; height:8%; background:var(--amber); opacity:0.85; transition:height 0.08s linear; }
+.tape-clock{ font-family:'VT323',ui-monospace,monospace; font-size:1.1rem; color:var(--amber); white-space:nowrap; }
+.tape-stop{ border-color:var(--danger); color:var(--danger); }
+.tape{ display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--line); }
+.tape-icon{ width:38px; height:26px; flex:0 0 auto; fill:none; stroke:var(--phosphor); stroke-width:1.4; stroke-linejoin:round; }
+.tape.playing .tape-icon{ stroke:var(--amber); filter:drop-shadow(0 0 4px rgba(255,154,46,0.6)); }
+.tape.playing .tape-icon circle{ animation:reel 1.2s linear infinite; transform-box:fill-box; transform-origin:center; stroke-dasharray:4 2; }
+@keyframes reel{ to{ transform:rotate(360deg); } }
+.tape-text{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.tape-title{
+  width:100%; min-width:0; border:1px solid transparent; border-radius:3px; background:transparent; padding:2px 4px; margin-left:-4px;
+  font-family:'VT323',ui-monospace,monospace; font-size:1.2rem; color:var(--amber);
+}
+.tape-title:focus{ border-color:var(--line); background:var(--bg); }
+.tape-meta{ font-size:0.7rem; color:var(--text-dim); }
+.tape-progress{ display:block; height:3px; background:var(--line); border-radius:1px; overflow:hidden; }
+.tape-progress i{ display:block; height:100%; width:0; background:var(--amber); }
+.tape .remove-btn{ flex:0 0 auto; }
+@media (prefers-reduced-motion:reduce){ .tape-rec, .tape.playing .tape-icon circle{ animation:none; } }
 .stats-cell{ border:1px solid var(--line); border-radius:3px; padding:10px 6px; text-align:center; }
 .stats-num{ font-family:'VT323',ui-monospace,monospace; font-size:1.4rem; color:var(--amber); }
 .stats-label{ font-size:0.62rem; color:var(--text-dim); margin-top:2px; line-height:1.2; }

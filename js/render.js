@@ -104,6 +104,7 @@
     html += perksHtml();
     html += '<div class="panel-title">Skills</div>';
     SKILL_KEYS.forEach(function(k){ html += skillRowHtml(k); });
+    html += bobbleheadsHtml();
     html += '<div class="panel-title">Lifetime</div><div class="stats-grid">'+
       '<div class="stats-cell"><div class="stats-num">'+commas(state.lifetimeXp||0)+'</div><div class="stats-label">Total XP earned</div></div>'+
       '<div class="stats-cell"><div class="stats-num">'+state.quests.side.filter(function(q){return q.done;}).length+'</div><div class="stats-label">Side quests done</div></div>'+
@@ -166,6 +167,37 @@
       }
       return html+'</div>';
     }).join('')+'</div>';
+  }
+
+  // ---------- bobbleheads ----------
+  // The shelf: a little figure per bobblehead, lit once found (a big head
+  // on a spring, on its stand), a dim "?" silhouette until then. A tap
+  // shows what it is and how it's found.
+  function bobbleSvg(found){
+    return '<svg class="bobble-svg" viewBox="0 0 32 40" aria-hidden="true">'+
+      '<circle cx="16" cy="11" r="9"/>'+
+      (found ? '<path d="M12 10h.01M20 10h.01M12 14q4 3 8 0"/>' : '<path d="M13.5 8.5q2.5-3 5 0t-2.5 3.5v1.5M16 16h.01"/>')+
+      '<path d="M16 20v3M11 29q0-6 5-6t5 6zM7 33h18l-2 4H9z"/></svg>';
+  }
+  function bobbleheadsHtml(){
+    var s = app.state, all = ST.BOBBLEHEADS;
+    var got = all.filter(function(b){ return s.bobbleheads && s.bobbleheads[b.id]; }).length;
+    var html = '<div class="panel-title">Bobbleheads <span class="panel-count">'+got+' / '+all.length+'</span></div><div class="bobble-shelf">';
+    all.forEach(function(b){
+      var date = s.bobbleheads && s.bobbleheads[b.id];
+      html += '<button class="bobble'+(date ? ' found' : '')+(app.bobbleOpen===b.id ? ' open' : '')+'" data-action="bobble" data-key="'+b.id+'" '+
+        'aria-label="'+escapeHtml(date ? b.name+': found' : 'Bobblehead not found yet')+'" aria-expanded="'+(app.bobbleOpen===b.id)+'">'+
+        bobbleSvg(!!date)+'<span class="bobble-name">'+escapeHtml(date ? b.name : '?')+'</span></button>';
+    });
+    html += '</div>';
+    var open = app.bobbleOpen && all.filter(function(b){ return b.id===app.bobbleOpen; })[0];
+    if (open){
+      var when = s.bobbleheads && s.bobbleheads[open.id];
+      html += '<div class="bobble-detail">'+
+        (when ? '<span class="perk-name">'+escapeHtml(open.name)+'</span> — found '+escapeHtml(ST.dateText(when)) : 'Not found yet')+
+        '<div class="perk-effect">'+escapeHtml(open.how)+' · +'+ST.BOBBLEHEAD_XP+' XP</div></div>';
+    }
+    return html;
   }
 
   // A quest's name, which is tapped to rename it. A quest without one (saved
@@ -487,6 +519,7 @@
       '<textarea id="log-input" rows="4" placeholder="What did you do today?" aria-label="Journal entry"></textarea>'+
       '<button id="analyze-btn">Analyze</button>'+
       '<div id="proposal-area"></div>'+
+      '<div id="holotapes"></div>'+                        // js/holotapes.js draws it
       '<div class="panel-title">History</div><div class="log-history">';
     if (state.log.length===0){
       html += '<div class="empty-note">No entries yet.</div>';
@@ -502,6 +535,7 @@
     html += '</div>';
     var tab = el('tab-log');
     keepTyped(tab, function(){ tab.innerHTML = html; });
+    if (ST.holotapes) ST.holotapes.render();
   }
 
   function renderProposal(source){
@@ -602,6 +636,13 @@
     toast('levelup-banner quest-banner', 'QUEST COMPLETED — ', 3200).appendChild(questName);
   }
   function showNotice(text){ toast('xp-toast', text, 2600).style.animationDuration = '2.6s'; }
+  // One or several found by the same change: one banner.
+  function showBobbleheads(found){
+    var names = document.createElement('span');
+    names.textContent = found.length===1 ? found[0].name : found.length+' ('+found.map(function(b){ return b.name; }).join(', ')+')';
+    sound('bobble', 0.15);
+    toast('levelup-banner quest-banner', found.length===1 ? 'BOBBLEHEAD FOUND: ' : 'BOBBLEHEADS FOUND: ', 3600).appendChild(names);
+  }
   function showPerk(name, rank){
     var perkName = document.createElement('span');
     perkName.textContent = name+(rank>1 ? ' (rank '+rank+')' : '');
@@ -688,6 +729,7 @@
     showQuestCompleted: showQuestCompleted,
     showNotice: showNotice,
     showPerk: showPerk,
+    showBobbleheads: showBobbleheads,
     showSold: showSold,
     showDiscovered: showDiscovered,
     showSaveWarning: showSaveWarning,

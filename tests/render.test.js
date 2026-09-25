@@ -22,8 +22,11 @@ function renderEverything(state, proposal) {
 // No tag or event handler the app doesn't write itself can appear. Escaped
 // text has no "<" and no '"', so every "<...>" is a real tag and every
 // "..." inside one is a whole attribute value.
+// The app's own line-art icons (perks, bobbleheads) are the only <svg> it
+// writes; any other <svg> would be a way in.
+const APP_ICON = /^<svg class="(perk-icon|bobble-svg)" viewBox="[\d ]+" aria-hidden="true">$|^<\/svg>$/;
 function assertInert(html) {
-  const tags = html.match(/<[^>]*>/g);
+  const tags = html.match(/<[^>]*>/g).filter(tag => !APP_ICON.test(tag));
   tags.forEach(tag => {
     const attributes = tag.replace(/"[^"]*"/g, '""');
     assert.doesNotMatch(attributes, /^<\/?(img|script|svg|iframe|object|embed)/i, tag);

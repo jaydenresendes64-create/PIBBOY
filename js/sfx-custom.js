@@ -30,7 +30,7 @@
   var LABELS = {
     boot:'Power on', tick:'Scroll tick', press:'Button', tab:'Tab switch', complete:'Quest check',
     levelUp:'Level up', quest:'Main quest completed', discover:'Place discovered', sold:'Item sold', error:'Error',
-    step:'Skill + / −', mapSelect:'Map: select a place', geiger:'Rads (Geiger counter)', radaway:'Backup made (RadAway)', key:'RobCo boot: typing', ping:'Scanner: blip', perk:'Perk acquired'
+    step:'Skill + / −', mapSelect:'Map: select a place', geiger:'Rads (Geiger counter)', radaway:'Backup made (RadAway)', key:'RobCo boot: typing', ping:'Scanner: blip', perk:'Perk acquired', bobble:'Bobblehead found', tape:'Holotape in / out'
   };
 
   // ---------- storage ----------

@@ -8,7 +8,7 @@
      except the MAP tab's data (OpenFreeMap's vector tiles), a new route's road (OSRM, asked
      once) and the weather (Open-Meteo); style attributes set the bars' widths; file: keeps it working when index.html is
      opened straight from disk. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; font-src 'self' file:; img-src 'self' file: data:; connect-src 'self' https://tiles.openfreemap.org https://router.project-osrm.org https://api.open-meteo.com; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; font-src 'self' file:; img-src 'self' file: data:; connect-src 'self' https://tiles.openfreemap.org https://router.project-osrm.org https://api.open-meteo.com; media-src 'self' blob: file:; object-src 'none'; base-uri 'self'; form-action 'none'">
 <title>MALIK // Status Terminal</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230d0602'/%3E%3Ccircle cx='8' cy='8' r='4' fill='%23e8a33d'/%3E%3C/svg%3E">
 <!-- Installable on a phone (manifest + sw.js, registered in js/main.js). -->
@@ -36,6 +36,7 @@
 <script defer src="js/bulk.js"></script>
 <script defer src="js/routes.js"></script>
 <script defer src="js/radar.js"></script>
+<script defer src="js/holotapes.js"></script>
 <script defer src="js/events.js"></script>
 <script defer src="js/main.js"></script>
 </head>

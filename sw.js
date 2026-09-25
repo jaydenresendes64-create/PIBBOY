@@ -36,7 +36,7 @@
 'use strict';
 
 var CACHE_PREFIX = 'status-terminal-';
-var CACHE = CACHE_PREFIX + 'v15';
+var CACHE = CACHE_PREFIX + 'v16';
 var TILE_CACHE = CACHE_PREFIX + 'vector-tiles';     // kept across versions
 var TILE_HOST = 'tiles.openfreemap.org';
 var TILE_MAX = 800;                                 // about 50 MB at most
@@ -49,7 +49,7 @@ var APP_SHELL = [
   './',
   'index.html',
   'css/terminal.css',
-  'js/state.js', 'js/storage.js', 'js/ai.js', 'js/places.js', 'js/sfx.js', 'js/sfx-custom.js', 'js/weather.js', 'js/boot.js', 'js/render.js', 'js/items3d.js', 'js/mascot.js', 'js/crt.js', 'js/tilt.js', 'js/fog.js', 'js/map.js', 'js/bulk.js', 'js/routes.js', 'js/radar.js', 'js/events.js', 'js/main.js',
+  'js/state.js', 'js/storage.js', 'js/ai.js', 'js/places.js', 'js/sfx.js', 'js/sfx-custom.js', 'js/weather.js', 'js/boot.js', 'js/render.js', 'js/items3d.js', 'js/mascot.js', 'js/crt.js', 'js/tilt.js', 'js/fog.js', 'js/map.js', 'js/bulk.js', 'js/routes.js', 'js/radar.js', 'js/holotapes.js', 'js/events.js', 'js/main.js',
   'vendor/maplibre/maplibre-gl.mjs', 'vendor/maplibre/maplibre-gl-shared.mjs', 'vendor/maplibre/maplibre-gl-worker.mjs', 'vendor/maplibre/maplibre-gl.css',
   'vendor/three/three.pibboy.min.js',
   'data/map-style.json', 'data/places.txt',

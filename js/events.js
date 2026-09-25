@@ -473,6 +473,12 @@
       renderStatus();
       focusStatus('[data-action="perk-take"][data-key="'+key+'"]');
     },
+    // A bobblehead tapped: what it is and how it's found, under the shelf.
+    'bobble': function(btn, id, key){
+      app.bobbleOpen = app.bobbleOpen===key ? null : key;
+      renderStatus();
+      focusStatus('[data-action="bobble"][data-key="'+key+'"]');
+    },
     'skill': function(btn, id, key){
       grantSkill(key, parseInt(btn.getAttribute('data-dir')||'0', 10));
       renderStatus(); scheduleSave();
@@ -600,8 +606,23 @@
     if (button) button();
   }
 
+  // Bobbleheads found by the last change (state.js findBobbleheads): a
+  // banner, their XP, and the STATUS tab drawn again. Runs after every
+  // change (storage.onChange), and once at startup for the ones a save
+  // already earned.
+  function checkBobbleheads(){
+    if (!app.state) return;
+    var found = ST.findBobbleheads();
+    if (!found) return;
+    R.showBobbleheads(found.found);
+    showXp(found.xp, found.leveled);
+    renderStatus();
+    scheduleSave();
+  }
+
   // ---------- events ----------
   function setupEvents(){
+    ST.storage.onChange(checkBobbleheads);
     document.body.addEventListener('click', onClick);
 
     // A main quest's objective and a holding's rate go into the state as
@@ -677,5 +698,5 @@
     });
   }
 
-  ST.events = { setup: setupEvents, adoptState: adoptState, commitEdits: commitEdits, syncCaps: syncCaps };
+  ST.events = { setup: setupEvents, adoptState: adoptState, commitEdits: commitEdits, syncCaps: syncCaps, checkBobbleheads: checkBobbleheads };
 })(window.StatusTerminal);
