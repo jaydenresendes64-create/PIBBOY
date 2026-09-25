@@ -18,6 +18,15 @@ quest · **Creature of Habit** (STR 3) daily quests +5 XP a rank · **Comprehens
 entries +20% a rank · **Quick Hands** (AGI 3) bonus objectives +25% a rank. A save from before perks
 got the points its level-ups would have given.
 
+**Bobbleheads** (STATUS tab): 15 collectibles for real milestones, found by themselves the moment one
+is reached (a banner, a springy sound, +50 XP each): Vault Dweller (level 5), Wasteland Veteran
+(level 10), Devotion (a day-streak quest completed), Capitalist (a Caps goal completed), Merchant (an
+item sold), Errand Runner (10 side quests), Creature of Routine (30 daily quests), Explorer (10
+cities), Globetrotter (places in 5 countries), Road Warrior (1,000 km of routes), Scribe (25 journal
+entries), Specialist (a skill at 50), S.P.E.C.I.A.L.ist (a stat at 10), Perk Collector (3 perks),
+Rad-Free (a backup made). Tap one to see what it is and when it was found; the ones still hidden say
+how to find them. A save from before them finds the ones it already earned, all at once.
+
 Main quests track their progress three ways: a **percentage** slider, a **day streak** (one check-in a
 day; missing a day starts it over), or a **Caps goal**: the bar follows the wallet by itself (`1.50 / 5 CAPS`)
 and the quest completes on its own when the wallet reaches the target. A quest saved before Caps goals

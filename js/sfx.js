@@ -22,6 +22,7 @@
  *   key       a small keystroke: each line of the RobCo boot (js/boot.js)
  *   ping      a soft sonar ping: the scanner's sweep crossing a blip (js/radar.js)
  *   perk      a card stamped, then a chord: a perk taken
+ *   bobble    a head on a spring, then a jingle: a bobblehead found
  *
  * Browsers only allow sound after a tap: the audio starts on the first one,
  * and anything asked before that is simply skipped. While the app is in the
@@ -268,6 +269,17 @@
       hiss(t, 0.05, 0.35, 'lowpass', 900, 0.7, 0.001);
       [587.33, 739.99, 880].forEach(function(f, i){ tone('square', f, null, t+0.1+i*0.07, 0.12, 0.08); });
       [587.33, 880, 1174.66].forEach(function(f){ tone('triangle', f, null, t+0.34, 0.7, 0.06, 0.03); });
+    },
+    bobble: function(t){                                                 // a bobblehead found: a head on a spring
+      var spring = tone('sine', 520, null, t, 0.9, 0.16, 0.004);
+      var wobble = ctx.createOscillator(), depth = ctx.createGain();
+      wobble.frequency.setValueAtTime(14, t);
+      wobble.frequency.exponentialRampToValueAtTime(4, t+0.9);
+      depth.gain.setValueAtTime(140, t);
+      depth.gain.exponentialRampToValueAtTime(3, t+0.9);
+      wobble.connect(depth); depth.connect(spring.frequency);
+      wobble.start(t); wobble.stop(t+0.92);
+      [784, 988, 1175].forEach(function(f, i){ tone('triangle', f, null, t+0.5+i*0.08, 0.3, 0.06); });
     },
     ping: function(t){                                                   // the scanner's sweep crossing a blip
       tone('sine', 1320, null, t, 0.16, 0.05, 0.002);

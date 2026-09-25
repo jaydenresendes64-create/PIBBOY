@@ -210,9 +210,18 @@
     });
   }
 
+  // After any change (a save asked for): the listener runs once, just after
+  // (events.js looks for bobbleheads found).
+  var onChange = null, changeTimer = null;
+  function changed(){
+    if (!onChange || changeTimer!==null) return;
+    changeTimer = setTimeout(function(){ changeTimer = null; onChange(); }, 0);
+  }
+
   function saveNow(){
     clearTimeout(saveTimer);
     saveTimer = null;
+    changed();
     if (!ST.app.state || readOnly) return Promise.resolve('failed');
     return write(ST.app.state).then(function(result){
       if (result==='failed') onSaveFailed();
@@ -221,6 +230,7 @@
   }
   function scheduleSave(){
     if (readOnly) return;
+    changed();
     clearTimeout(saveTimer);
     saveTimer = setTimeout(saveNow, SAVE_DELAY_MS);
   }
@@ -307,6 +317,7 @@
     exportFile: exportFile,
     readJsonFile: readJsonFile,
     onSaveFailed: function(fn){ onSaveFailed = fn; },
-    onExternalChange: function(fn){ onExternalChange = fn; }
+    onExternalChange: function(fn){ onExternalChange = fn; },
+    onChange: function(fn){ onChange = fn; }
   };
 })(window.StatusTerminal);

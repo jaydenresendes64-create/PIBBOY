@@ -27,6 +27,7 @@
       if (!saved) ST.storage.saveNow();
       ST.storage.requestPersistence();
       remindBackup();
+      afterBoot(ST.events.checkBobbleheads);      // the ones this save already earned
     }, function(){
       ST.render.switchTab('status');
       ST.render.showLoadError();
@@ -55,6 +56,17 @@
     setInterval(ST.render.refreshIfNewDay, 60000);
   }
 
+  // Runs `fn` once the app is on show: after the power-on screen and the
+  // RobCo boot, so its banners aren't hidden under them.
+  function afterBoot(fn){
+    var waited = 0;
+    (function check(){
+      var covered = document.getElementById('power-on') || document.querySelector('.robco');
+      if (covered && waited<60000){ waited += 400; setTimeout(check, 400); return; }
+      setTimeout(fn, 600);
+    })();
+  }
+
   // Everything lives on this phone: when a backup is due (ST.backupDue), a
   // notice says so, at most once a day. The footer's line always shows it.
   var REMINDED_KEY = 'status_terminal_backup_reminded';
@@ -66,11 +78,11 @@
       localStorage.setItem(REMINDED_KEY, today);
     }catch(e){ return; }
     var d = ST.backupDays();
-    setTimeout(function(){
+    afterBoot(function(){
       if (ST.sfx) ST.sfx.play('geiger');
       ST.render.showNotice('☢ '+ST.rads()+' RADS — '+(d===null ? 'no backup yet' : 'last backup '+d+' days ago')+
         '. Tap the rad meter for RadAway');
-    }, 1500);
+    });
   }
 
   // The topbar's ONLINE, as it really is: OFFLINE with no signal (the app

@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of commit `8d299ab` (2026-09-24). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-187/187 tests pass locally and on GitHub Actions. `sw.js` cache: `v15`.
+192/192 tests pass locally and on GitHub Actions. `sw.js` cache: `v15`.
 
 ## 1. What it is
 
@@ -81,6 +81,9 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   Perks (state.js `PERKS`, `takePerk`, effects inside each reward fn: discoverPlace, sellItem,
   payQuest (Scholar), completeDaily/Bonus, `journalXp`, `rewardRoute`, `rewardCheckIn`); chart in
   render.js `perksHtml()`; migration gives old saves level-2 perk points.
+  Bobbleheads (state.js `BOBBLEHEADS`, `findBobbleheads()` +50 XP each; `lifetimeDailies` counter):
+  checked after every change through `storage.onChange` (events.js `checkBobbleheads`) and once after
+  the boot screens (main.js `afterBoot`). Render test allows only the app's own icon <svg>s.
 - PWA: installable, offline (fonts local, city list precached).
 
 ## 4. Important design decisions
