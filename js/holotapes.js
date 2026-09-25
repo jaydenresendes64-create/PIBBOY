@@ -154,7 +154,7 @@
       return put(record).then(function(){
         tapes = [record].concat(tapes || []);
         if (ST.app.state){
-          ST.app.state.lifetimeHolotapes = (ST.app.state.lifetimeHolotapes||0)+1;
+          ST.countHolotape(seconds);
           ST.storage.scheduleSave();
         }
         if (ST.render) ST.render.showNotice('Holotape saved: '+record.title+' ('+durationText(seconds)+')');

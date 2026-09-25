@@ -406,7 +406,8 @@
       date:todayStr(), note:''};
     if (c.gid) place.gid = c.gid;
     app.state.map.cities.push(place);
-    return {place:place, isNew:true, reward:ST.discoverPlace(ST.placeKey('city', place), ST.CITY_XP)};
+    return {place:place, isNew:true, reward:ST.discoverPlace(ST.placeKey('city', place), ST.CITY_XP,
+      {kind:'city', name:place.name, cc:place.cc})};
   }
   // A region or group from the lists ({code, cc, name}); like revealCity.
   function revealRegion(r){
@@ -415,7 +416,8 @@
     var place = {id:genId(), name:String(r.name).slice(0, ST.PLACE_NAME_MAX), cc:r.cc||'', code:r.code, date:todayStr(), note:''};
     app.state.map.regions.push(place);
     loadShapes(place.cc).catch(function(){});
-    return {place:place, isNew:true, reward:ST.discoverPlace(ST.placeKey('region', place), ST.REGION_XP)};
+    return {place:place, isNew:true, reward:ST.discoverPlace(ST.placeKey('region', place), ST.REGION_XP,
+      {kind:'region', name:place.name, cc:place.cc})};
   }
   // A pin: no XP.
   function addPin(lat, lon, name, cc){

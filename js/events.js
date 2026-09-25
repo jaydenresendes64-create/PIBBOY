@@ -1,13 +1,14 @@
 /**
- * User actions — every change to the state document happens here, followed
- * by the matching re-render and a (debounced) save. The MAP tab's are in
- * js/map.js (with js/places.js).
+ * User actions — a tap or a typed value becomes a request to the state
+ * (js/state.js: rewards go through its award(), recorded in the history),
+ * followed by the matching re-render, the toasts and a (debounced) save.
+ * The MAP tab's are in js/map.js (with js/places.js).
  */
 (function(ST){
   'use strict';
 
-  var el = ST.el, clamp = ST.clamp, genId = ST.genId, todayStr = ST.todayStr, todayDisplay = ST.todayDisplay;
-  var grantSkill = ST.grantSkill, grantStat = ST.grantStat;
+  var el = ST.el, clamp = ST.clamp, genId = ST.genId;
+  var grantSkill = ST.grantSkill;
   var app = ST.app;
   var R = ST.render;
   var renderHeader = R.renderHeader, renderStatus = R.renderStatus, renderQuests = R.renderQuests,
@@ -18,9 +19,7 @@
   var pendingImport = null;
   var checkPlaying = false;     // a check button's animation is running
 
-  function addXp(amount){
-    showXp(amount, ST.gainXp(amount));
-  }
+  // A reward's toasts (what state.js gave): the XP and skills, a level-up.
   function showXp(amount, leveled, skillGains){
     R.showXpToast(Number(amount)||0, skillGains);
     if (leveled) R.showLevelUp();
@@ -131,8 +130,8 @@
   function checkIn(m){
     var result = ST.streakCheckIn(m);
     if (!result) return false;
-    var bonus = ST.rewardCheckIn();
-    if (bonus) showXp(bonus.xp, bonus.leveled);
+    var bonus = ST.rewardCheckIn(m);
+    if (bonus.xp>0) showXp(bonus.xp, bonus.leveled);
     if (result==='target') completeMainQuest(m);
     return true;
   }
@@ -284,10 +283,8 @@
   // ---------- log analysis ----------
   function acceptProposal(){
     if (!app.pendingProposal) return;
-    var p = app.pendingProposal, xp = ST.journalXp(p.xp);      // Comprehension adds to it
-    addXp(xp);
-    p.skillGains.forEach(function(g){ grantSkill(g.skill, g.amount); });
-    ST.addLogEntry({date:todayDisplay(), text:p.text, xp:xp, reason:p.reason});
+    var reward = ST.acceptJournal(app.pendingProposal);          // XP, skills, the journal line
+    showXp(reward.xp, reward.leveled);
     app.pendingProposal = null;
     renderStatus(); renderLog();
     scheduleSave();
@@ -331,7 +328,7 @@
     ST.storage.exportFile(app.state).then(function(done){
       if (!done) return;
       var hadRads = ST.rads()>0;
-      app.state.lastBackup = todayStr();
+      ST.markBackup();
       R.renderBackup();
       R.showRadAway(hadRads);
       scheduleSave();
@@ -430,13 +427,9 @@
       focusStatus('[data-action="special-no"]');
     },
     'special-yes': function(){
-      var s = app.state, key = app.confirmSpecial;
+      var key = app.confirmSpecial;
       app.confirmSpecial = null;
-      if (key && (s.unspentSpecialPoints||0)>0 && s.stats[key]<10){
-        grantStat(key, 1);
-        s.unspentSpecialPoints -= 1;
-        scheduleSave();
-      }
+      if (key && ST.spendSpecialPoint(key)) scheduleSave();
       renderStatus();
       focusStatus('[data-action="special-assign"][data-key="'+key+'"]');
     },
@@ -495,7 +488,7 @@
     'bonus-toggle': function(btn, id){
       var owner = findMain(btn.getAttribute('data-quest'));
       var b = owner && (owner.bonus||[]).filter(function(x){ return x.id===id; })[0];
-      reward(btn, b && ST.completeBonus(b));
+      reward(btn, b && ST.completeBonus(b, owner));
     },
     'main-checkin': function(btn, id){
       var m = findMain(id);

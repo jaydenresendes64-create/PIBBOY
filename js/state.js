@@ -16,6 +16,9 @@
  *   lifetimeDailies: number,                // daily quests done, ever (a bobblehead counts them)
  *   lifetimeHolotapes: number,              // holotapes recorded, ever (the recordings themselves
  *                                           // stay on the device: js/holotapes.js)
+ *   history: [ { t: ms, type: EVENT_TYPES, xp: number, data: { name: string|number } } ],
+ *                                           // what happened, oldest first (record(); the latest
+ *                                           // HISTORY_MAX); saves from before it start empty
  *   stats:  { STR,END,CHA,INT,AGI: number(0-10) },   // SPECIAL — see "S.P.E.C.I.A.L." below
  *   skills: { CONCENTRATION,KNOWLEDGE,SPEECH,SURVIVAL,COOKING,FINANCE,MUSIC,BUSINESS: number(0-100) },
  *                                           // CONCENTRATION was SCIENCE: see migrate()
@@ -70,15 +73,17 @@
  * quests saved before it existed have none ('' or missing) and show only
  * their objective. Bonus objectives have no name.
  *
- * Every reward path (quest completion, bonus objective, journal proposal)
- * should express its reward as XP plus zero or more SkillGains, and apply
- * them through grantSkill()/gainXp() (completeMain() and completeSide() do
- * both for a quest) rather than touching state.skills / state.xp directly — that's
- * what keeps the bounds checks and lifetime counters in one place instead
- * of duplicated at each call site. events.js adds the toasts (addXp()).
- * Selling an item (sellItem()) is one of them too: SALE_XP, plus the money
- * in the wallet and a line in the journal. So is revealing a new city or
- * region on the map (discoverPlace()): CITY_XP or REGION_XP, once per place.
+ * REWARDS — every reward is an event paid through award(type, data, xp,
+ * skillGains): the perks taken change it (the PERKS table, withPerks), its
+ * skills and XP are given (grantSkill, gainXp), and it's recorded in
+ * `history`. The reward functions only say what happened: completeMain,
+ * completeSide, completeBonus, completeDaily, rewardCheckIn (a streak
+ * check-in), acceptJournal (a journal proposal), sellItem (SALE_XP, the
+ * money in the wallet and a journal line), discoverPlace (CITY_XP or
+ * REGION_XP, once per place), rewardRoute, findBobbleheads. Milestones
+ * without XP are recorded too (level-ups, perks, S.P.E.C.I.A.L. points,
+ * backups, holotapes). Nothing else touches state.skills / state.xp;
+ * events.js only adds the toasts.
  *
  * LOADING — every document the app takes in (a saved copy, a backup file,
  * another window's save) goes through sanitizeImported(), which runs
@@ -88,13 +93,14 @@
  *
  * S.P.E.C.I.A.L.: `stats` only goes up one way. Each level-up adds one
  * unspentSpecialPoint; the player taps a stat in the STATUS tab's level-up
- * banner and confirms "Yes", which calls grantStat(key, 1) and spends the
- * point. No reward (quest, bonus objective, journal proposal) and no button
+ * banner and confirms "Yes", which calls spendSpecialPoint(key) (grantStat,
+ * and the point spent). No reward (quest, bonus objective, journal proposal) and no button
  * changes `stats` otherwise, and a journal proposal is XP + SkillGains only.
  *
  * SCRIPTS — every file attaches to one namespace, window.StatusTerminal, and
  * index.html loads them in dependency order: state → storage → ai → places →
- * render → mascot → crt → tilt → fog → map → bulk → routes → events → main (map.js loads
+ * weather → boot → render → mascot → crt → tilt → fog → map → bulk → routes → radar →
+ * holotapes → events → main (map.js loads
  * MapLibre, vendor/maplibre/, the first time MAP opens: the one module, needing
  * http(s) like the map's lists). They are plain scripts rather than ES modules so the app
  * still runs when index.html is opened straight from disk (file://), where
@@ -149,6 +155,7 @@
     bobbleheads:{},
     lifetimeDailies:0,
     lifetimeHolotapes:0,
+    history:[],
     stats:{STR:4,END:3,CHA:4,INT:5,AGI:2},
     skills:{CONCENTRATION:21,KNOWLEDGE:10,SPEECH:42,SURVIVAL:23,COOKING:8,FINANCE:17,MUSIC:35,BUSINESS:5},
     quests:{
@@ -415,9 +422,9 @@
       state.finances.holdings.push(cash);
     }
     cash.amount = cents((Number(cash.amount)||0) + amount/(Number(cash.rateToCAD)||1));
-    var xp = SALE_XP*(1+perkRank('barter'));
-    addLogEntry({date:todayDisplay(), text:'Sold '+item.name+' for $'+money(amount), xp:xp, reason:'Item sold'});
-    return {name:item.name, amount:amount, xp:xp, leveled:gainXp(xp)};
+    var reward = award('ITEM_SOLD', {name:item.name, amount:amount}, SALE_XP);
+    addLogEntry({date:todayDisplay(), text:'Sold '+item.name+' for $'+money(amount), xp:reward.xp, reason:'Item sold'});
+    return {name:item.name, amount:amount, xp:reward.xp, leveled:reward.leveled};
   }
 
   // ---------- places on the map ----------
@@ -436,13 +443,14 @@
   }
   // A new city or region's XP, once ever per place: the key stays in
   // map.discovered when the place is removed, so adding it back pays
-  // nothing. Returns null when it already paid, else {xp, leveled}.
-  function discoverPlace(key, xp){
+  // nothing. Returns null when it already paid, else {xp, leveled}. `data`:
+  // what it is, for the history ({kind, name, cc}).
+  function discoverPlace(key, xp, data){
     var list = app.state.map.discovered;
     if (list.indexOf(key)!==-1) return null;
     list.push(key);
-    xp = Math.round(xp*(1+0.25*perkRank('cartographer')));
-    return {xp:xp, leveled:gainXp(xp)};
+    var reward = award('PLACE_DISCOVERED', data || {key:key}, xp);
+    return {xp:reward.xp, leveled:reward.leveled};
   }
 
   // Moves an item to another category, keeping everything else (an asking
@@ -531,11 +539,64 @@
     return q.streakDays>=q.streakTarget ? 'target' : true;
   }
 
+  // ---------- the history: what happened, as events ----------
+  // Every reward, level-up and milestone is an event, recorded in
+  // state.history (oldest first, the latest HISTORY_MAX kept):
+  //   {t: when (ms), type: one of EVENT_TYPES, xp: what it gave (perks
+  //    included), data: a few names and numbers (strings and numbers only)}
+  // One stream for "what happened this week", instead of each part of the
+  // app keeping its own. award() records every reward; the milestones that
+  // give no XP call record() themselves.
+  var HISTORY_MAX = 2000;
+  var EVENT_TYPES = ['QUEST_COMPLETED', 'BONUS_COMPLETED', 'DAILY_DONE', 'STREAK_CHECKIN', 'JOURNAL_ENTRY',
+    'ITEM_SOLD', 'PLACE_DISCOVERED', 'ROUTE_ADDED', 'BOBBLEHEAD_FOUND', 'LEVEL_UP', 'PERK_TAKEN',
+    'SPECIAL_RAISED', 'BACKUP_MADE', 'HOLOTAPE_RECORDED'];
+  function record(type, data, xp){
+    var s = app.state;
+    if (!Array.isArray(s.history)) s.history = [];
+    var event = {t:Date.now(), type:type, xp:Math.max(0, Math.round(Number(xp)||0)), data:eventData(data)};
+    s.history.push(event);
+    if (s.history.length>HISTORY_MAX) s.history = s.history.slice(-HISTORY_MAX);
+    return event;
+  }
+  // An event's data, kept small and plain: strings (at most 200 letters) and
+  // numbers, at most 8 of them.
+  function eventData(data){
+    var out = {};
+    if (!data || typeof data!=='object' || Array.isArray(data)) return out;
+    Object.keys(data).slice(0, 8).forEach(function(k){
+      var v = data[k];
+      if (k==='__proto__') return;
+      if (typeof v==='string') out[k] = v.slice(0, 200);
+      else if (typeof v==='number' && isFinite(v)) out[k] = v;
+    });
+    return out;
+  }
+  // The events of the last `days` days, oldest first.
+  function recentEvents(days){
+    var since = Date.now() - days*864e5;
+    return (app.state.history||[]).filter(function(e){ return e.t>=since; });
+  }
+  // Over the last `days` days: {xp: all the XP gained, count, byType: {type: count}}.
+  function historySummary(days){
+    var out = {xp:0, count:0, byType:{}};
+    recentEvents(days).forEach(function(e){
+      out.xp += e.xp;
+      out.count++;
+      out.byType[e.type] = (out.byType[e.type]||0) + 1;
+    });
+    return out;
+  }
+
   // ---------- centralized reward logic ----------
-  // Every code path that hands out a skill point goes through grantSkill(),
-  // so the bounds and validity checks live in one place instead of being
-  // copy-pasted at each call site. grantStat() has a single caller: spending
-  // a level-up point, once the player confirmed it (see S.P.E.C.I.A.L. above).
+  // Every reward goes through award(): the perks taken change it (withPerks,
+  // from the PERKS table below), its skill gains and XP are given, and it's
+  // recorded in the history. The reward functions below only say what
+  // happened (an event type and its data) and its base XP and skills.
+  //
+  // Every skill point goes through grantSkill(), so the bounds and validity
+  // checks live in one place. grantStat() has a single caller: spending a
+  // level-up point, once the player confirmed it (spendSpecialPoint).
   function grantSkill(key, amount){
     var state = app.state;
     amount = Number(amount);
@@ -565,36 +626,100 @@
       state.xpToNext += 400;
       state.unspentSpecialPoints = (state.unspentSpecialPoints||0) + 1;
       state.unspentPerkPoints = (state.unspentPerkPoints||0) + 1;
+      record('LEVEL_UP', {level:state.level}, 0);
       leveled = true;
     }
     return leveled;
   }
+  // What the perks taken do to a reward of this event type: {xp, gains}.
+  // Their flat XP is added first, then their percentages, rounded; each
+  // positive skill gain grows by their skillFlat.
+  function withPerks(type, xp, gains){
+    var flat = 0, percent = 0, skill = 0;
+    PERKS.forEach(function(p){
+      var rank = perkRank(p.id);
+      if (!rank || p.on!==type) return;
+      flat += (p.xpFlat||0)*rank;
+      percent += (p.xpPercent||0)*rank;
+      skill += (p.skillFlat||0)*rank;
+    });
+    return {
+      xp: Math.round(((Number(xp)||0)+flat)*(1+percent/100)),
+      gains: (gains||[]).map(function(g){
+        return {skill:g.skill, amount:Number(g.amount)>0 ? Number(g.amount)+skill : g.amount};
+      })
+    };
+  }
+  // Pays a reward: {xp, leveled, skillGains} (what was given, for the toasts).
+  // The event goes in the history before the level-ups it causes.
+  function award(type, data, xp, gains){
+    var r = withPerks(type, xp, gains);
+    r.gains.forEach(function(g){ grantSkill(g.skill, g.amount); });
+    record(type, data, r.xp);
+    return {xp:r.xp, leveled:gainXp(r.xp), skillGains:r.gains};
+  }
   // Completes a main quest: its XP and skill gains, once. Returns null when
-  // it was completed already, else {xp, leveled} for the toasts.
+  // it was completed already, else award()'s result.
   function completeMain(m){
     if (m.completed) return null;
     m.completed = true;
-    return payQuest(m);
+    return award('QUEST_COMPLETED', {kind:'main', name:m.questName || m.title || ''}, m.xp, m.skillGains);
   }
   // Completes a side quest the same way: its XP and skill gains, once.
   function completeSide(q){
     if (q.done) return null;
     q.done = true;
-    return payQuest(q);
+    return award('QUEST_COMPLETED', {kind:'side', name:q.questName || q.name || ''}, q.xp, q.skillGains);
   }
-  // A main quest's bonus objective: its XP, once (Quick Hands adds to it).
-  function completeBonus(b){
+  // A main quest's bonus objective (of `quest`): its XP, once.
+  function completeBonus(b, quest){
     if (b.done) return null;
     b.done = true;
-    return payQuest({xp:Math.round((Number(b.xp)||0)*(1+0.25*perkRank('quickhands')))});
+    return award('BONUS_COMPLETED', {name:b.name || '', quest:quest ? quest.questName || quest.title || '' : ''}, b.xp);
   }
   // A daily quest, once a day: its XP only (no skills, the owner's choice:
-  // a skill a day would reach 100 within months). Creature of Habit adds to it.
+  // a skill a day would reach 100 within months).
   function completeDaily(d){
     if (dailyDoneToday(d)) return null;
     d.lastDate = todayStr();
     app.state.lifetimeDailies = (app.state.lifetimeDailies||0) + 1;
-    return payQuest({xp:(Number(d.xp)||0)+5*perkRank('habit')});
+    return award('DAILY_DONE', {name:d.questName || d.name || ''}, d.xp);
+  }
+  // A streak quest's check-in (after streakCheckIn): no XP of its own, only
+  // what perks give (Iron Will); recorded either way.
+  function rewardCheckIn(m){
+    return award('STREAK_CHECKIN', {name:m ? m.questName || m.title || '' : '', day:m ? Number(m.streakDays)||0 : 0}, 0);
+  }
+  // A route added on the map: the same (Wanderer).
+  function rewardRoute(route){
+    return award('ROUTE_ADDED', {name:route ? route.name : '', km:route ? Number(route.km)||0 : 0}, 0);
+  }
+  // A journal proposal accepted: its XP and skill gains, and its line in the
+  // journal (with the XP it really gave).
+  function acceptJournal(p){
+    var reward = award('JOURNAL_ENTRY', {reason:p.reason || ''}, p.xp, p.skillGains);
+    addLogEntry({date:todayDisplay(), text:p.text, xp:reward.xp, reason:p.reason});
+    return reward;
+  }
+  // A level-up point spent on a stat, after "Yes": false when it can't be
+  // (no point left, the stat at 10 already, not a stat).
+  function spendSpecialPoint(key){
+    var s = app.state;
+    if (STAT_KEYS.indexOf(key)===-1 || (s.unspentSpecialPoints||0)<=0 || s.stats[key]>=10) return false;
+    grantStat(key, 1);
+    s.unspentSpecialPoints -= 1;
+    record('SPECIAL_RAISED', {stat:key, value:s.stats[key]}, 0);
+    return true;
+  }
+  // A backup file handed over: today is the last backup (the rads drain).
+  function markBackup(){
+    app.state.lastBackup = todayStr();
+    record('BACKUP_MADE', {}, 0);
+  }
+  // A holotape recorded (the recording itself stays on the device).
+  function countHolotape(seconds){
+    app.state.lifetimeHolotapes = (app.state.lifetimeHolotapes||0) + 1;
+    record('HOLOTAPE_RECORDED', {seconds:Math.round(Number(seconds)||0)}, 0);
   }
 
   // ---------- bobbleheads ----------
@@ -632,53 +757,53 @@
     {id:'archivist', name:'Archivist', how:'Record 5 holotapes', found:function(s){ return (s.lifetimeHolotapes||0)>=5; }}
   ];
   // The bobbleheads found by this change: {found: [bobblehead], xp, leveled},
-  // or null when there's none new.
+  // or null when there's none new. Each is its own reward (and event).
   function findBobbleheads(){
-    var s = app.state, found = [];
+    var s = app.state, found = [], xp = 0, leveled = false;
     BOBBLEHEADS.forEach(function(b){
       if (has(s.bobbleheads, b.id) || !b.found(s)) return;
       s.bobbleheads[b.id] = todayStr();
       found.push(b);
+      var reward = award('BOBBLEHEAD_FOUND', {id:b.id, name:b.name}, BOBBLEHEAD_XP);
+      xp += reward.xp;
+      leveled = leveled || reward.leveled;
     });
-    if (!found.length) return null;
-    var xp = BOBBLEHEAD_XP*found.length;
-    return {found:found, xp:xp, leveled:gainXp(xp)};
-  }
-  // {xp, leveled, skillGains} for the toasts. Scholar adds to each skill
-  // gain (the gains given are returned, for the toast).
-  function payQuest(q){
-    var scholar = perkRank('scholar');
-    var gains = (q.skillGains || []).map(function(g){
-      return {skill:g.skill, amount:Number(g.amount)>0 ? Number(g.amount)+scholar : g.amount};
-    });
-    gains.forEach(function(g){ grantSkill(g.skill, g.amount); });
-    var xp = Number(q.xp)||0;
-    return {xp:xp, leveled:gainXp(xp), skillGains:gains};
+    return found.length ? {found:found, xp:xp, leveled:leveled} : null;
   }
 
   // ---------- perks ----------
   // A perk point comes with each level-up, like the S.P.E.C.I.A.L. point;
   // the player spends it on a perk of the chart (STATUS tab). Rank r of a
-  // perk needs its stat at `min`+r-1. Each perk changes one reward, in the
-  // function that pays it: effect(rank) says how, for the chart.
+  // perk needs its stat at `min`+r-1. What each perk does is data, applied
+  // in one place (withPerks, in award): to the rewards of event type `on`,
+  // per rank, `xpFlat` XP added, then `xpPercent` % more, and `skillFlat`
+  // added to each skill gain. `text` says it for the chart ({flat},
+  // {percent}, {times}, {skill}: the numbers at a rank).
   var PERKS = [
     {id:'wanderer', name:'Wanderer', stat:'END', min:3, ranks:3, icon:'road',
-      effect:function(r){ return 'Each new route: +'+(25*r)+' XP'; }},
+      on:'ROUTE_ADDED', xpFlat:25, text:'Each new route: +{flat} XP'},
     {id:'cartographer', name:'Cartographer', stat:'INT', min:4, ranks:2, icon:'map',
-      effect:function(r){ return 'Discovering a city or region: +'+(25*r)+'% XP'; }},
+      on:'PLACE_DISCOVERED', xpPercent:25, text:'Discovering a city or region: +{percent}% XP'},
     {id:'ironwill', name:'Iron Will', stat:'END', min:4, ranks:3, icon:'flame',
-      effect:function(r){ return 'Each streak check-in: +'+(10*r)+' XP'; }},
+      on:'STREAK_CHECKIN', xpFlat:10, text:'Each streak check-in: +{flat} XP'},
     {id:'barter', name:'Barter', stat:'CHA', min:3, ranks:2, icon:'cap',
-      effect:function(r){ return 'Selling an item: '+(r+1)+'× the XP'; }},
+      on:'ITEM_SOLD', xpPercent:100, text:'Selling an item: {times}× the XP'},
     {id:'scholar', name:'Scholar', stat:'INT', min:5, ranks:2, icon:'book',
-      effect:function(r){ return 'Every skill gain from a quest: +'+r; }},
+      on:'QUEST_COMPLETED', skillFlat:1, text:'Every skill gain from a quest: +{skill}'},
     {id:'habit', name:'Creature of Habit', stat:'STR', min:3, ranks:3, icon:'calendar',
-      effect:function(r){ return 'Daily quests: +'+(5*r)+' XP'; }},
+      on:'DAILY_DONE', xpFlat:5, text:'Daily quests: +{flat} XP'},
     {id:'comprehension', name:'Comprehension', stat:'INT', min:3, ranks:2, icon:'eye',
-      effect:function(r){ return 'Journal entries (Analyze): +'+(20*r)+'% XP'; }},
+      on:'JOURNAL_ENTRY', xpPercent:20, text:'Journal entries (Analyze): +{percent}% XP'},
     {id:'quickhands', name:'Quick Hands', stat:'AGI', min:3, ranks:2, icon:'bolt',
-      effect:function(r){ return 'Bonus objectives: +'+(25*r)+'% XP'; }}
+      on:'BONUS_COMPLETED', xpPercent:25, text:'Bonus objectives: +{percent}% XP'}
   ];
+  // "Each new route: +50 XP": a perk's text at rank r (for the chart).
+  PERKS.forEach(function(p){
+    p.effect = function(r){
+      return p.text.replace('{flat}', (p.xpFlat||0)*r).replace('{percent}', (p.xpPercent||0)*r)
+        .replace('{times}', 1+(p.xpPercent||0)*r/100).replace('{skill}', (p.skillFlat||0)*r);
+    };
+  });
   function perkById(id){ return PERKS.filter(function(p){ return p.id===id; })[0] || null; }
   function perkRank(id){
     var perks = app.state && app.state.perks;
@@ -698,18 +823,9 @@
     if ((s.unspentPerkPoints||0)<=0 || !perkOpen(id)) return 0;
     s.perks[id] = perkRank(id)+1;
     s.unspentPerkPoints -= 1;
+    record('PERK_TAKEN', {perk:id, name:perkById(id).name, rank:s.perks[id]}, 0);
     return s.perks[id];
   }
-  // XP from a perk alone (Wanderer's per route, Iron Will's per check-in):
-  // {xp, leveled}, or null without the perk.
-  function perkXp(id, perRank){
-    var xp = perRank*perkRank(id);
-    return xp>0 ? {xp:xp, leveled:gainXp(xp)} : null;
-  }
-  function rewardRoute(){ return perkXp('wanderer', 25); }
-  function rewardCheckIn(){ return perkXp('ironwill', 10); }
-  // A journal proposal's XP, with Comprehension.
-  function journalXp(xp){ return Math.round((Number(xp)||0)*(1+0.2*perkRank('comprehension'))); }
 
   // ---------- checking a document ----------
   // Every document the app takes in goes through sanitizeImported(): a
@@ -776,6 +892,12 @@
     s.bobbleheads = bobbleheads;
     s.lifetimeDailies = Math.max(0, Math.round(num(s.lifetimeDailies, 0)));
     s.lifetimeHolotapes = Math.max(0, Math.round(num(s.lifetimeHolotapes, 0)));
+    // The history: known event types at a real time, their data kept plain.
+    s.history = (Array.isArray(s.history) ? s.history : []).filter(function(e){
+      return e && typeof e==='object' && EVENT_TYPES.indexOf(e.type)!==-1 && isFinite(Number(e.t)) && Number(e.t)>0;
+    }).map(function(e){
+      return {t:Number(e.t), type:e.type, xp:Math.max(0, Math.round(num(e.xp, 0))), data:eventData(e.data)};
+    }).slice(-HISTORY_MAX);
     STAT_KEYS.forEach(function(k){ s.stats[k] = clamp(Math.round(num(s.stats[k], 0)), 0, 10); });
     SKILL_KEYS.forEach(function(k){ s.skills[k] = clamp(Math.round(num(s.skills[k], 0)), 0, 100); });
 
@@ -1025,7 +1147,17 @@
   ST.takePerk = takePerk;
   ST.rewardRoute = rewardRoute;
   ST.rewardCheckIn = rewardCheckIn;
-  ST.journalXp = journalXp;
+  ST.acceptJournal = acceptJournal;
+  ST.spendSpecialPoint = spendSpecialPoint;
+  ST.markBackup = markBackup;
+  ST.countHolotape = countHolotape;
+  ST.withPerks = withPerks;
+  ST.award = award;
+  ST.EVENT_TYPES = EVENT_TYPES;
+  ST.HISTORY_MAX = HISTORY_MAX;
+  ST.record = record;
+  ST.recentEvents = recentEvents;
+  ST.historySummary = historySummary;
   ST.completeDaily = completeDaily;
   ST.sellItem = sellItem;
   ST.moveItem = moveItem;

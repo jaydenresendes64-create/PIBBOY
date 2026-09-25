@@ -321,6 +321,12 @@ next to a commit means a test failed.
 
 ## Your data
 
+- **History:** everything that happens is recorded as an event, in order: quests, dailies, bonus
+  objectives, check-ins, journal entries, sales, places discovered, routes, bobbleheads, level-ups,
+  perks, S.P.E.C.I.A.L. points, backups, holotapes (with the XP each gave, perks included). The
+  latest 2,000 are kept, in the save and in backups. Nothing shows it yet: it's the base for a weekly
+  summary, quests that progress by themselves, and statistics. A save from before it starts empty.
+
 - Saved in the browser you use, twice (IndexedDB and localStorage): if one copy is damaged, the
   other is used. If neither can be read, the app says so and changes nothing rather than starting
   empty. Another browser or device starts empty. Use **Export backup / Import backup** in the footer
