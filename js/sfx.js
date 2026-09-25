@@ -32,7 +32,7 @@
  * Power-on screen: when the app opens, a black screen says "TAP TO POWER ON";
  * the tap plays boot while the screen lights up like a tube (css/terminal.css).
  *
- * Two footer links, kept on this device only (localStorage, not in the saved
+ * Two switches in Settings, kept on this device only (localStorage, not in the saved
  * data): "Sound: on/off" (on by default) and "Power-on: on/off" (on by
  * default; off opens the app directly, and boot plays on the first tap).
  *
@@ -449,7 +449,7 @@
     setTimeout(function(){ if (ST.boot) ST.boot.afterPowerOn(); }, POWER_ON_MS);
   }
 
-  // ---------- footer links ----------
+  // ---------- the switches in Settings ----------
   function showChoices(){
     var s = document.getElementById('sound-btn');
     if (s){ s.textContent = 'Sound: '+(soundOn ? 'on' : 'off'); s.setAttribute('aria-pressed', String(soundOn)); }

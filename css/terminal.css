@@ -626,10 +626,9 @@ button{ cursor:pointer; }
    neighbours' (checked at 375px wide): 40px or more where the spacing
    allows. Inputs can't have one. */
 .step-btn, .remove-btn, .move-btn, .complete-btn, .tab-btn, .assign-btn, .add-row button, .add-name, .sell-btn,
-.footer-actions button, #reset-confirm-area button, .card-confirm button{ position:relative; }
+.card-confirm button{ position:relative; }
 .step-btn::before, .remove-btn::before, .move-btn::before, .complete-btn::before, .tab-btn::before, .assign-btn::before,
-.add-row button::before, .add-name::before, .sell-btn::before, .footer-actions button::before,
-#reset-confirm-area button::before, .card-confirm button::before{ content:''; position:absolute; }
+.add-row button::before, .add-name::before, .sell-btn::before, .card-confirm button::before{ content:''; position:absolute; }
 .remove-btn::before{ inset:-7px; }                             /* 26 -> 40 */
 .move-btn::before{ inset:-7px -4px; }                          /* 26 -> 34 x 40: 8px from the remove button */
 .complete-btn::before{ inset:-5px; }                           /* 30 -> 40 */
@@ -641,8 +640,6 @@ button{ cursor:pointer; }
 .add-row button::before{ inset:-1px; }                         /* 38 -> 40 */
 .add-name::before{ inset:-8px -3px; }
 .sell-btn::before{ inset:-5px -1px; }                          /* 34 -> 44 tall; clear of the remove button 8px away */
-.footer-actions button::before{ inset:-12px -5px -8px; }       /* 16 -> 36: the confirm row is 16px below */
-#reset-confirm-area button::before{ inset:-8px -3px -12px; }
 .card-confirm button::before{ inset:-8px -6px; }               /* 22 -> 38 */
 
 .add-row{ display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
@@ -914,19 +911,61 @@ button{ cursor:pointer; }
 .log-text{ font-size:0.85rem; margin-top:2px; }
 .log-xp{ font-size:0.75rem; color:var(--amber); margin-top:2px; }
 
-.footer-row{
-  margin-top:16px; display:flex; justify-content:space-between; align-items:center;
-  font-size:0.68rem; color:var(--text-dim); letter-spacing:0.04em; position:relative; z-index:3;
-  flex-wrap:wrap; gap:8px;
-}
-/* The links wrap as whole links when they don't fit on one line. */
-.footer-actions{ display:flex; flex-wrap:wrap; gap:20px 10px; }
-.footer-actions button{ color:var(--text-dim); text-decoration:underline; font-size:0.68rem; padding:1px 2px; white-space:nowrap; }
 .reset-warning{ color:var(--danger); }
+
+/* ---------- settings (index.html #settings, js/events.js) ----------
+   Over the app, under the toasts (so a backup's RadAway shows) and under
+   Custom sounds, the RobCo boot and the power-on screen. */
+body.modal-open{ overflow:hidden; }
+.settings-btn{ position:relative; padding:2px; font-size:1.05rem; line-height:1; color:var(--text-dim); }
+.settings-btn::before{ content:''; position:absolute; inset:-12px -8px; }
+.settings{
+  position:fixed; inset:0; z-index:900; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  background:rgba(8,4,1,0.9);
+  padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px));
+}
+.settings[hidden]{ display:none; }
+.settings-box{
+  max-width:520px; margin:0 auto; padding:10px 14px 16px;
+  border:1px solid var(--amber-dim); border-radius:3px; background:var(--panel);
+  box-shadow:0 0 24px rgba(255,154,46,0.12);
+}
+.settings-head{ display:flex; justify-content:space-between; align-items:center; }
+.settings-title{
+  font-family:'VT323',ui-monospace,monospace; font-size:1.6rem; letter-spacing:0.12em; color:var(--amber);
+  text-shadow:0 0 8px rgba(255,154,46,0.35);
+}
+.settings-close{ width:44px; height:44px; margin-right:-8px; font-size:1.6rem; color:var(--phosphor); }
+.set-section{
+  margin-top:16px; padding-bottom:4px; border-bottom:1px solid var(--line);
+  font-size:0.7rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--text-dim);
+}
+/* A row per setting, the whole row to tap. A switch's own text ("Sound: on")
+   is for screen readers; it shows as its label and [ ON ] / [ OFF ]. */
+.set-toggle, .set-link{
+  display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; min-height:48px;
+  padding:0 2px; border-bottom:1px solid var(--line); text-align:left;
+}
+.set-toggle{ font-size:0; color:transparent; }
+.set-toggle::before{ content:attr(data-label); font-size:0.9rem; color:var(--phosphor); }
+.set-toggle::after{
+  content:'[ OFF ]'; font-family:'VT323',ui-monospace,monospace; font-size:1.2rem; letter-spacing:0.06em; color:var(--text-dim);
+}
+.set-toggle[aria-pressed="true"]::after{ content:'[ ON ]'; color:var(--amber); text-shadow:0 0 6px rgba(255,154,46,0.5); }
+.set-link{ font-size:0.9rem; color:var(--phosphor); }
+.set-link::after{ content:'\203A'; font-size:1.4rem; line-height:1; color:var(--text-dim); }
+.set-danger{ color:var(--danger); }
+.set-note{ margin:6px 2px 4px; font-size:0.72rem; line-height:1.45; color:var(--text-dim); }
+.set-note a{ color:inherit; }
 .backup-age.due{ color:var(--amber); }
 .backup-age.due::before{ content:'\25B2  '; }
-#reset-confirm-area button{ text-decoration:underline; font-size:0.68rem; margin-left:6px; }
-#reset-confirm-btn, #import-confirm-btn{ color:var(--danger); }
+.set-confirm{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 0 2px; font-size:0.8rem; }
+.set-confirm:empty{ display:none; }
+.set-confirm button{
+  min-height:40px; padding:6px 12px; border:1px solid var(--line); border-radius:3px; background:var(--bg);
+  color:var(--phosphor); font-size:0.8rem;
+}
+#reset-confirm-btn, #import-confirm-btn{ color:var(--danger); border-color:var(--danger); }
 
 /* ---------- power-on screen (js/sfx.js) ----------
    A black screen when the app opens; the tap plays the boot sound while the
@@ -967,8 +1006,6 @@ button{ cursor:pointer; }
 .weather-btn{ position:relative; color:var(--text-dim); letter-spacing:0.06em; font-size:0.75rem; }
 .weather-btn::before{ content:''; position:absolute; inset:-12px -6px; }
 .weather-btn[hidden]{ display:none; }
-.credits{ font-size:0.62rem; color:var(--text-dim); opacity:0.8; }
-.credits a{ color:inherit; }
 @keyframes powerHint{ 0%,100%{ opacity:1; } 50%{ opacity:0.7; } }
 .frame.crt-power-on{ animation:crtPowerOn 0.7s ease-out both; transform-origin:50% 30vh; }
 @keyframes crtPowerOn{

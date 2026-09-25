@@ -69,7 +69,7 @@
   }
 
   // Everything lives on this phone: when a backup is due (ST.backupDue), a
-  // notice says so, at most once a day. The footer's line always shows it.
+  // notice says so, at most once a day. Settings and the rad meter always show it.
   var REMINDED_KEY = 'status_terminal_backup_reminded';
   function remindBackup(){
     if (!ST.backupDue()) return;

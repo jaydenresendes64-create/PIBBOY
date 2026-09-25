@@ -345,7 +345,7 @@
     app.confirmPerk = null;
   }
   // A whole new state (a backup, a reset): drawn, caps quests brought up to
-  // date with its wallet, and saved.
+  // date with its wallet, and saved; the settings close on it.
   function replaceState(state){
     app.state = state;
     app.pendingProposal = null;
@@ -354,6 +354,31 @@
     renderAll();
     if (syncCaps()) renderQuests();
     ST.storage.saveNow();
+    closeSettings(false);
+  }
+
+  // ---------- settings ----------
+  // The panel over the app (index.html #settings), opened by the topbar's
+  // gear, closed by ×, Escape or a tap outside it. The keyboard focus goes
+  // into it, and back to the gear after.
+  function openSettings(){
+    var box = el('settings');
+    if (!box || !box.hidden) return;
+    box.hidden = false;
+    box.scrollTop = 0;
+    document.body.classList.add('modal-open');
+    el('settings-btn').setAttribute('aria-expanded', 'true');
+    el('settings-close').focus();
+  }
+  function closeSettings(refocus){
+    var box = el('settings');
+    if (!box || box.hidden) return;
+    box.hidden = true;
+    document.body.classList.remove('modal-open');
+    el('settings-btn').setAttribute('aria-expanded', 'false');
+    el('reset-confirm-area').innerHTML = '';
+    pendingImport = null;
+    if (refocus!==false) el('settings-btn').focus();
   }
   function importBackup(file){
     ST.storage.readJsonFile(file).then(function(raw){
@@ -569,6 +594,8 @@
     'power-btn': function(){ if (ST.sfx) ST.sfx.togglePowerScreen(); },
     'sounds-btn': function(){ if (ST.sfxCustom) ST.sfxCustom.open(); },
     'weather-btn': function(){ if (ST.weather) ST.weather.tell(); },
+    'settings-btn': openSettings,
+    'settings-close': function(){ closeSettings(); },
     'export-btn': exportData,
     'import-btn': function(){ el('import-file').click(); },
     'import-confirm-btn': confirmImport,
@@ -578,6 +605,7 @@
     'reset-cancel-btn': function(){ el('reset-confirm-area').innerHTML = ''; }
   };
   function onClick(e){
+    if (e.target.id==='settings'){ closeSettings(); return; }       // a tap outside the settings' box
     var tabBtn = e.target.closest('[data-tab]');
     if (tabBtn){
       var tab = tabBtn.getAttribute('data-tab');
@@ -680,6 +708,11 @@
       }
     });
     document.body.addEventListener('keydown', function(e){
+      // Escape closes the settings (not when it closes Custom sounds, over them).
+      if (e.key==='Escape'){
+        if (!el('settings').hidden && !(e.target.closest && e.target.closest('.sound-lab'))) closeSettings();
+        return;
+      }
       if (e.key!=='Enter') return;
       var targetId = e.target.id || '';
       if (targetId.indexOf('new-main-')===0) addMainQuest();

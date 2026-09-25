@@ -567,7 +567,7 @@
     renderQuests();
   }
 
-  // The footer's backup line: "Last backup: 3 days ago", in the warning
+  // Settings' backup line: "Last backup: 3 days ago", in the warning
   // colour when it's time for another one (ST.backupDue).
   function renderBackup(){
     var d = ST.backupDays(), due = ST.backupDue();

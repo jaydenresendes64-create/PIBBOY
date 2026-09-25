@@ -62,7 +62,7 @@
       <div class="topbar">
         <span class="net-status" id="net-status"><span class="status-dot"></span><span id="net-text">ONLINE</span></span>
         <span class="device-plate" aria-hidden="true">PIBBOY 3000</span>
-        <span class="topbar-right"><button class="weather-btn" id="weather-btn" hidden></button><span id="hdr-date"></span></span>
+        <span class="topbar-right"><button class="weather-btn" id="weather-btn" hidden></button><span id="hdr-date"></span><button class="settings-btn" id="settings-btn" aria-label="Settings" aria-haspopup="dialog" aria-expanded="false">&#9881;&#xFE0E;</button></span>
       </div>
 
       <div class="hero">
@@ -102,22 +102,42 @@
       <section class="tab-content" id="tab-map" style="display:none"></section>
       <section class="tab-content" id="tab-log" style="display:none"></section>
 
-      <div class="footer-row">
-        <span id="ai-indicator">AI analysis: checking…</span>
-        <div class="footer-actions">
-          <button id="tilt-btn" aria-pressed="false">3D tilt: off</button>
-          <button id="sound-btn" aria-pressed="true">Sound: on</button>
-          <button id="power-btn" aria-pressed="true">Power-on: on</button>
-          <button id="sounds-btn">Custom sounds</button>
-          <button id="export-btn">Export backup</button>
-          <button id="import-btn">Import backup</button>
-          <button id="reset-btn">Reset</button>
-        </div>
-      </div>
-      <div class="footer-row"><span class="backup-age" id="backup-age"></span><span class="credits">Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a></span></div>
-      <div class="footer-row" id="reset-confirm-area"></div>
       <input type="file" id="import-file" accept="application/json,.json" hidden>
     </div>
   </main>
+
+  <!-- Settings, opened by the topbar's gear (js/events.js). The buttons keep their ids: tilt.js and
+       sfx.js write their state in them ("Sound: on", aria-pressed), the CSS shows it as [ ON ]. -->
+  <div class="settings" id="settings" hidden>
+    <div class="settings-box" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <div class="settings-head">
+        <span class="settings-title" id="settings-title">SETTINGS</span>
+        <button class="settings-close" id="settings-close" aria-label="Close settings">&times;</button>
+      </div>
+
+      <div class="set-section">Display</div>
+      <button class="set-toggle" id="tilt-btn" data-label="3D tilt" aria-pressed="false">3D tilt: off</button>
+      <p class="set-note">The screen's layers follow the phone's motion.</p>
+      <button class="set-toggle" id="power-btn" data-label="Power-on screen" aria-pressed="true">Power-on: on</button>
+      <p class="set-note">"Tap to power on", then the RobCo boot once a day.</p>
+
+      <div class="set-section">Sound</div>
+      <button class="set-toggle" id="sound-btn" data-label="Sound" aria-pressed="true">Sound: on</button>
+      <button class="set-link" id="sounds-btn">Custom sounds</button>
+      <p class="set-note">Your own clips for any sound, kept on this device.</p>
+
+      <div class="set-section">Data</div>
+      <button class="set-link" id="export-btn">Export backup (RadAway)</button>
+      <p class="set-note backup-age" id="backup-age"></p>
+      <button class="set-link" id="import-btn">Import backup</button>
+      <button class="set-link set-danger" id="reset-btn">Reset everything</button>
+      <div class="set-confirm" id="reset-confirm-area"></div>
+
+      <div class="set-section">About</div>
+      <p class="set-note" id="ai-indicator">AI analysis: checking…</p>
+      <p class="set-note">Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> ·
+        Routes: OSRM · Map: OpenFreeMap, OpenMapTiles, OpenStreetMap (credited on the map).</p>
+    </div>
+  </div>
 </body>
 </html>

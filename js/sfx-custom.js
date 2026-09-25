@@ -3,7 +3,7 @@
  * cut from a video or audio file on this device (for example a recording of
  * the real Pip-Boy).
  *
- * The footer link "Custom sounds" opens a panel:
+ * "Custom sounds" (in Settings) opens a panel:
  *   - each sound, with ▶ to hear it and Reset to go back to the built-in one;
  *   - "Choose a video or audio file": the file is decoded in the browser and
  *     every separate sound in it is found automatically (detectSegments).
