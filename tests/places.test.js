@@ -11,6 +11,17 @@ const ST = app.ST;
 const P = ST.places;
 const near = (a, b, tolerance) => assert.ok(Math.abs(a - b) <= tolerance, a + ' is not ' + b + ' ± ' + tolerance);
 
+test('marks: smaller as the map zooms out, bounded, their usual size at a city', () => {
+  assert.equal(P.markerScale(0), 0.4);                // the whole world: points
+  assert.equal(P.markerScale(3), 0.4);
+  assert.equal(P.markerScale(9), 1);                  // a city, where the map opens: as before
+  assert.equal(P.markerScale(14), 1.2);               // the streets: a little bigger
+  assert.equal(P.markerScale(19), 1.2);
+  near(P.markerScale(6), 0.7, 1e-9);                  // straight in between
+  assert.equal(P.markerScale(NaN), 0.4);
+  for (let z = 0; z < 19; z += 0.25) assert.ok(P.markerScale(z + 0.25) >= P.markerScale(z), 'never smaller zooming in, at ' + z);
+});
+
 test('positions: Web Mercator from 0 to 1 across the world', () => {
   assert.equal(P.mercX(-180), 0);
   assert.equal(P.mercX(0), 0.5);

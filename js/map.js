@@ -148,6 +148,7 @@
       if (pendingFocus){ focusPlace(pendingFocus.type, pendingFocus.place); pendingFocus = null; }
     });
     map.on('zoomend', showLabels);
+    map.on('zoom', scaleMarks);                     // during a pinch too, not only once it ends
     // A right click (or a long press, which some phones send as one) drops
     // a pin; so does a tap after "Drop pin". A tap while placing a bulk-list
     // line places it.
@@ -232,6 +233,17 @@
     var z = map.getZoom(), box = map.getContainer();
     box.classList.toggle('labels-cities', z>=5);
     box.classList.toggle('labels-pins', z>=10);
+    scaleMarks();
+  }
+  // The marks shrink as the map zooms out (P.markerScale), through one CSS
+  // variable on the map (css/terminal.css .mk-dot): no mark is redrawn, and
+  // it's only written when it changes by a step (0.05).
+  var markScale = null;
+  function scaleMarks(){
+    var s = Math.round(P.markerScale(map.getZoom())*20)/20;
+    if (s===markScale) return;
+    markScale = s;
+    map.getContainer().style.setProperty('--mk-scale', String(s));
   }
   // The marks for the cities and pins (regions show by their shape). A tap
   // on one opens it. 44px to tap, a small dot to see.
