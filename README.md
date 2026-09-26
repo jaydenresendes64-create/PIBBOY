@@ -197,7 +197,10 @@ places, train and metro lines and stations), drawn in the app's own amber Pip-Bo
 pinch on the phone (drag and the mouse wheel on a computer); the map always stays north up and flat,
 and goes from the whole world to zoom 19 (a few houses). It opens on Montréal. The round buttons on the
 map: **⌖** recenters on your latest place (Montréal when there's none yet), **⛶** zooms to show all
-your places.
+your places. Each city is an amber diamond and each pin a dot, sized by the zoom so they never cover
+the map: small points over the whole world (about 6 px), their usual size at a city (as the map opens
+on Montréal), a little bigger in the streets. They stay just as easy to tap (the tap area doesn't
+shrink), and the place that's open keeps its full size.
 
 - **Map library:** [MapLibre GL JS](https://maplibre.org) 6.11.2, kept in `vendor/maplibre/` (no CDN;
   the files are the package's, with only the source-map comment line removed). It draws the map with

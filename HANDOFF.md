@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
-State as of the `trophies` PR (2026-09-25, after PR #11). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-210/210 tests pass locally. `sw.js` cache: `v18`.
+State as of the `marker-scale` PR (2026-09-26, after PR #12). Live: https://jaydenresendes64-create.github.io/PIBBOY/
+211/211 tests pass locally. `sw.js` cache: `v19`.
 
 ## 1. What it is
 
@@ -78,6 +78,9 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   manual CAD rates, **1000 CAD = 1 Cap**; 3D wireframe model per category.
 - MAP: see architecture; DISCOVERED banner + XP once per place (50 city / 100 region). Routes
   (road trips between nearby cities; the owner picks the stops, never auto-linked; no XP).
+  City diamonds and pin dots are DOM markers sized by zoom: `places.js markerScale()` (0.4 at zoom ≤3,
+  1 at 9 ≈ the Montréal opening view, 1.2 at ≥14) → one `--mk-scale` CSS variable on the map, set by
+  map.js `scaleMarks()` on `zoom`; the 44 px tap area never shrinks; the open place keeps ≥1.
 - LOG: journal → proposal (XP + skills only, never SPECIAL) → Accept/Reject.
 - Look & feel: CRT vignette/flicker, scanlines, bezel with rounded corners (+ screws ≥600px), glass
   glare, physical tab keys, recessed panels, faint "PIBBOY 3000" plate, animated amber mascot
@@ -134,7 +137,7 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   Co-Authored-By line) → push → open a PR with GitHub CLI (`C:Program FilesGitHub CLIgh.exe`,
   installed 2026-09-25, owner signed in) → the owner merges it on GitHub (= deploy to Pages in ~1 min)
   → `git checkout main && git pull`. PRs #8 (bobbleheads + holotapes), #9 (event core), #10 (settings),
-  #11 (safety fixes) were done this way. Earlier features were pushed straight to main.
+  #11 (safety fixes), #12 (trophies) were done this way. Earlier features were pushed straight to main.
 - The working copy now has CRLF line endings (git autocrlf after pulls): scripted text edits must
   normalize `
 ` first (the Edit tool is fine).

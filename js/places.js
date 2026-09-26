@@ -49,6 +49,21 @@
     return [[Math.max(-180, lon-dLon), Math.max(-MAX_LAT, mid-dLat)],
       [Math.min(180, lon+dLon), Math.min(MAX_LAT, mid+dLat)]];
   }
+  // How big the marks of cities and pins are drawn at a zoom (MapLibre's,
+  // 0 = the whole world, 19 = a street): 1 is their size at a city's zoom
+  // (9: the map opens on Montréal at about that), smaller the further out,
+  // so zoomed out they stay points rather than cover the map; a little
+  // bigger in the streets. Straight lines between these zooms, never
+  // outside the first and last.
+  var MARK_SCALES = [[3, 0.4], [9, 1], [14, 1.2]];
+  function markerScale(zoom){
+    var z = Number(zoom), s = MARK_SCALES;
+    if (!(z>s[0][0])) return s[0][1];                  // NaN too
+    for (var i=1;i<s.length;i++){
+      if (z<=s[i][0]) return s[i-1][1] + (z-s[i-1][0])/(s[i][0]-s[i-1][0])*(s[i][1]-s[i-1][1]);
+    }
+    return s[s.length-1][1];
+  }
   // The box around every place (each circle twice its radius, each region
   // whose shape is loaded), or null when there's none.
   function placesBounds(){
@@ -584,6 +599,7 @@
     pixelsPerMetre: pixelsPerMetre,
     distance: distance,
     boundsAround: boundsAround,
+    markerScale: markerScale,
     placesBounds: placesBounds,
     tileUrl: tileUrl,
     noDataTile: noDataTile,
