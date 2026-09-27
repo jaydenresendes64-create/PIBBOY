@@ -31,6 +31,9 @@
  *   inventory: [ { id, name, category: one of CATS,     // WEAPONS is gone: see migrate()
  *                  price?: number>=0 } ],    // asking price in CAD, optional, shown in THINGS TO SELL (SELL)
  *                                           // only; kept when the item moves to another category
+ *   books: [ { id, title, author, date: 'YYYY-M-D'|null,   // ITEMS → BOOKS: the books read, each
+ *              skillGains: [SkillGain] } ],   // paid once when added (readBook): BOOK_XP and at most
+ *                                           // one skill gain, +1 to BOOK_SKILL_MAX; older saves: none
  *   finances: { holdings: [ { id, label, amount, rateToCAD: number>0 } ] },  // Caps = total CAD / CAD_PER_CAP
  *                                           // a sale adds to the holding labelled CASH (made if missing)
  *   log: [ { date, text, xp, reason } ],     // date as shown ('Sep 24, 2026'); the latest LOG_MAX only
@@ -81,7 +84,8 @@
  * completeSide, completeBonus, completeDaily, rewardCheckIn (a streak
  * check-in), acceptJournal (a journal proposal), sellItem (SALE_XP, the
  * money in the wallet and a journal line), discoverPlace (CITY_XP or
- * REGION_XP, once per place), rewardRoute, findBobbleheads. Milestones
+ * REGION_XP, once per place), rewardRoute, readBook (BOOK_XP and its skill),
+ * findBobbleheads. Milestones
  * without XP are recorded too (level-ups, perks, S.P.E.C.I.A.L. points,
  * backups, holotapes). Nothing else touches state.skills / state.xp;
  * events.js only adds the toasts.
@@ -130,6 +134,8 @@
   var PLACE_NAME_MAX = 80, PLACE_NOTE_MAX = 500;
   var ROUTE_NAME_MAX = 120, ROUTE_STOPS_MAX = 25, ROUTE_PATH_MAX = 200000;
   var CITY_XP = 50, REGION_XP = 100;
+  // ITEMS → BOOKS (see "books" above).
+  var BOOK_XP = 50, BOOK_SKILL_MAX = 5, BOOK_TITLE_MAX = 120, BOOK_AUTHOR_MAX = 80;
   // Every country a place can be in (GeoNames' country list, as in data/places.txt).
   var COUNTRY_CODES = ('AD AE AF AG AI AL AM AN AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR '+
     'BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CS CU CV CW CX CY CZ DE DJ DK DM DO DZ '+
@@ -182,6 +188,7 @@
       {id:'i1',name:'Phone',category:'MISC'},
       {id:'i2',name:'Keys',category:'IMPORTANT'}
     ],
+    books:[],                   // starts empty: add the ones you finish in ITEMS → BOOKS
     finances:{ holdings:[] },   // starts empty: add your own in ITEMS → wallet
     log:[],
     map:{ cities:[], regions:[], pins:[], routes:[], discovered:[] }
@@ -203,7 +210,7 @@
     perkChart: false,           // the STATUS tab's perk chart is open
     bobbleOpen: null,           // id of the bobblehead whose details show
     confirmPerk: null,          // id of the perk whose rank awaits "Yes"
-    addOpen: null               // the QUESTS add row unfolded: 'main', 'side' or 'daily'
+    addOpen: null               // the add form unfolded: 'main', 'side', 'daily' (QUESTS) or 'book' (ITEMS)
   };
 
   function el(id){ return document.getElementById(id); }
@@ -269,6 +276,7 @@
     migrateSkills(doc);
     migrateInventory(doc);
     migrateMap(doc);
+    migrateBooks(doc);
     return doc;
   }
   // Side quests from before their skill gains: the app's first four (s1-s4,
@@ -356,6 +364,10 @@
     ['cities','regions','pins','routes','discovered'].forEach(function(list){
       if (!Array.isArray(doc.map[list])) doc.map[list] = [];
     });
+  }
+  // Books came later: a save from before them has none yet.
+  function migrateBooks(doc){
+    if (!Array.isArray(doc.books)) doc.books = [];
   }
   function has(obj, key){ return Object.prototype.hasOwnProperty.call(obj, key); }
   function mergeDefaults(loaded){
@@ -553,7 +565,7 @@
   var HISTORY_MAX = 2000;
   var EVENT_TYPES = ['QUEST_COMPLETED', 'BONUS_COMPLETED', 'DAILY_DONE', 'STREAK_CHECKIN', 'JOURNAL_ENTRY',
     'ITEM_SOLD', 'PLACE_DISCOVERED', 'ROUTE_ADDED', 'BOBBLEHEAD_FOUND', 'LEVEL_UP', 'PERK_TAKEN',
-    'SPECIAL_RAISED', 'BACKUP_MADE', 'HOLOTAPE_RECORDED'];
+    'SPECIAL_RAISED', 'BACKUP_MADE', 'HOLOTAPE_RECORDED', 'BOOK_READ'];
   function record(type, data, xp){
     var s = app.state;
     if (!Array.isArray(s.history)) s.history = [];
@@ -705,6 +717,21 @@
   function rewardRoute(route){
     return award('ROUTE_ADDED', {name:route ? route.name : '', km:route ? Number(route.km)||0 : 0}, 0);
   }
+  // A book finished (ITEMS → BOOKS): kept in the list with today's date, and
+  // paid once, now: BOOK_XP and its one skill gain (+1 to BOOK_SKILL_MAX;
+  // none when no skill is picked). Returns null without a title, else
+  // {book, xp, leveled, skillGains}.
+  function readBook(title, author, skill, amount){
+    title = String(title===undefined || title===null ? '' : title).trim().slice(0, BOOK_TITLE_MAX);
+    if (!title) return null;
+    var gains = SKILL_KEYS.indexOf(skill)===-1 ? [] :
+      [{skill:skill, amount:clamp(Math.round(Number(amount)||1), 1, BOOK_SKILL_MAX)}];
+    var book = {id:genId(), title:title, author:String(author===undefined || author===null ? '' : author).trim().slice(0, BOOK_AUTHOR_MAX),
+      date:todayStr(), skillGains:gains};
+    app.state.books.push(book);
+    var reward = award('BOOK_READ', {name:title}, BOOK_XP, gains);
+    return {book:book, xp:reward.xp, leveled:reward.leveled, skillGains:reward.skillGains};
+  }
   // A journal proposal accepted: its XP and skill gains, and its line in the
   // journal (with the XP it really gave).
   function acceptJournal(p){
@@ -744,7 +771,6 @@
     s.map.cities.concat(s.map.regions, s.map.pins).forEach(function(p){ if (p.cc) seen[p.cc] = true; });
     return Object.keys(seen).length;
   }
-  function routeKm(s){ return (s.map.routes||[]).reduce(function(sum, r){ return sum+(Number(r.km)||0); }, 0); }
   function doneMain(s, type){ return s.quests.mains.some(function(m){ return m.completed && m.progressType===type; }); }
   function highest(values){ return Math.max.apply(null, Object.keys(values).map(function(k){ return Number(values[k])||0; })); }
   var BOBBLEHEADS = [
@@ -759,7 +785,7 @@
     {id:'routine', name:'Creature of Routine', how:'Do 30 daily quests', found:function(s){ return (s.lifetimeDailies||0)>=30; }},
     {id:'explorer', name:'Explorer', how:'Reveal 10 cities', found:function(s){ return s.map.cities.length>=10; }},
     {id:'globetrotter', name:'Globetrotter', how:'Places in 5 countries', found:function(s){ return countries(s)>=5; }},
-    {id:'roadwarrior', name:'Road Warrior', how:'1,000 km of routes', found:function(s){ return routeKm(s)>=1000; }},
+    {id:'bookworm', name:'Bookworm', how:'Read 5 books', found:function(s){ return (s.books||[]).length>=5; }},
     {id:'scribe', name:'Scribe', how:'25 journal entries', found:function(s){ return logEntryCount()>=25; }},
     {id:'specialist', name:'Specialist', how:'A skill at 50', found:function(s){ return highest(s.skills)>=50; }},
     {id:'special', name:'S.P.E.C.I.A.L.ist', how:'A S.P.E.C.I.A.L. stat at 10', found:function(s){ return highest(s.stats)>=10; }},
@@ -951,6 +977,15 @@
         else delete i.price;
       }
     });
+    s.books = records(s.books, function(b){
+      b.id = safeId(b.id);
+      b.title = text(b.title, BOOK_TITLE_MAX).trim() || 'Untitled';
+      b.author = text(b.author, BOOK_AUTHOR_MAX).trim();
+      b.date = normalizeDate(b.date);
+      b.skillGains = fixGains(b.skillGains).slice(0, 1).map(function(g){
+        return {skill:g.skill, amount:clamp(Math.round(g.amount), 1, BOOK_SKILL_MAX)};
+      });
+    });
     s.finances.holdings = records(s.finances.holdings, function(h){
       h.id = safeId(h.id);
       h.label = text(h.label);
@@ -1107,6 +1142,10 @@
   ST.decodePath = decodePath;
   ST.PLACE_NOTE_MAX = PLACE_NOTE_MAX;
   ST.CITY_XP = CITY_XP;
+  ST.BOOK_XP = BOOK_XP;
+  ST.BOOK_SKILL_MAX = BOOK_SKILL_MAX;
+  ST.BOOK_TITLE_MAX = BOOK_TITLE_MAX;
+  ST.BOOK_AUTHOR_MAX = BOOK_AUTHOR_MAX;
   ST.REGION_XP = REGION_XP;
   ST.COUNTRY_CODES = COUNTRY_CODES;
   ST.REGION_CODE = REGION_CODE;
@@ -1158,6 +1197,7 @@
   ST.perkOpen = perkOpen;
   ST.takePerk = takePerk;
   ST.rewardRoute = rewardRoute;
+  ST.readBook = readBook;
   ST.rewardCheckIn = rewardCheckIn;
   ST.acceptJournal = acceptJournal;
   ST.spendSpecialPoint = spendSpecialPoint;

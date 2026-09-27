@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
-State as of the `da-trophies-titles` PR (2026-09-26, after PR #13). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-212/212 tests pass locally. `sw.js` cache: `v20`.
+State as of the `books` PR (2026-09-26, after PR #14). Live: https://jaydenresendes64-create.github.io/PIBBOY/
+216/216 tests pass locally. `sw.js` cache: `v21`.
 
 ## 1. What it is
 
@@ -75,7 +75,11 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   (tap to rename), completion animation + banners, confirmations before removing.
 - ITEMS: categories SELL ("THINGS TO SELL", price + Sold → CASH + 25 XP + journal line), APPAREL,
   AID, MISC, IMPORTANT (WEAPONS migrated to MISC); move between categories; wallet holdings with
-  manual CAD rates, **1000 CAD = 1 Cap**; 3D wireframe model per category.
+  manual CAD rates, **1000 CAD = 1 Cap**; 3D wireframe model per category. **BOOKS** (owner's request
+  2026-09-26): `state.books`, `readBook()` → award('BOOK_READ', +50 XP, one skill +1..+5, owner's choice),
+  paid once when added; removing a book keeps what it gave; folded form (`addFormHtml`, kind 'book').
+  Bookworm (5 books) replaced Road Warrior (1,000 km of routes) on the shelf: the owner wanted to stay
+  at 16 and drop the least well drawn; sanitize drops an old 'roadwarrior' find (its XP stays).
 - MAP: see architecture; DISCOVERED banner + XP once per place (50 city / 100 region). Routes
   (road trips between nearby cities; the owner picks the stops, never auto-linked; no XP).
   City diamonds and pin dots are DOM markers sized by zoom: `places.js markerScale()` (0.4 at zoom ≤3,
@@ -141,7 +145,7 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   Co-Authored-By line) → push → open a PR with GitHub CLI (`C:Program FilesGitHub CLIgh.exe`,
   installed 2026-09-25, owner signed in) → the owner merges it on GitHub (= deploy to Pages in ~1 min)
   → `git checkout main && git pull`. PRs #8 (bobbleheads + holotapes), #9 (event core), #10 (settings),
-  #11 (safety fixes), #12 (trophies), #13 (map marks) were done this way. Earlier features were pushed straight to main.
+  #11 (safety fixes), #12 (trophies), #13 (map marks), #14 (DA) were done this way. Earlier features were pushed straight to main.
 - The working copy now has CRLF line endings (git autocrlf after pulls): scripted text edits must
   normalize `
 ` first (the Edit tool is fine).

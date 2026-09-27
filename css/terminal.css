@@ -611,6 +611,20 @@ button{ cursor:pointer; }
    pushing the XP, the amount or the remove button out of its row. */
 .quest-name, .inv-item > span, .wallet-label, .log-text, .log-xp{ min-width:0; overflow-wrap:anywhere; }
 .quest-xp{ font-size:0.72rem; color:var(--text-dim); white-space:nowrap; text-align:right; }
+/* ITEMS → BOOKS (js/render.js booksHtml): the title like a quest's name, the
+   author and the day it was finished under it, what it gave on the right. */
+.book-list{ display:flex; flex-direction:column; }
+.book-item{
+  display:grid; grid-template-columns:1fr auto auto; align-items:center;
+  gap:8px; padding:8px 0; border-bottom:1px solid var(--line);
+}
+.book-item:last-child{ border-bottom:none; }
+.book-text{ display:flex; flex-direction:column; min-width:0; }
+.book-title{
+  font-family:'VT323',ui-monospace,monospace; font-size:1.3rem; line-height:1.05;
+  color:var(--amber); letter-spacing:0.02em; overflow-wrap:anywhere;
+}
+.book-meta{ font-size:0.72rem; color:var(--text-dim); margin-top:1px; overflow-wrap:anywhere; }
 .quest-gain{ display:block; font-size:0.66rem; color:var(--amber-dim); }
 .complete-btn{
   width:30px; height:30px; border:1px solid var(--phosphor-dim); border-radius:50%;

@@ -48,11 +48,10 @@ test('the quest, item, map and journal milestones', () => {
   s.lifetimeDailies = 30;
   s.map.cities = Array.from({ length: 10 }, (_, i) => city(i));
   s.map.pins = ['FR', 'MA', 'US', 'MX'].map((cc, i) => Object.assign(city(20 + i, cc), { radius: 500 }));
-  s.map.routes = [{ id: 'r1', name: 'Trip', stops: [], path: '', km: 649, date: null, note: '' },
-    { id: 'r2', name: 'Trip 2', stops: [], path: '', km: 351, date: null, note: '' }];
+  for (let i = 0; i < 5; i++) ST.readBook('Book ' + i, '', 'KNOWLEDGE', 1);
   s.lifetimeLogEntries = 25;
   assert.deepEqual(ids(ST.findBobbleheads()).sort(),
-    ['capitalist', 'devotion', 'errands', 'explorer', 'globetrotter', 'merchant', 'roadwarrior', 'routine', 'scribe'].sort());
+    ['bookworm', 'capitalist', 'devotion', 'errands', 'explorer', 'globetrotter', 'merchant', 'routine', 'scribe'].sort());
 });
 
 test('daily quests are counted for their bobblehead', () => {
@@ -65,7 +64,8 @@ test('daily quests are counted for their bobblehead', () => {
 
 test('sanitize: only known bobbleheads, each with a real date; older saves start with none', () => {
   const s = app.plain(ST.defaultState());
-  s.bobbleheads = { vault: '2026-09-25', veteran: 'yesterday', nope: '2026-9-1', '__proto__': '2026-9-1' };
+  s.bobbleheads = { vault: '2026-09-25', veteran: 'yesterday', nope: '2026-9-1', '__proto__': '2026-9-1',
+    roadwarrior: '2026-9-20' };                                // replaced by Bookworm: gone, its XP stays
   s.lifetimeDailies = '12.2';
   const out = app.plain(ST.sanitizeImported(JSON.parse(JSON.stringify(s))));
   assert.deepEqual(out.bobbleheads, { vault: '2026-9-25' });

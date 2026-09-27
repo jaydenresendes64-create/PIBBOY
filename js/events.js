@@ -17,7 +17,16 @@
   var scheduleSave = ST.storage.scheduleSave;
 
   var pendingImport = null;
-  var ADD_PREFIX = {main:'new-main-', side:'new-quest-', daily:'new-daily-'};   // the QUESTS add rows' boxes
+  // The folded add forms (render.js addFormHtml): their boxes' id prefix, the
+  // first box, and the tab they're in.
+  var ADD_FORMS = {
+    main: {prefix:'new-main-', first:'new-main-questname', tab:'quests'},
+    side: {prefix:'new-quest-', first:'new-quest-questname', tab:'quests'},
+    daily: {prefix:'new-daily-', first:'new-daily-questname', tab:'quests'},
+    book: {prefix:'new-book-', first:'new-book-title', tab:'items'}
+  };
+  function addForm(kind){ return Object.prototype.hasOwnProperty.call(ADD_FORMS, kind) ? ADD_FORMS[kind] : null; }
+  function redrawAddForm(form){ if (form.tab==='items') renderInventory(); else renderQuests(); }
   var checkPlaying = false;     // a check button's animation is running
 
   // A reward's toasts (what state.js gave): the XP and skills, a level-up.
@@ -163,6 +172,20 @@
     R.clearTyped('new-item-');
     renderInventory(); scheduleSave();
   }
+  // A book finished (ITEMS → BOOKS): its XP and skill points now
+  // (ST.readBook), a banner, and the form folded and emptied.
+  function addBook(){
+    var titleInput = el('new-book-title');
+    if (!titleInput.value.trim()){ titleInput.focus(); return; }
+    var result = ST.readBook(titleInput.value, el('new-book-author').value, el('new-book-skill').value, el('new-book-amount').value);
+    if (!result) return;
+    R.clearTyped('new-book-');
+    app.addOpen = null;
+    R.showBookRead(result.book.title);
+    showXp(result.xp, result.leveled, result.skillGains);
+    renderInventory(); renderStatus();
+    ST.storage.saveNow();
+  }
   function findItem(id){
     return app.state.inventory.filter(function(x){ return x.id===id; })[0] || null;
   }
@@ -202,7 +225,7 @@
   }
 
   // ---------- removing, after "Yes, remove" ----------
-  var REMOVE_REDRAW = {side:'quests', daily:'quests', item:'items', wallet:'items'};
+  var REMOVE_REDRAW = {side:'quests', daily:'quests', item:'items', wallet:'items', book:'items'};
   function redraw(kind){
     if (REMOVE_REDRAW[kind]==='quests') renderQuests(); else renderInventory();
   }
@@ -223,6 +246,7 @@
     else if (kind==='daily') state.quests.daily = state.quests.daily.filter(keep);
     else if (kind==='item') state.inventory = state.inventory.filter(keep);
     else if (kind==='wallet') state.finances.holdings = state.finances.holdings.filter(keep);
+    else if (kind==='book') state.books = state.books.filter(keep);          // its XP and skill points stay
     else return;
     app.confirmRemove = null;
     redraw(kind);
@@ -554,26 +578,31 @@
       renderQuests();
     },
     'rename': function(btn){ startRename(btn); },
-    // QUESTS: an add row, unfolded by its "+ New ..." button (render.js
-    // addFormHtml) with the cursor in its first box; Cancel folds it and
-    // empties it. Adding a quest folds it too.
+    // An add form (QUESTS, BOOKS), unfolded by its "+ New ..." button
+    // (render.js addFormHtml) with the cursor in its first box; Cancel folds
+    // it and empties it. Adding folds it too. One open at a time.
     'add-open': function(btn, id, key){
-      if (!Object.prototype.hasOwnProperty.call(ADD_PREFIX, key)) return;
+      var form = addForm(key), was = addForm(app.addOpen);
+      if (!form) return;
       app.addOpen = key;
-      renderQuests();
-      var first = el(ADD_PREFIX[key]+'questname');
+      if (was && was.tab!==form.tab) redrawAddForm(was);
+      redrawAddForm(form);
+      var first = el(form.first);
       if (first) first.focus();
     },
     'add-close': function(){
-      if (Object.prototype.hasOwnProperty.call(ADD_PREFIX, app.addOpen)) R.clearTyped(ADD_PREFIX[app.addOpen]);
+      var form = addForm(app.addOpen);
       app.addOpen = null;
-      renderQuests();
+      if (!form) return;
+      R.clearTyped(form.prefix);
+      redrawAddForm(form);
     },
     // Removing a row: asks first, under it.
     'quest-remove': function(btn, id){ askRemove('side', id); },
     'daily-remove': function(btn, id){ askRemove('daily', id); },
     'inv-remove': function(btn, id){ askRemove('item', id); },
     'wallet-remove': function(btn, id){ askRemove('wallet', id); },
+    'book-remove': function(btn, id){ askRemove('book', id); },
     'remove-yes': function(btn, id){ remove(btn.getAttribute('data-kind'), id); },
     'remove-no': function(btn){
       app.confirmRemove = null;
@@ -620,6 +649,7 @@
     'add-daily-btn': addDailyQuest,
     'add-item-btn': addInventoryItem,
     'add-wallet-btn': addHolding,
+    'add-book-btn': addBook,
     'analyze-btn': analyzeEntry,
     'accept-proposal-btn': acceptProposal,
     'reject-proposal-btn': rejectProposal,
@@ -692,6 +722,8 @@
         el('new-main-caps-field').hidden = e.target.value!=='caps';
       } else if (e.target.id==='new-item-cat'){
         el('new-item-price').hidden = e.target.value!=='SELL';
+      } else if (e.target.id==='new-book-skill'){
+        el('new-book-amount').hidden = !e.target.value;          // no skill: no points to pick
       } else if (e.target.classList.contains('rate-input')){
         renderInventory();          // the CAD values and total, with the rate kept
       } else if (e.target.classList.contains('price-input')){
@@ -755,6 +787,7 @@
       else if (e.target.id==='new-item-name' || e.target.id==='new-item-price') addInventoryItem();
       else if (e.target.classList.contains('sell-amount')) confirmSale(e.target.getAttribute('data-id'));
       else if (/^new-wallet-(label|amount|rate)$/.test(e.target.id)) addHolding();
+      else if (e.target.id==='new-book-title' || e.target.id==='new-book-author') addBook();
     });
   }
 
