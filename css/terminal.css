@@ -145,8 +145,8 @@ button{ cursor:pointer; }
 /* The mascot stands in the empty top-right corner, beside the name and level:
    below the top bar's date, above the XP bar, right of the subtitle, even at
    the end of a walk. Under the scanlines (2) and the rest of the page (3);
-   taps go through him. The PNG has room for its glow around the figure, so
-   the figure itself is about 67px tall. */
+   taps go through him. The PNG leaves some room around the figure, so the
+   figure itself is about 62px tall. */
 .mascot{
   position:absolute; top:52px; right:26px; z-index:1;
   width:54px; height:76px;
@@ -158,7 +158,7 @@ button{ cursor:pointer; }
   .mascot{ right:22px; --mascot-step:3px; }
 }
 /* Both turn around the feet, under the body (not the image's centre). */
-.mascot-move, .mascot-img{ display:block; width:100%; height:100%; transform-origin:58% 94%; }
+.mascot-move, .mascot-img{ display:block; width:100%; height:100%; transform-origin:52% 97%; }
 
 /* Limited animation, like Vault Boy in a Pip-Boy: every move jumps between a
    few poses (steps), with long holds. Idle, he only breathes (1-2px); js/mascot.js

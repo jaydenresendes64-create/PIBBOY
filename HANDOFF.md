@@ -87,8 +87,9 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   map.js `scaleMarks()` on `zoom`; the 44 px tap area never shrinks; the open place keeps ≥1.
 - LOG: journal → proposal (XP + skills only, never SPECIAL) → Accept/Reject.
 - Look & feel: CRT vignette/flicker, scanlines, bezel with rounded corners (+ screws ≥600px), glass
-  glare, physical tab keys, recessed panels, faint "PIBBOY 3000" plate, animated amber mascot
-  (stepped Vault-Boy-style gestures per tab; MAP = "scout"), tab swing transition, 3D tilt (opt-in).
+  glare, physical tab keys, recessed panels, faint "PIBBOY 3000" plate, animated mascot (the
+  owner's own cartoon since 2026-09-27; stepped Vault-Boy-style gestures per tab; MAP = "scout"),
+  tab swing transition, 3D tilt (opt-in).
 - Sounds: boot, tick (scroll/slider), press, tab, complete, levelUp, quest, discover, sold, error,
   step (skill ±), mapSelect; power-on screen; Settings panel (⚙ in the topbar): 3D tilt, Power-on, Sound, Custom sounds, backup/import/reset, credits.
 - Data safety: dual storage, backups with dated file names (share sheet on phones), a "Last backup"
@@ -190,11 +191,13 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   (ChatGPT's 8-phase "event OS" rewrite was declined in favour of the light event core, PR #9; a
   forensic "PIBBOY 2.0" audit prompt was answered with a short read-only audit instead, which found
   the data layer solid and led to the `safety-fixes` PR).
-- **The mascot**: the owner plans to remove it completely (said 2026-09-25), so mascot reactions to
-  rewards were declined. If confirmed, removing it touches: `index.html` (`#mascot`), `js/mascot.js`,
-  `images/mascot.png`, the `.mascot*` rules and keyframes in `css/terminal.css`, `js/tilt.js`
-  (its `mascot` layer), `js/events.js` (`ST.mascot.onTab`), `js/main.js` (`ST.mascot.init`),
-  `sw.js` `APP_SHELL`, README/HANDOFF.
+- **The mascot** stays: the owner had planned to remove it (2026-09-25), then replaced the Vault Boy
+  drawing with their own cartoon (2026-09-27): `images/mascot.png`, same 144×204 canvas, white
+  background cut out with soft edges, `transform-origin` moved to the new feet (52% 97%). Mascot
+  reactions to rewards were declined. Removing it would touch: `index.html` (`#mascot`),
+  `js/mascot.js`, `images/mascot.png`, the `.mascot*` rules and keyframes in `css/terminal.css`,
+  `js/tilt.js` (its `mascot` layer), `js/events.js` (`ST.mascot.onTab`), `js/main.js`
+  (`ST.mascot.init`), `sw.js` `APP_SHELL`, README/HANDOFF.
 - Deferred: "PIBBOY 2.0" roadmap (reward engine, custom skills with XP, weekly/auto quests,
   achievements, dashboard). Owner chose to polish V1 first.
 
