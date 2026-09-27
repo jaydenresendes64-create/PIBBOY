@@ -22,6 +22,7 @@
   --amber:#ff9a2e;
   --amber-dim:#b8631a;
   --danger:#ff4433;
+  --glint:#ffe3b8;              /* a glint of light on a drawing (trophies) */
   color-scheme:dark;
 }
 html{ scroll-padding-top:env(safe-area-inset-top,0px); }
@@ -394,10 +395,15 @@ button{ cursor:pointer; }
   from{ opacity:0; transform:perspective(900px) rotateY(8deg); }
   to{ opacity:1; transform:perspective(900px) rotateY(0deg); }
 }
+/* A section's title: a small lit marker, the name, and a line fading out
+   after it. Whatever else the title holds (a count, a button) sits between. */
 .panel-title{
-  font-size:0.72rem; letter-spacing:0.12em; text-transform:uppercase;
-  color:var(--text-dim); margin:14px 0 8px;
+  display:flex; align-items:center; gap:8px;
+  font-size:0.72rem; letter-spacing:0.14em; text-transform:uppercase;
+  color:var(--text-dim); margin:18px 0 8px;
 }
+.panel-title::before{ content:''; flex:0 0 3px; height:12px; background:var(--amber); box-shadow:0 0 6px rgba(255,154,46,0.7); }
+.panel-title::after{ content:''; flex:1 1 auto; min-width:12px; height:1px; background:linear-gradient(90deg, var(--line), transparent); }
 .panel-title:first-child{ margin-top:0; }
 .empty-note{ font-size:0.85rem; color:var(--text-dim); padding:6px 0; }
 
@@ -440,11 +446,19 @@ button{ cursor:pointer; }
 /* Bobbleheads (js/render.js bobbleheadsHtml): a shelf of trophies, each its own. */
 .bobble-shelf{ display:grid; grid-template-columns:repeat(auto-fill, minmax(72px, 1fr)); gap:8px; }
 .bobble{
-  display:flex; flex-direction:column; align-items:center; gap:4px; min-height:92px; padding:8px 4px 6px;
+  display:flex; flex-direction:column; align-items:center; gap:4px; min-height:100px; padding:8px 4px 6px;
   border:1px solid var(--line); border-radius:3px; background:var(--panel-alt); color:var(--phosphor-dim);
 }
-.bobble-svg{ width:40px; height:48px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; opacity:0.3; }
+.bobble-svg{ width:44px; height:55px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; opacity:0.3; }
+/* The drawing's layers (js/render.js TROPHIES): a faint volume, fine engraved
+   details, thick teeth, a glint of light, filled and cut-out parts. */
 .bobble-svg .solid{ fill:currentColor; }
+.bobble-svg .f{ fill:currentColor; fill-opacity:0.13; stroke:none; }
+.bobble-svg .d{ stroke-width:0.8; opacity:0.75; }
+.bobble-svg .t{ stroke-width:2.6; stroke-linecap:butt; }
+.bobble-svg .g{ stroke:var(--glint); stroke-width:1.1; opacity:0.85; }
+.bobble-svg .hole{ fill:var(--bg); }
+.bobble:not(.found) .bobble-svg .g, .bobble:not(.found) .bobble-svg .f{ display:none; }   /* not found: an outline only */
 .bobble-name{ font-size:0.62rem; line-height:1.2; text-align:center; overflow-wrap:anywhere; }
 .bobble.found{ border-color:var(--amber-dim); color:var(--amber); }
 .bobble.found .bobble-svg{ opacity:1; filter:drop-shadow(0 0 4px rgba(255,154,46,0.55)); }
@@ -658,6 +672,14 @@ button{ cursor:pointer; }
 .card-confirm button::before{ inset:-8px -6px; }               /* 22 -> 38 */
 
 .add-row{ display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
+/* QUESTS: each add row folded behind its "+ New ..." button (js/render.js addFormHtml). */
+.add-open-btn{
+  display:block; width:100%; min-height:44px; margin-top:10px; padding:10px 12px;
+  border:1px dashed var(--amber-dim); border-radius:3px; background:none;
+  color:var(--amber); font-size:0.72rem; letter-spacing:0.14em; text-transform:uppercase; text-align:left;
+}
+.add-open-btn[hidden], .add-row[hidden]{ display:none; }
+.add-row .add-cancel{ border-color:var(--line); color:var(--text-dim); }
 .add-row input[type="text"], .add-row input[type="number"], .add-row select{
   border:1px solid var(--line); border-radius:3px; background:var(--panel-alt);
   padding:8px; font-size:0.85rem; min-height:38px;
@@ -1084,6 +1106,7 @@ html.sl-open{ overflow:hidden; }
    Beside each category's title, glowing like the rest of the screen. A
    sideways drag turns one by hand; up and down still scrolls the page. */
 .panel-title.inv-cat{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.panel-title.inv-cat canvas.item-model{ order:1; }            /* after the title's line, at the right */
 canvas.item-model{
   width:78px; height:44px; margin:-12px 0 -8px; flex:0 0 auto;
   filter:drop-shadow(0 0 3px rgba(232,163,61,0.55));

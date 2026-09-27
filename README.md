@@ -34,7 +34,9 @@ Merchant (an item sold: scales), Errand Runner (10 side quests: a running boot),
 countries: a globe), Road Warrior (1,000 km of routes: the road to the horizon), Scribe (25 journal
 entries: a quill and inkwell), Specialist (a skill at 50: a bullseye), S.P.E.C.I.A.L.ist (a stat at
 10: the atom), Perk Collector (3 perks: perk cards), Rad-Free (a backup made: RadAway), Archivist (5
-holotapes: a tape). The ones not found yet are dim outlines. Tap one to see what it is and when it was found; the ones still hidden say
+holotapes: a tape). Each is drawn in detail (bolts, a beaded rim, engraved graduations, a glint of
+light, a faint amber volume) on a collector's stand with its plate and rivets; the ones not found yet
+are dim outlines. Tap one to see what it is and when it was found; the ones still hidden say
 how to find them. A save from before them finds the ones it already earned, all at once.
 
 Main quests track their progress three ways: a **percentage** slider, a **day streak** (one check-in a
@@ -48,6 +50,10 @@ A streak quest completes with the check-in that reaches its target.
 Side quests can raise a skill too: **+3** of the skill picked when adding one (the first four: KNOWLEDGE,
 FINANCE, SURVIVAL, MUSIC), given once with the XP. Daily quests give XP only. Skills otherwise come from
 Analyze and the − / + buttons.
+
+In QUESTS, each list's add form stays folded behind its **+ New main / side / daily quest** button
+until you tap it (the cursor goes into its first box); **Cancel** folds and empties it, and adding a
+quest folds it too. Every section title has a small lit marker and a line fading out after it.
 
 Plain HTML, CSS and JavaScript: no framework, no build step.
 
