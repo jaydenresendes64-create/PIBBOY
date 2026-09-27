@@ -44,6 +44,8 @@ test('user text is escaped in every tab', () => {
     s.inventory.push({ id: 'xs', name: EVIL, category: 'SELL', price: 5 });
     s.finances.holdings = [{ id: 'h1', label: EVIL, amount: 5, rateToCAD: 1 }];
     s.log = [{ date: EVIL, text: EVIL, xp: 5, reason: EVIL }];
+    s.books = [{ id: 'bk', title: EVIL, author: EVIL, date: '2026-9-26', skillGains: [{ skill: 'MUSIC', amount: 2 }] }];
+    ST.app.confirmRemove = { kind: 'book', id: 'bk' };
     return s;
   }, { text: 'x', xp: 20, reason: EVIL, skillGains: [] });
   assertInert(html);
@@ -66,6 +68,7 @@ test('hostile ids and numbers that skipped sanitizeImported stay inert', () => {
     ST.app.confirmRemove = { kind: 'item', id: EVIL };
     s.finances.holdings = [{ id: EVIL, label: 'L', amount: EVIL, rateToCAD: EVIL }];
     s.log = [{ date: 'd', text: 't', xp: EVIL, reason: 'r' }];
+    s.books = [{ id: EVIL, title: 't', author: '', date: EVIL, skillGains: [{ skill: EVIL, amount: EVIL }] }];
     return s;
   }, { text: 'x', xp: EVIL, reason: 'r', skillGains: [{ skill: EVIL, amount: EVIL }] });
   assertInert(html);

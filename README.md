@@ -9,6 +9,11 @@ Beside each ITEMS category, a small 3D model drawn in amber wireframe turns slow
 Fallout 4 Pip-Boy (a price tag, a vault jumpsuit, a first-aid kit, a crate, a key); drag one sideways
 to turn it by hand.
 
+**BOOKS** (end of ITEMS): the books you've read. **+ New book** opens the form: the title, the author
+(optional) and the skill it raised, **+1 to +5** (or no skill). **Add** gives **+50 XP** and those
+skill points at once (a BOOK READ banner), and the book joins the list with the day you finished it,
+the latest first. Removing a book from the list keeps what it gave.
+
 **Perks** (STATUS tab): each level-up gives a perk point as well as its S.P.E.C.I.A.L. point. Open the
 **Perk chart** and take a perk (it asks first); each rank needs its stat a little higher. Every perk
 changes a real reward: **Wanderer** (END 3) +25 XP a rank for each new route · **Cartographer** (INT 4)
@@ -31,7 +36,7 @@ shelf, found by themselves the moment one is reached (a banner showing the troph
 (a day-streak quest completed: an eternal flame), Capitalist (a Caps goal completed: a money bag),
 Merchant (an item sold: scales), Errand Runner (10 side quests: a running boot), Creature of Routine
 (30 daily quests: an alarm clock), Explorer (10 cities: a compass), Globetrotter (places in 5
-countries: a globe), Road Warrior (1,000 km of routes: the road to the horizon), Scribe (25 journal
+countries: a globe), Bookworm (5 books read: a stack of books, the top one open), Scribe (25 journal
 entries: a quill and inkwell), Specialist (a skill at 50: a bullseye), S.P.E.C.I.A.L.ist (a stat at
 10: the atom), Perk Collector (3 perks: perk cards), Rad-Free (a backup made: RadAway), Archivist (5
 holotapes: a tape). Each is drawn in detail (bolts, a beaded rim, engraved graduations, a glint of

@@ -245,11 +245,17 @@
       '<path d="M24 8.5a5.8 11.5 0 0 0 0 23a5.8 11.5 0 0 0 0-23M13.4 15.5h21.2M13.4 24.5h21.2"/><path class="d" d="M12.5 20h23"/>'+
       '<path d="M14.2 10.2A13.8 13.8 0 0 0 33.8 29.8M24 33.8v4"/><circle class="solid" cx="14.2" cy="10.2" r=".9"/><circle class="solid" cx="33.8" cy="29.8" r=".9"/>'+
       '<path class="f" d="M18.5 38h11l1.5 6h-14z"/><path d="M18.5 38h11l1.5 6h-14z"/><path class="g" d="M15.1 16.8A9.5 9.5 0 0 1 20 11.4"/>',
-    // Road Warrior (1,000 km of routes): the road to the horizon, the sun setting behind the hills.
-    roadwarrior: '<path class="f" d="M17.5 10a6.5 6.5 0 0 1 13 0zM22.2 10h3.6L36 40H12z"/>'+
-      '<path d="M8 10h32M17.5 10a6.5 6.5 0 0 1 13 0M22.2 10L12 40M25.8 10L36 40M12 40h24M24 12.5v2.5M24 18v3.5M24 25v4.5M24 33v5.5M20 40.5h8l1 3.5H19z"/>'+
-      '<path class="d" d="M24 1.5v1.8M16.5 4.5l1.2 1.2M31.5 4.5l-1.2 1.2M13 8.8h1.6M33.4 8.8H35M8 10l4-4 3 2.5 2.5-2M30.5 7.5l2.5-2 3 2.8 2-1.5 2 3.2'+
-      'M16.5 20v3M15 25.5v3.5M31.5 20v3M33 25.5v3.5"/>',
+    // Bookworm (5 books read): a stack of books, the top one open, its light rising.
+    bookworm: '<path class="d" d="M17 18.5l-1.5-2M24 17v-2.5M31 18.5l1.5-2M24 9.5v3M22.5 11h3"/>'+
+      '<circle class="solid" cx="18" cy="13" r=".6"/><circle class="solid" cx="30.5" cy="12" r=".6"/>'+
+      '<path class="f" d="M9 22c4-1.5 9.5-1.5 15 1 5.5-2.5 11-2.5 15-1v5c-4-1.5-9.5-1.5-15 1-5.5-2.5-11-2.5-15-1z"/>'+
+      '<path d="M9 22c4-1.5 9.5-1.5 15 1 5.5-2.5 11-2.5 15-1v5c-4-1.5-9.5-1.5-15 1-5.5-2.5-11-2.5-15-1zM24 23v5"/>'+
+      '<path class="d" d="M12 24h8M12 25.8h7M28 24h8M29 25.8h7"/>'+
+      '<rect class="f" x="11" y="28" width="24" height="7" rx="1"/><rect x="11" y="28" width="24" height="7" rx="1"/>'+
+      '<path d="M15 28v7M30.5 28v7"/><path class="d" d="M17.5 30.5h9M17.5 32.5h6M31 30.3h3.5M31 32.7h3.5"/>'+
+      '<rect class="f" x="8" y="35" width="30" height="7" rx="1"/><rect x="8" y="35" width="30" height="7" rx="1"/>'+
+      '<path d="M12 35v7M33 35v7M18 42h12l.8 2H17.2z"/><path class="d" d="M14.5 37.5h11M14.5 39.5h7M33.5 37.3h4M33.5 39.7h4"/>'+
+      '<path class="solid" d="M25.5 27.8h2.4v5.4l-1.2-1-1.2 1z"/><path class="g" d="M10 36.5v3"/>',
     // Scribe (25 journal entries): a quill in its inkwell, a rolled scroll beside it.
     scribe: '<path class="f" d="M23.5 29.5C24.5 21 29 14 37 10c-1 7.5-5.5 13.5-12 16.5z"/>'+
       '<path d="M23.5 29.5C24.5 21 29 14 37 10c-1 7.5-5.5 13.5-12 16.5M23.5 29.5l7-12"/>'+
@@ -636,10 +642,46 @@
       '<input type="number" id="new-item-price" placeholder="Price $" min="0" step="0.01" inputmode="decimal" aria-label="Asking price in CAD (optional)">'+
       '<button id="add-item-btn">Add</button>'+
     '</div>';
+    html += booksHtml();
     var tab = el('tab-items');
     keepTyped(tab, function(){ tab.innerHTML = html; });
     el('new-item-price').hidden = el('new-item-cat').value!=='SELL';
+    el('new-book-amount').hidden = !el('new-book-skill').value;
     if (ST.items3d) ST.items3d.attach(tab);
+  }
+
+  // ITEMS → BOOKS: the books read, the latest first, each with the skill it
+  // gave; "+ New book" unfolds the form, and Add pays the book (ST.readBook).
+  function booksHtml(){
+    var books = app.state.books;
+    var html = '<div class="panel-title">Books <span class="panel-count">'+books.length+'</span></div>';
+    if (!books.length){
+      html += '<div class="empty-note">No books yet: each one you finish gives +'+ST.BOOK_XP+' XP and up to +'+ST.BOOK_SKILL_MAX+' in a skill.</div>';
+    } else {
+      html += '<div class="book-list">';
+      books.slice().reverse().forEach(function(b){
+        var meta = [b.author, ST.dateText(b.date)].filter(Boolean).join(' · ');
+        html += '<div class="book-item">'+
+          '<span class="book-text"><span class="book-title">'+escapeHtml(b.title)+'</span>'+
+            (meta ? '<span class="book-meta">'+escapeHtml(meta)+'</span>' : '')+'</span>'+
+          '<span class="quest-xp">+'+ST.BOOK_XP+' XP'+gainsHtml(b.skillGains)+'</span>'+
+          '<button class="remove-btn" data-action="book-remove" data-id="'+attr(b.id)+'" aria-label="Remove: '+about(b.title)+'">&times;</button>'+
+        '</div>'+
+        removeConfirmHtml('book', b.id, 'Remove this book? Its XP and skill points stay.');
+      });
+      html += '</div>';
+    }
+    var points = '';
+    for (var n=1; n<=ST.BOOK_SKILL_MAX; n++) points += '<option value="'+n+'"'+(n===3 ? ' selected' : '')+'>+'+n+'</option>';
+    return html+addFormHtml('book', 'New book',
+      '<input type="text" class="field-full" id="new-book-title" placeholder="Title" maxlength="'+ST.BOOK_TITLE_MAX+'" required aria-label="Book title">'+
+      '<input type="text" class="field-full" id="new-book-author" placeholder="Author (optional)" maxlength="'+ST.BOOK_AUTHOR_MAX+'" aria-label="Author">'+
+      '<select id="new-book-skill" aria-label="Skill it raises">'+
+        '<option value="">No skill</option>'+
+        ST.SKILL_KEYS.map(function(k){ return '<option value="'+k+'">'+k+'</option>'; }).join('')+
+      '</select>'+
+      '<select id="new-book-amount" aria-label="Skill points">'+points+'</select>'+
+      '<button id="add-book-btn">Add</button>');
   }
 
   function renderLog(){
@@ -786,6 +828,12 @@
     sound('perk');
     toast('levelup-banner quest-banner', 'PERK ACQUIRED: ', 3200).appendChild(perkName);
   }
+  function showBookRead(title){
+    var bookTitle = document.createElement('span');
+    bookTitle.textContent = title;
+    sound('quest', 0.25);
+    toast('levelup-banner quest-banner', 'BOOK READ: ', 3200).appendChild(bookTitle);
+  }
   function showSold(name){
     var itemName = document.createElement('span');
     itemName.textContent = name;
@@ -868,6 +916,7 @@
     showPerk: showPerk,
     showBobbleheads: showBobbleheads,
     showSold: showSold,
+    showBookRead: showBookRead,
     showDiscovered: showDiscovered,
     showSaveWarning: showSaveWarning,
     showConflictWarning: showConflictWarning,
