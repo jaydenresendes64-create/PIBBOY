@@ -171,60 +171,129 @@
 
   // ---------- bobbleheads ----------
   // The shelf: a trophy per bobblehead, each its own (what it was won for),
-  // all on the same little stand. Lit once found, a dim outline until then
-  // (its name stays "?"). A tap shows what it is and how it's found; a
-  // found one wobbles on its stand. Line art on a 40×48 grid, like the perk
-  // icons; `solid` parts are filled.
-  var TROPHY_STAND = '<path d="M12 36h16v3H12zM9 39h22l1 6H8zM16 42h8"/>';
+  // all on the same collector's stand (a plate and two rivets). Lit once
+  // found, a dim outline until then (its name stays "?"). A tap shows what
+  // it is and how it's found; a found one wobbles on its stand. Line art on
+  // a 48×60 grid (the trophy above y 44, the stand below), in the app's
+  // drawing language: the main lines, and by class (css/terminal.css
+  // .bobble-svg): `f` a faint amber volume, `d` fine engraved details, `t`
+  // thick teeth, `g` a glint of light, `solid` filled, `hole` cut out.
+  var TROPHY_STAND = '<path class="f" d="M10 47h28l1.5 9h-31z"/><path d="M13 44h22v3H13zM10 47h28l1.5 9h-31z"/>'+
+    '<rect class="d" x="17" y="49.5" width="14" height="4" rx=".6"/><path class="d" d="M19.5 51.5h9M9.3 55h29.4"/>'+
+    '<circle class="solid" cx="12.8" cy="51.5" r=".8"/><circle class="solid" cx="35.2" cy="51.5" r=".8"/>';
   var TROPHIES = {
-    // Vault Dweller (level 5): a vault door with a 5 on it.
-    vault: '<circle cx="20" cy="19" r="12"/><circle cx="20" cy="19" r="7"/>'+
-      '<path d="M20 7V4.5M20 31v2.5M8 19H5.5M32 19h2.5M11.5 10.5l-1.8-1.8M28.5 10.5l1.8-1.8M11.5 27.5l-1.8 1.8M28.5 27.5l1.8 1.8'+
-      'M22.5 15.5h-4l-.5 3.3h2a2 2 0 0 1 0 4h-2.5"/>',
-    // Wasteland Veteran (level 10): a medal on its ribbon.
-    veteran: '<path d="M12.5 3h15l-5 12h-5zM20 3v12"/><circle cx="20" cy="23.5" r="8.5"/>'+
-      '<path class="solid" d="M20 18.5L21.18 21.88 24.76 21.95 21.9 24.12 22.94 27.55 20 25.5 17.06 27.55 18.1 24.12 15.24 21.95 18.82 21.88Z"/>',
-    // Devotion (a day streak): an eternal flame in its brazier.
-    devotion: '<path d="M20 24c-4 0-6-2.5-6-6 0-4 4-5.5 4-11 3 2 5 5 5 8 1-1 1.5-2.5 1.5-4 2 2 2.5 4.5 2.5 7 0 3.5-3 6-7 6z'+
-      'M20 24c-1.7 0-2.7-1.1-2.7-2.7 0-1.8 1.7-2.6 1.7-4.8 1.8 1.2 3.7 2.6 3.7 4.8 0 1.6-1.1 2.7-2.7 2.7zM11 25h18l-2.5 6h-13zM20 31v3M16 34h8"/>',
-    // Capitalist (a Caps goal): a full money bag.
-    capitalist: '<path d="M16 7h8l-2 4.5c5 2.5 9 7.5 9 13 0 4.5-3 7.5-7 7.5h-8c-4 0-7-3-7-7.5 0-5.5 4-10.5 9-13zM17 11.5h6'+
-      'M22.5 19.8c-.5-1-1.4-1.5-2.5-1.5-1.4 0-2.5.8-2.5 2s1 1.6 2.5 2 2.5.9 2.5 2.1-1.1 2-2.5 2c-1.1 0-2-.5-2.5-1.5M20 16.8v1.5M20 26.4v1.5"/>',
-    // Merchant (an item sold): the trader's scales.
-    merchant: '<circle cx="20" cy="6" r="1.5"/>'+
-      '<path d="M20 7.5V33M14 33h12M9 11h22M9 11l-4.5 9M9 11l4.5 9M4 20h10a5 3.5 0 0 1-10 0zM31 11l-4.5 9M31 11l4.5 9M26 20h10a5 3.5 0 0 1-10 0z"/>',
-    // Errand Runner (10 side quests): a running boot.
-    errands: '<path d="M14 6h7v14c5 1 10.5 3 11.5 7v4H10V10c0-2.5 1.5-4 4-4zM10 27.5h22.5M21 11h-4M21 15h-4M3 13h5M2 18.5h6M4 24h4"/>',
-    // Creature of Routine (30 daily quests): an alarm clock.
-    routine: '<circle cx="20" cy="20" r="10"/>'+
-      '<path d="M9.5 12.5a4.5 4.5 0 0 1 6-6M24.5 6.5a4.5 4.5 0 0 1 6 6M20 14v6l4 2.5M13.5 28l-2.5 3.5M26.5 28l2.5 3.5M20 10V8M18 8h4"/>',
-    // Explorer (10 cities): a compass.
-    explorer: '<circle cx="20" cy="19" r="13"/>'+
-      '<path d="M20 6v2.5M20 32v-2.5M7 19h2.5M33 19h-2.5M20 9.5l3.5 9.5-3.5 9.5-3.5-9.5z"/><path class="solid" d="M20 9.5l3.5 9.5h-7z"/>',
-    // Globetrotter (5 countries): a globe on its stand.
-    globetrotter: '<circle cx="20" cy="17" r="10"/>'+
-      '<path d="M20 7a5 10 0 0 0 0 20a5 10 0 0 0 0-20M10.6 13.5h18.8M10.6 20.5h18.8M11.5 8.5A12 12 0 0 0 28.5 25.5M20 29v3.5M15 32.5h10"/>',
-    // Road Warrior (1,000 km of routes): the road to the horizon, the sun setting on it.
-    roadwarrior: '<path d="M6 7h28M14.5 7a5.5 5.5 0 0 1 11 0M18 7L8 33M22 7l10 26M20 9.5v3M20 16v4.5M20 24.5v6"/>',
-    // Scribe (25 journal entries): a quill in its inkwell.
-    scribe: '<path d="M14 25h12v8H14zM16 25v-3h8v3M19.5 23.5C20.5 15 25 8 33 4c-1 7.5-5.5 13.5-12 16.5M19.5 23.5l7-12"/>',
-    // Specialist (a skill at 50): an arrow in the bullseye.
-    specialist: '<circle cx="18" cy="21" r="11"/><circle cx="18" cy="21" r="6.5"/><circle class="solid" cx="18" cy="21" r="2"/>'+
-      '<path d="M18 21L31 8M28 11V6.5M28 11h4.5M31 8V3.5M31 8h4.5"/>',
-    // S.P.E.C.I.A.L.ist (a stat at 10): the atom.
-    special: '<ellipse cx="20" cy="19" rx="13" ry="5"/><ellipse cx="20" cy="19" rx="13" ry="5" transform="rotate(60 20 19)"/>'+
-      '<ellipse cx="20" cy="19" rx="13" ry="5" transform="rotate(-60 20 19)"/><circle class="solid" cx="20" cy="19" r="2.2"/>',
-    // Perk Collector (3 perks): a hand of perk cards, a star on the top one.
-    perks: '<path d="M9.5 12v18a2 2 0 0 0 2 2h13M12 9.5v18a2 2 0 0 0 2 2h13"/><rect x="14.5" y="6" width="15" height="21" rx="2"/>'+
-      '<path class="solid" d="M22 12L23.06 15.04 26.28 15.11 23.71 17.06 24.65 20.14 22 18.3 19.35 20.14 20.29 17.06 17.72 15.11 20.94 15.04Z"/>',
-    // Rad-Free (a backup made): a bag of RadAway.
-    radfree: '<path d="M13 7h14v18a4 4 0 0 1-4 4h-6a4 4 0 0 1-4-4zM17 7V4.5h6V7M20 29v5M20 12.5v8M16 16.5h8"/>',
-    // Archivist (5 holotapes): a tape.
-    archivist: '<rect x="6" y="11" width="28" height="19" rx="2"/><circle cx="14.5" cy="19" r="2.8"/><circle cx="25.5" cy="19" r="2.8"/>'+
-      '<path d="M11 15h18v8H11zM11.5 30l2-4h13l2 4"/>'
+    // Vault Dweller (level 5): a vault door, its bolts, a 5 on its hub.
+    vault: '<circle class="f" cx="24" cy="22" r="15"/><circle cx="24" cy="22" r="15"/>'+
+      '<path class="t" d="M39 22h2.5M36.99 29.5l2.17 1.25M31.5 34.99l1.25 2.17M24 37v2.5M16.5 34.99l-1.25 2.17M11.01 29.5l-2.17 1.25'+
+      'M9 22H6.5M11.01 14.5l-2.17-1.25M16.5 9.01l-1.25-2.17M24 7V4.5M31.5 9.01l1.25-2.17M36.99 14.5l2.17-1.25"/>'+
+      '<circle class="d" cx="24" cy="22" r="11"/><circle cx="24" cy="22" r="7"/>'+
+      '<circle class="solid" cx="35.83" cy="26.9" r=".9"/><circle class="solid" cx="28.9" cy="33.83" r=".9"/>'+
+      '<circle class="solid" cx="19.1" cy="33.83" r=".9"/><circle class="solid" cx="12.17" cy="26.9" r=".9"/>'+
+      '<circle class="solid" cx="12.17" cy="17.1" r=".9"/><circle class="solid" cx="19.1" cy="10.17" r=".9"/>'+
+      '<circle class="solid" cx="28.9" cy="10.17" r=".9"/><circle class="solid" cx="35.83" cy="17.1" r=".9"/>'+
+      '<path d="M26.6 18.2h-4.4l-.6 3.6h2.4a2.3 2.3 0 0 1 0 4.6h-2.8M20 40.5h8l1.5 3.5h-11z"/><path class="g" d="M11.3 17.4A13.5 13.5 0 0 1 18.3 9.8"/>',
+    // Wasteland Veteran (level 10): a medal with a beaded rim, on its striped ribbon.
+    veteran: '<path class="f" d="M15 3h18l-6 14h-6z"/><path d="M15 3h18l-6 14h-6z"/><path class="d" d="M20.3 3l2.4 14M27.7 3l-2.4 14"/>'+
+      '<rect x="19" y="16.5" width="10" height="3.5" rx="1"/>'+
+      '<circle class="f" cx="24" cy="30" r="10.5"/><circle cx="24" cy="30" r="10.5"/><circle class="d" cx="24" cy="30" r="8"/>'+
+      '<path class="d" d="M33.3 30h.01M32.05 34.65h.01M28.65 38.05h.01M24 39.3h.01M19.35 38.05h.01M15.95 34.65h.01M14.7 30h.01M15.95 25.35h.01M32.05 25.35h.01"/>'+
+      '<path class="solid" d="M24 24.5L25.29 28.22 29.23 28.3 26.09 30.68 27.23 34.45 24 32.2 20.77 34.45 21.91 30.68 18.77 28.3 22.71 28.22Z"/>'+
+      '<path d="M21 40.5h6l1 3.5h-8z"/><path class="g" d="M15.7 27A8.8 8.8 0 0 1 21 21.7"/>',
+    // Devotion (a day streak): an eternal flame, its white-hot heart and sparks, in a brazier.
+    devotion: '<path class="f" d="M24 29c-4 0-6-2.5-6-6 0-4 4-5.5 4-11 3 2 5 5 5 8 1-1 1.5-2.5 1.5-4 2 2 2.5 4.5 2.5 7 0 3.5-3 6-7 6z"/>'+
+      '<path d="M24 29c-4 0-6-2.5-6-6 0-4 4-5.5 4-11 3 2 5 5 5 8 1-1 1.5-2.5 1.5-4 2 2 2.5 4.5 2.5 7 0 3.5-3 6-7 6z"/>'+
+      '<path class="solid" d="M24 29c-1.7 0-2.7-1.1-2.7-2.7 0-1.8 1.7-2.6 1.7-4.8 1.8 1.2 3.7 2.6 3.7 4.8 0 1.6-1.1 2.7-2.7 2.7z"/>'+
+      '<path class="d" d="M16.5 17c-1.2 1.6-1.2 3.4 0 5M32 15.5c1.2 1.6 1.2 3.6 0 5.2"/>'+
+      '<circle class="solid" cx="19" cy="8" r=".6"/><circle class="solid" cx="30" cy="7" r=".6"/><circle class="solid" cx="27" cy="3.8" r=".5"/>'+
+      '<path class="f" d="M13 30h22l-3 7H16z"/><path d="M12 30h24M13 30l3 7h16l3-7M24 37v3.5M20 40.5h8l1.2 3.5H18.8z"/>'+
+      '<path class="d" d="M14.3 33h19.4"/><path class="g" d="M16.3 31.5l1 3"/>',
+    // Capitalist (a Caps goal): a full money bag, tied, and two caps at its feet.
+    capitalist: '<path class="f" d="M20 13h8l-2 4.5c5 2.5 9 7.5 9 13 0 4.5-3 7.5-7 7.5h-8c-4 0-7-3-7-7.5 0-5.5 4-10.5 9-13z"/>'+
+      '<path d="M20 13h8l-2 4.5c5 2.5 9 7.5 9 13 0 4.5-3 7.5-7 7.5h-8c-4 0-7-3-7-7.5 0-5.5 4-10.5 9-13zM21 17.5h6"/>'+
+      '<path class="d" d="M21 17.5c-2-1-3.5-.2-3.5 1.2M27 17.5c2-1 3.5-.2 3.5 1.2M15.5 31.5c1 2 2.5 3.2 4.5 3.8"/>'+
+      '<path d="M26.5 25.8c-.5-1-1.4-1.5-2.5-1.5-1.4 0-2.5.8-2.5 2s1 1.6 2.5 2 2.5.9 2.5 2.1-1.1 2-2.5 2c-1.1 0-2-.5-2.5-1.5M24 22.8v1.5M24 32.4v1.5'+
+      'M19.5 38.5h9l1.5 5.5h-12z"/>'+
+      '<circle cx="13.5" cy="41.5" r="2.2"/><circle class="d" cx="13.5" cy="41.5" r="1.1"/><circle cx="34.5" cy="41.5" r="2.2"/><circle class="d" cx="34.5" cy="41.5" r="1.1"/>'+
+      '<path class="g" d="M16.8 27c.3-2 1.2-3.8 2.6-5.2"/>',
+    // Merchant (an item sold): the trader's scales, coins on one pan, a gem on the other.
+    merchant: '<circle cx="24" cy="10" r="1.6"/><path d="M24 11.6V37.5M13 15h22M13 15l-4.5 9M13 15l4.5 9M35 15l-4.5 9M35 15l4.5 9"/>'+
+      '<path class="f" d="M8 24h10a5 3.5 0 0 1-10 0zM30 24h10a5 3.5 0 0 1-10 0z"/><path d="M8 24h10a5 3.5 0 0 1-10 0zM30 24h10a5 3.5 0 0 1-10 0z"/>'+
+      '<path class="d" d="M10.5 22.5h5M11 21h4M35 20.3l1.8 1.8-1.8 1.8-1.8-1.8zM22.5 27h3M12 15.8l-.9.9M36 15.8l.9.9"/>'+
+      '<path class="f" d="M20 37.5h8l1.5 6.5h-11z"/><path d="M20 37.5h8l1.5 6.5h-11z"/><path class="g" d="M9.8 25.8c.8 1 1.8 1.5 3 1.7"/>',
+    // Errand Runner (10 side quests): a winged running boot.
+    errands: '<path class="f" d="M18 13h7v14c5 1 10.5 3 11.5 7v4H14V17c0-2.5 1.5-4 4-4z"/>'+
+      '<path d="M18 13h7v14c5 1 10.5 3 11.5 7v4H14V17c0-2.5 1.5-4 4-4zM14 34.5h22.5M25 18h-4M25 22h-4"/>'+
+      '<path class="d" d="M14 29c2 0 3.5-1 4-3M17 36.3h2M22 36.3h2M27 36.3h2M32 36.3h2"/>'+
+      '<path d="M14 18.5c-3.5-.6-6.5-2.8-8-6 3 .8 5.6 1.2 8 1.2M14 23c-3.8-.2-7-1.8-8.8-4.6 3 .6 5.8.8 8.8.6"/>'+
+      '<path class="f" d="M19 38h12l1.5 6h-15z"/><path d="M19 38l-1.5 6h15L31 38"/><path class="g" d="M17 16.5v8"/>',
+    // Creature of Routine (30 daily quests): an alarm clock, its hours engraved.
+    routine: '<circle class="f" cx="24" cy="24" r="11"/><circle cx="24" cy="24" r="11"/><circle class="d" cx="24" cy="24" r="8.5"/>'+
+      '<path class="d" d="M31 24h1.5M30.06 27.5l1.3.75M27.5 30.06l.75 1.3M24 31v1.5M20.5 30.06l-.75 1.3M17.94 27.5l-1.3.75M17 24h-1.5'+
+      'M17.94 20.5l-1.3-.75M20.5 17.94l-.75-1.3M24 17v-1.5M27.5 17.94l.75-1.3M30.06 20.5l1.3-.75"/>'+
+      '<path d="M24 18v6l4.2 2.6"/><circle class="solid" cx="24" cy="24" r="1"/>'+
+      '<path class="f" d="M12.5 15a5 5 0 0 1 7-7zM28.5 8a5 5 0 0 1 7 7z"/><path d="M12.5 15a5 5 0 0 1 7-7M28.5 8a5 5 0 0 1 7 7M24 13v-2.5M21.5 10.5h5'+
+      'M16.5 32.5l-2.5 4M31.5 32.5l2.5 4M19 37h10l1.5 7h-13z"/><path class="g" d="M15.1 20.8A9.5 9.5 0 0 1 20 15.4"/>',
+    // Explorer (10 cities): a compass, its bezel graduated, the north needle lit.
+    explorer: '<circle cx="24" cy="5" r="2"/><path d="M24 7v2.2"/><circle class="f" cx="24" cy="24" r="15"/><circle cx="24" cy="24" r="15"/>'+
+      '<circle class="d" cx="24" cy="24" r="12.5"/><path d="M24 11.8v-2M36.2 24h2M24 36.2v2M11.8 24h-2"/>'+
+      '<path class="d" d="M35.83 28.9l1.11.46M33.05 33.05l.85.85M28.9 35.83l.46 1.11M19.1 35.83l-.46 1.11M14.95 33.05l-.85.85M12.17 28.9l-1.11.46'+
+      'M12.17 19.1l-1.11-.46M14.95 14.95l-.85-.85M19.1 12.17l-.46-1.11M28.9 12.17l.46-1.11M33.05 14.95l.85-.85M35.83 19.1l1.11-.46"/>'+
+      '<path class="solid" d="M24 13l3.5 11h-7z"/><path d="M20.5 24L24 35l3.5-11M21 39.5h6l1.5 4.5h-9z"/><circle class="hole" cx="24" cy="24" r="1.5"/>'+
+      '<path class="g" d="M13.7 20.2A11 11 0 0 1 18.5 14.5"/>',
+    // Globetrotter (5 countries): a globe in its meridian ring, on its stand.
+    globetrotter: '<circle class="f" cx="24" cy="20" r="11.5"/><circle cx="24" cy="20" r="11.5"/>'+
+      '<path d="M24 8.5a5.8 11.5 0 0 0 0 23a5.8 11.5 0 0 0 0-23M13.4 15.5h21.2M13.4 24.5h21.2"/><path class="d" d="M12.5 20h23"/>'+
+      '<path d="M14.2 10.2A13.8 13.8 0 0 0 33.8 29.8M24 33.8v4"/><circle class="solid" cx="14.2" cy="10.2" r=".9"/><circle class="solid" cx="33.8" cy="29.8" r=".9"/>'+
+      '<path class="f" d="M18.5 38h11l1.5 6h-14z"/><path d="M18.5 38h11l1.5 6h-14z"/><path class="g" d="M15.1 16.8A9.5 9.5 0 0 1 20 11.4"/>',
+    // Road Warrior (1,000 km of routes): the road to the horizon, the sun setting behind the hills.
+    roadwarrior: '<path class="f" d="M17.5 10a6.5 6.5 0 0 1 13 0zM22.2 10h3.6L36 40H12z"/>'+
+      '<path d="M8 10h32M17.5 10a6.5 6.5 0 0 1 13 0M22.2 10L12 40M25.8 10L36 40M12 40h24M24 12.5v2.5M24 18v3.5M24 25v4.5M24 33v5.5M20 40.5h8l1 3.5H19z"/>'+
+      '<path class="d" d="M24 1.5v1.8M16.5 4.5l1.2 1.2M31.5 4.5l-1.2 1.2M13 8.8h1.6M33.4 8.8H35M8 10l4-4 3 2.5 2.5-2M30.5 7.5l2.5-2 3 2.8 2-1.5 2 3.2'+
+      'M16.5 20v3M15 25.5v3.5M31.5 20v3M33 25.5v3.5"/>',
+    // Scribe (25 journal entries): a quill in its inkwell, a rolled scroll beside it.
+    scribe: '<path class="f" d="M23.5 29.5C24.5 21 29 14 37 10c-1 7.5-5.5 13.5-12 16.5z"/>'+
+      '<path d="M23.5 29.5C24.5 21 29 14 37 10c-1 7.5-5.5 13.5-12 16.5M23.5 29.5l7-12"/>'+
+      '<path class="d" d="M25.95 25.3l3.2-1.2M27.7 22.3l3.4-1.5M29.45 19.3l3.3-1.8"/>'+
+      '<path class="f" d="M16 31h16v9a2 2 0 0 1-2 2H18a2 2 0 0 1-2-2z"/><path d="M16 31h16v9a2 2 0 0 1-2 2H18a2 2 0 0 1-2-2zM18 31v-2.5h12V31M19 42h10l.8 2H18.2z"/>'+
+      '<path class="d" d="M16 34.5h16"/><rect class="d" x="19" y="36.3" width="10" height="3.4" rx=".5"/>'+
+      '<rect class="f" x="7.5" y="24" width="6" height="19" rx="1"/><rect x="7.5" y="24" width="6" height="19" rx="1"/>'+
+      '<path class="d" d="M9.3 28h2.4M9.3 31h2.4M9.3 34h2.4M9.3 37h2.4"/><path class="g" d="M18 33v6"/>',
+    // Specialist (a skill at 50): an arrow in the bullseye of a target on its easel.
+    specialist: '<path d="M17 31.9l-3.5 11.1M27 31.9l3.5 11.1M22 33v11"/>'+
+      '<circle class="f" cx="22" cy="21" r="12"/><circle cx="22" cy="21" r="12"/><circle class="d" cx="22" cy="21" r="9"/>'+
+      '<circle cx="22" cy="21" r="6"/><circle class="d" cx="22" cy="21" r="3"/><circle class="solid" cx="22" cy="21" r="1.6"/>'+
+      '<path d="M22 21L36 7M33 10l-.2-4.6M33 10l4.6.2M35.6 7.4l-.2-4.4M35.6 7.4l4.4.2"/><path class="g" d="M12.1 17.4A10.5 10.5 0 0 1 17.6 11.5"/>',
+    // S.P.E.C.I.A.L.ist (a stat at 10): the atom, its electrons on their orbits, above a cup.
+    special: '<ellipse cx="24" cy="20" rx="15" ry="5.8"/><ellipse cx="24" cy="20" rx="15" ry="5.8" transform="rotate(60 24 20)"/>'+
+      '<ellipse cx="24" cy="20" rx="15" ry="5.8" transform="rotate(-60 24 20)"/>'+
+      '<circle class="f" cx="24" cy="20" r="3"/><circle cx="24" cy="20" r="3"/><circle class="solid" cx="24" cy="20" r="1.4"/>'+
+      '<circle class="solid" cx="39" cy="20" r="1.3"/><circle class="solid" cx="16.5" cy="7" r="1.3"/><circle class="solid" cx="29" cy="22.9" r="1.3"/>'+
+      '<path d="M24 36v2"/><path class="f" d="M19.5 38h9l1.5 6h-12z"/><path d="M19.5 38h9l1.5 6h-12z"/><path class="g" d="M22.3 18.6a2.2 2.2 0 0 1 1.4-1.2"/>',
+    // Perk Collector (3 perks): a hand of perk cards, a star framed on the top one.
+    perks: '<path d="M13.5 18v18a2 2 0 0 0 2 2h13M16 15.5v18a2 2 0 0 0 2 2h13"/>'+
+      '<rect class="f" x="18.5" y="12" width="15" height="21" rx="2"/><rect x="18.5" y="12" width="15" height="21" rx="2"/>'+
+      '<rect class="d" x="20.3" y="13.8" width="11.4" height="17.4" rx="1"/><path class="d" d="M22.5 28.8h7M23.5 30.4h5"/>'+
+      '<path class="solid" d="M26 18L27.06 21.04 30.28 21.11 27.71 23.06 28.65 26.14 26 24.3 23.35 26.14 24.29 23.06 21.72 21.11 24.94 21.04Z"/>'+
+      '<path class="f" d="M18.5 38.5h11l1.5 5.5h-14z"/><path d="M18.5 38.5h11l1.5 5.5h-14z"/><path class="g" d="M20.5 15.5h4"/>',
+    // Rad-Free (a backup made): a bag of RadAway, its label, its level and its drip.
+    radfree: '<path d="M20 8.5V6a4 4 0 0 1 8 0v2.5"/><path class="f" d="M15 8.5h18v22a5 5 0 0 1-5 5h-8a5 5 0 0 1-5-5z"/>'+
+      '<path class="f" d="M15 16.5c3 1.2 6 1.2 9 0s6-1.2 9 0v14a5 5 0 0 1-5 5h-8a5 5 0 0 1-5-5z"/>'+
+      '<path d="M15 8.5h18v22a5 5 0 0 1-5 5h-8a5 5 0 0 1-5-5z"/><path class="d" d="M15 16.5c3 1.2 6 1.2 9 0s6-1.2 9 0M30.5 11h2M31.5 13.5h1M30.5 16h2"/>'+
+      '<rect class="d" x="18.8" y="19.8" width="10.4" height="10.4" rx="1.2"/>'+
+      '<path class="solid" d="M23.2 23.61L22 21.54A4 4 0 0 1 26 21.54L24.8 23.61A1.6 1.6 0 0 0 23.2 23.61Z'+
+      'M25.6 25L28 25A4 4 0 0 1 26 28.46L24.8 26.39A1.6 1.6 0 0 0 25.6 25ZM23.2 26.39L22 28.46A4 4 0 0 1 20 25L22.4 25A1.6 1.6 0 0 0 23.2 26.39Z"/>'+
+      '<circle class="solid" cx="24" cy="25" r=".8"/><rect x="22" y="36" width="4" height="4" rx="1"/><path d="M24 40v4"/><path class="g" d="M17.5 11.5v8"/>',
+    // Archivist (5 holotapes): a tape, its reels, its screws, standing in its holder.
+    archivist: '<rect class="f" x="8" y="17" width="32" height="22" rx="2.5"/><rect x="8" y="17" width="32" height="22" rx="2.5"/>'+
+      '<path d="M14 22h20v9H14zM14 39l2.2-4.5h15.6L34 39"/><circle cx="19" cy="26.5" r="3.2"/><circle cx="29" cy="26.5" r="3.2"/>'+
+      '<path class="d" d="M19 24.3v.9M17.1 27.6l.8-.45M20.9 27.6l-.8-.45M29 24.3v.9M27.1 27.6l.8-.45M30.9 27.6l-.8-.45M12 19.5h24"/>'+
+      '<circle class="d" cx="19.5" cy="37" r=".9"/><circle class="d" cx="28.5" cy="37" r=".9"/>'+
+      '<circle class="solid" cx="10.5" cy="19.5" r=".7"/><circle class="solid" cx="37.5" cy="19.5" r=".7"/>'+
+      '<circle class="solid" cx="10.5" cy="36.5" r=".7"/><circle class="solid" cx="37.5" cy="36.5" r=".7"/>'+
+      '<path class="f" d="M19.5 39.5h9l1.5 4.5h-12z"/><path d="M19.5 39.5h9l1.5 4.5h-12z"/><path class="g" d="M10.5 23v8"/>'
   };
   function bobbleSvg(id){
-    return '<svg class="bobble-svg" viewBox="0 0 40 48" aria-hidden="true">'+
+    return '<svg class="bobble-svg" viewBox="0 0 48 60" aria-hidden="true">'+
       '<g class="bobble-top">'+(TROPHIES[id] || '')+'</g>'+TROPHY_STAND+'</svg>';
   }
   function bobbleheadsHtml(){
@@ -370,6 +439,16 @@
     return html+'</div>';
   }
 
+  // An add row of the QUESTS tab, folded behind its "+ New ..." button until
+  // that's tapped (app.addOpen, events.js add-open); Cancel folds it again.
+  // Folded, it's still in the page (hidden), so what was typed in it stays.
+  function addFormHtml(kind, label, row){
+    var open = app.addOpen===kind;
+    return '<button class="add-open-btn" data-action="add-open" data-key="'+kind+'" aria-expanded="'+open+'"'+(open ? ' hidden' : '')+'>+ '+label+'</button>'+
+      '<div class="add-row" id="add-'+kind+'"'+(open ? '' : ' hidden')+'>'+row+
+      '<button class="add-cancel" data-action="add-close">Cancel</button></div>';
+  }
+
   var questsDay = null;       // the date the quests were last drawn for
   function renderQuests(){
     // Rebuilding the list would drop a rename still in progress: save it first.
@@ -381,7 +460,7 @@
       html += '<div class="empty-note">No main quests yet — add one below.</div>';
     }
     state.quests.mains.forEach(function(m){ html += mainQuestHtml(m); });
-    html += '<div class="add-row">'+
+    html += addFormHtml('main', 'New main quest',
       '<input type="text" class="field-full" id="new-main-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
       '<input type="text" id="new-main-objective" placeholder="Objective..." maxlength="60" required aria-label="Objective">'+
       '<input type="number" id="new-main-xp" value="1000" min="10" max="5000" aria-label="XP reward">'+
@@ -396,8 +475,7 @@
       '<label class="days-field" id="new-main-days-field" hidden>'+
         '<input type="number" id="new-main-days" value="7" min="1" max="'+ST.STREAK_MAX_DAYS+'" aria-label="Target days"><span>days</span>'+
       '</label>'+
-      '<button id="add-main-btn">Add</button>'+
-    '</div>';
+      '<button id="add-main-btn">Add</button>');
 
     html += '<div class="panel-title">Side Quests</div>';
     var active = state.quests.side.filter(function(q){ return !q.done; });
@@ -416,7 +494,7 @@
       });
       html += '</div>';
     }
-    html += '<div class="add-row">'+
+    html += addFormHtml('side', 'New side quest',
       '<input type="text" class="field-full" id="new-quest-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
       '<input type="text" class="field-objective" id="new-quest-objective" placeholder="Objective..." required aria-label="Objective">'+
       '<input type="number" id="new-quest-xp" value="100" min="5" max="500" aria-label="XP reward">'+
@@ -424,8 +502,7 @@
         '<option value="">No skill</option>'+
         ST.SKILL_KEYS.map(function(k){ return '<option value="'+k+'">+'+ST.SIDE_SKILL_GAIN+' '+k+'</option>'; }).join('')+
       '</select>'+
-      '<button id="add-quest-btn">Add</button>'+
-    '</div>';
+      '<button id="add-quest-btn">Add</button>');
 
     html += '<div class="panel-title">Daily Quests</div><div class="quest-list">';
     state.quests.daily.forEach(function(q){
@@ -438,12 +515,11 @@
       '</div>'+
       removeConfirmHtml('daily', q.id, 'Remove this quest?');
     });
-    html += '</div><div class="add-row">'+
+    html += '</div>'+addFormHtml('daily', 'New daily quest',
       '<input type="text" class="field-full" id="new-daily-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
       '<input type="text" class="field-objective" id="new-daily-objective" placeholder="Daily habit..." required aria-label="Objective">'+
       '<input type="number" id="new-daily-xp" value="15" min="5" max="100" aria-label="XP reward">'+
-      '<button id="add-daily-btn">Add</button>'+
-    '</div>';
+      '<button id="add-daily-btn">Add</button>');
 
     var tab = el('tab-quests');
     keepTyped(tab, function(){ tab.innerHTML = html; });

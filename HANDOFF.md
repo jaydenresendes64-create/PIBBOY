@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
-State as of the `marker-scale` PR (2026-09-26, after PR #12). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-211/211 tests pass locally. `sw.js` cache: `v19`.
+State as of the `da-trophies-titles` PR (2026-09-26, after PR #13). Live: https://jaydenresendes64-create.github.io/PIBBOY/
+212/212 tests pass locally. `sw.js` cache: `v20`.
 
 ## 1. What it is
 
@@ -101,7 +101,11 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   checked after every change through `storage.onChange` (events.js `checkBobbleheads`) and once after
   the boot screens (main.js `afterBoot`). Each has its own trophy (render.js `TROPHIES`, by id, on a shared
   `TROPHY_STAND`; the owner found the old smiley figure ugly), shown on the shelf and in the FOUND
-  banner. Render test allows only the app's own icon <svg>s.
+  banner. Drawn in detail on a 48×60 grid (DA pass, 2026-09-26): main lines plus classes `f` (faint
+  volume), `d` (fine details), `t` (thick teeth), `g` (glint, `--glint`), `solid`, `hole`; no nested
+  <g> (the render test reads each trophy's group). The owner saw a DA proposal page and chose only the
+  detailed trophies and the section titles / folded add forms (QUESTS `addFormHtml`, `app.addOpen`);
+  declined for now: icons for S.P.E.C.I.A.L. and skills, a vault-door level emblem instead of the mascot. Render test allows only the app's own icon <svg>s.
   Holotapes (holotapes.js): MediaRecorder (audio/mp4 on iPhone), recordings in IndexedDB
   `status_terminal_holotapes` (NOT in state/backups; Share per tape), state keeps `lifetimeHolotapes`;
   CSP `media-src 'self' blob:` for playback.
@@ -137,7 +141,7 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   Co-Authored-By line) → push → open a PR with GitHub CLI (`C:Program FilesGitHub CLIgh.exe`,
   installed 2026-09-25, owner signed in) → the owner merges it on GitHub (= deploy to Pages in ~1 min)
   → `git checkout main && git pull`. PRs #8 (bobbleheads + holotapes), #9 (event core), #10 (settings),
-  #11 (safety fixes), #12 (trophies) were done this way. Earlier features were pushed straight to main.
+  #11 (safety fixes), #12 (trophies), #13 (map marks) were done this way. Earlier features were pushed straight to main.
 - The working copy now has CRLF line endings (git autocrlf after pulls): scripted text edits must
   normalize `
 ` first (the Edit tool is fine).

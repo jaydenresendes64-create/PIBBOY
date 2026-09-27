@@ -202,7 +202,8 @@
     confirmSpecial: null,       // SPECIAL key whose level-up point awaits "Yes"
     perkChart: false,           // the STATUS tab's perk chart is open
     bobbleOpen: null,           // id of the bobblehead whose details show
-    confirmPerk: null           // id of the perk whose rank awaits "Yes"
+    confirmPerk: null,          // id of the perk whose rank awaits "Yes"
+    addOpen: null               // the QUESTS add row unfolded: 'main', 'side' or 'daily'
   };
 
   function el(id){ return document.getElementById(id); }

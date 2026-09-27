@@ -92,6 +92,19 @@ test('a main quest at 100% shows its Complete button; below 100%, done or a stre
   assert.ok(html.includes('Complete quest &middot; +700 XP'));
 });
 
+test('QUESTS: each add row is folded behind its button until opened', () => {
+  const folded = renderEverything(ST => ST.defaultState());
+  ['main', 'side', 'daily'].forEach(kind => {
+    assert.match(folded, new RegExp('data-action="add-open" data-key="' + kind + '" aria-expanded="false">'));
+    assert.match(folded, new RegExp('<div class="add-row" id="add-' + kind + '" hidden>'));
+  });
+  assert.match(folded, /id="add-quest-btn">Add<\/button><button class="add-cancel" data-action="add-close">Cancel<\/button>/);
+  const open = renderEverything(ST => { ST.app.addOpen = 'side'; return ST.defaultState(); });
+  assert.match(open, /<div class="add-row" id="add-side">/);
+  assert.match(open, /data-key="side" aria-expanded="true" hidden>/);
+  assert.match(open, /<div class="add-row" id="add-daily" hidden>/);
+});
+
 test('every bobblehead has its own trophy, on the same stand', () => {
   const html = renderEverything(ST => ST.defaultState());
   const trophies = html.split('data-action="bobble"').slice(1)

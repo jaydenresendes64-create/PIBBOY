@@ -17,6 +17,7 @@
   var scheduleSave = ST.storage.scheduleSave;
 
   var pendingImport = null;
+  var ADD_PREFIX = {main:'new-main-', side:'new-quest-', daily:'new-daily-'};   // the QUESTS add rows' boxes
   var checkPlaying = false;     // a check button's animation is running
 
   // A reward's toasts (what state.js gave): the XP and skills, a level-up.
@@ -71,6 +72,7 @@
     var gains = ST.SKILL_KEYS.indexOf(skill)!==-1 ? [{skill:skill, amount:ST.SIDE_SKILL_GAIN}] : [];
     app.state.quests.side.push({id:genId(),questName:q.questName,name:q.objective,xp:xp,done:false,skillGains:gains});
     R.clearTyped('new-quest-');
+    app.addOpen = null;
     renderQuests(); scheduleSave();
   }
   function addDailyQuest(){
@@ -79,6 +81,7 @@
     var xp = readWhole('new-daily-xp', 15, 5, 100);
     app.state.quests.daily.push({id:genId(),questName:q.questName,name:q.objective,xp:xp,lastDate:null});
     R.clearTyped('new-daily-');
+    app.addOpen = null;
     renderQuests(); scheduleSave();
   }
   function addMainQuest(){
@@ -99,6 +102,7 @@
     }
     app.state.quests.mains.push(quest);
     R.clearTyped('new-main-');
+    app.addOpen = null;
     syncCaps();
     renderQuests(); scheduleSave();
   }
@@ -550,6 +554,21 @@
       renderQuests();
     },
     'rename': function(btn){ startRename(btn); },
+    // QUESTS: an add row, unfolded by its "+ New ..." button (render.js
+    // addFormHtml) with the cursor in its first box; Cancel folds it and
+    // empties it. Adding a quest folds it too.
+    'add-open': function(btn, id, key){
+      if (!Object.prototype.hasOwnProperty.call(ADD_PREFIX, key)) return;
+      app.addOpen = key;
+      renderQuests();
+      var first = el(ADD_PREFIX[key]+'questname');
+      if (first) first.focus();
+    },
+    'add-close': function(){
+      if (Object.prototype.hasOwnProperty.call(ADD_PREFIX, app.addOpen)) R.clearTyped(ADD_PREFIX[app.addOpen]);
+      app.addOpen = null;
+      renderQuests();
+    },
     // Removing a row: asks first, under it.
     'quest-remove': function(btn, id){ askRemove('side', id); },
     'daily-remove': function(btn, id){ askRemove('daily', id); },
