@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of the `books` PR (2026-09-26, after PR #14). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-216/216 tests pass locally. `sw.js` cache: `v21`.
+221/221 tests pass locally. `sw.js` cache: `v22`.
 
 ## 1. What it is
 
@@ -25,7 +25,7 @@ Plain scripts (not ES modules, so `index.html` still opens from disk) sharing
 | `js/sfx-custom.js` | "Custom sounds" panel: decode a video/audio file, detect sounds, trim, assign; clips in IndexedDB `status_terminal_sounds`; sound-pack JSON export/import |
 | `js/render.js` | Builds every tab's HTML (escapes everything), toasts/banners, `switchTab` |
 | `js/items3d.js` | ITEMS 3D wireframe models (Three.js, dynamic `import()`), one shared WebGLRenderer copied into small 2D canvases |
-| `js/mascot.js` | Mascot gesture scheduling (moves are CSS keyframes) |
+| `js/mascot.js` | Mascot gesture scheduling (moves are CSS keyframes, per body part: see §3 Look & feel) |
 | `js/crt.js`, `js/tilt.js` | CRT flicker; 3D tilt (DeviceOrientation/mouse) incl. glass glare parallax |
 | `js/events.js` | All user actions → state change → re-render → debounced save |
 | `js/main.js` | Boot: load → setup events → render → `syncCaps()` → SW registration |
@@ -90,6 +90,17 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   glare, physical tab keys, recessed panels, faint "PIBBOY 3000" plate, animated mascot (the
   owner's own cartoon since 2026-09-27; stepped Vault-Boy-style gestures per tab; MAP = "scout"),
   tab swing transition, 3D tilt (opt-in).
+  **Mascot rig (2026-09-28, owner: "animate him like the Pip-Boy in Fallout 4"):** the picture is cut
+  by `tools/mascot-parts.py` into `images/mascot-parts.png` (6 picture-sized cells: back leg, front
+  leg, thumb arm, body, head, head with eyes shut). `index.html` stacks them as full-size `.mp` layers
+  (background-size 600%); each turns around its joint (`transform-origin` = the tool's `JOINTS`, as
+  % of 144×204). Each move = one `.mascot-move` keyframe (where he goes / faces) + part keyframes of
+  the same length (generated poses: legs ±8–12°, arm ±6–16°, head ±2–7°, body bob 1–2 px), all
+  `steps(1,end)`. Idle: breathing on `.mascot-body`, a blink every 5.3 s; mascot.js picks walk-left /
+  walk-right / thumbs every 10–20 s. At rest the layers rebuild the picture exactly (the tool checks);
+  moving parts carry a little of themselves under the part in front, so no hole shows.
+  `tests/mascot.test.js` keeps sheet, page, CSS joints and moves in sync. A new picture (same size
+  and pose): replace `images/mascot.png`, run the tool, check the cut lines.
 - Sounds: boot, tick (scroll/slider), press, tab, complete, levelUp, quest, discover, sold, error,
   step (skill ±), mapSelect; power-on screen; Settings panel (⚙ in the topbar): 3D tilt, Power-on, Sound, Custom sounds, backup/import/reset, credits.
 - Data safety: dual storage, backups with dated file names (share sheet on phones), a "Last backup"
@@ -194,8 +205,10 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 - **The mascot** stays: the owner had planned to remove it (2026-09-25), then replaced the Vault Boy
   drawing with their own cartoon (2026-09-27): `images/mascot.png`, same 144×204 canvas, white
   background cut out with soft edges, `transform-origin` moved to the new feet (52% 97%). Mascot
-  reactions to rewards were declined. Removing it would touch: `index.html` (`#mascot`),
-  `js/mascot.js`, `images/mascot.png`, the `.mascot*` rules and keyframes in `css/terminal.css`,
+  reactions to rewards were declined; on 2026-09-28 the owner asked for Fallout 4 Pip-Boy-style
+  animation, so he's now a rig of moving parts (see §3). Removing him would touch: `index.html`
+  (`#mascot`), `js/mascot.js`, `images/mascot*.png`, `tools/mascot-parts.py`, `tests/mascot.test.js`,
+  the `.mascot*` / `.mp*` rules and keyframes in `css/terminal.css`,
   `js/tilt.js` (its `mascot` layer), `js/events.js` (`ST.mascot.onTab`), `js/main.js`
   (`ST.mascot.init`), `sw.js` `APP_SHELL`, README/HANDOFF.
 - Deferred: "PIBBOY 2.0" roadmap (reward engine, custom skills with XP, weekly/auto quests,

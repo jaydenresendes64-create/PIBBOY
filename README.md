@@ -74,7 +74,7 @@ js/storage.js       saving: two copies (IndexedDB and localStorage), backup file
 js/ai.js            journal analysis client + offline keyword rules
 js/render.js        builds each tab
 js/items3d.js       ITEMS: the turning 3D wireframe models (loads Three.js the first time ITEMS opens)
-js/mascot.js        when the mascot walks or gestures (his moves are in css/terminal.css)
+js/mascot.js        when the mascot walks or gestures (his moves, part by part, are in css/terminal.css)
 js/crt.js           the screen's rare flicker (the tube look itself is in css/terminal.css)
 js/tilt.js          3D tilt: the screen's layers follow the phone's motion (or the mouse)
 js/sfx.js           sounds, all made in code (no audio files), and the power-on screen
@@ -94,12 +94,14 @@ js/events.js        user actions
 js/main.js          startup
 sw.js               service worker: offline use (network first for the app, so updates show right away)
 manifest.webmanifest name, colours and icons (icons/) for installing on a phone
-images/mascot.png   the mascot in the top-right corner
+images/mascot.png   the mascot's picture, the source of his parts (not loaded by the app)
+images/mascot-parts.png  the mascot cut into parts that each move (legs, thumb arm, body, head, blink)
 data/map-style.json MAP: the map's own amber Pip-Boy style (colours, line widths, labels, by zoom)
 data/places.txt     MAP: every country, region and city (15,000 people or more), for searching
 data/regions/       MAP: one file per country with the shapes of its regions
 tools/              build-map-data.js, which makes data/ (see "Map data"); build-three.mjs, which makes
-                    vendor/three/ from the parts listed in three-entry.mjs
+                    vendor/three/ from the parts listed in three-entry.mjs; mascot-parts.py, which cuts
+                    images/mascot.png into images/mascot-parts.png (Python with Pillow and numpy)
 fonts/              the two terminal fonts, VT323 and IBM Plex Mono (licence: fonts/OFL.txt)
 api/analyze.js      optional serverless AI function (not used on GitHub Pages, see below)
 tests/              automated tests (see "Run the tests")

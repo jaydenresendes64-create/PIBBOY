@@ -52,9 +52,12 @@
       <div class="crt-bezel"></div>
       <div class="crt-glare"></div>
     </div>
-    <!-- The mascot: under the scanlines, taps go through him (css/terminal.css, js/mascot.js). -->
+    <!-- The mascot: under the scanlines, taps go through him (css/terminal.css, js/mascot.js).
+         Cut into parts that each move, like Vault Boy in a Fallout 4 Pip-Boy (tools/mascot-parts.py). -->
     <div class="mascot" id="mascot" aria-hidden="true">
-      <div class="mascot-move"><img class="mascot-img" src="images/mascot.png" alt="" width="144" height="204" draggable="false"></div>
+      <div class="mascot-move"><div class="mascot-body">
+        <span class="mp mp-leg-back"></span><span class="mp mp-leg-front"></span><span class="mp mp-arm"></span><span class="mp mp-torso"></span><span class="mp mp-head"><span class="mp mp-blink"></span></span>
+      </div></div>
     </div>
 
     <!-- Everything you tap. With 3D tilt on it only shifts a few pixels, never turns (js/tilt.js). -->
