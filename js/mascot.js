@@ -1,10 +1,12 @@
 /**
- * Mascot — the amber figure in the top-right corner (images/mascot.png).
- * How he moves lives in css/terminal.css: few poses, steps() timing, like
- * Vault Boy in a Pip-Boy. This file only picks when: a short walk every
- * 10-20 s, and one gesture when the tab changes. He never takes a tap
- * (pointer-events:none), with prefers-reduced-motion he stays still, and
- * while the app is in the background nothing is planned or played.
+ * Mascot — the figure in the top-right corner, cut into parts that each move
+ * (images/mascot-parts.png, from tools/mascot-parts.py), like Vault Boy in a
+ * Fallout 4 Pip-Boy. How he moves lives in css/terminal.css: few poses,
+ * steps() timing, and a blink now and then. This file only picks when: a
+ * short walk or a thumbs-up every 10-20 s, and one gesture when the tab
+ * changes. He never takes a tap (pointer-events:none), with
+ * prefers-reduced-motion he stays still, and while the app is in the
+ * background nothing is planned or played.
  */
 (function(ST){
   'use strict';
@@ -43,11 +45,12 @@
     clearTimeout(walkTimer);
     if (!mover || stayStill() || hidden()) return;
     walkTimer = setTimeout(function(){
-      play(Math.random()<0.5 ? 'walk-left' : 'walk-right');
+      var r = Math.random();
+      play(r<0.4 ? 'walk-left' : r<0.8 ? 'walk-right' : 'thumbs');
     }, WALK_MIN_MS + Math.random()*(WALK_MAX_MS-WALK_MIN_MS));
   }
   function onMoveEnd(e){
-    if (e.target!==mover) return;     // not the breathing, which never ends
+    if (e.target!==mover) return;     // not a part's own move, the breathing or the blink
     mover.removeAttribute('data-move');
     planWalk();
   }

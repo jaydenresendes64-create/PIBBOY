@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of the `books` PR (2026-09-26, after PR #14). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-216/216 tests pass locally. `sw.js` cache: `v21`.
+221/221 tests pass locally. `sw.js` cache: `v22`.
 
 ## 1. What it is
 
@@ -25,7 +25,7 @@ Plain scripts (not ES modules, so `index.html` still opens from disk) sharing
 | `js/sfx-custom.js` | "Custom sounds" panel: decode a video/audio file, detect sounds, trim, assign; clips in IndexedDB `status_terminal_sounds`; sound-pack JSON export/import |
 | `js/render.js` | Builds every tab's HTML (escapes everything), toasts/banners, `switchTab` |
 | `js/items3d.js` | ITEMS 3D wireframe models (Three.js, dynamic `import()`), one shared WebGLRenderer copied into small 2D canvases |
-| `js/mascot.js` | Mascot gesture scheduling (moves are CSS keyframes) |
+| `js/mascot.js` | Mascot gesture scheduling (moves are CSS keyframes, per body part: see §3 Look & feel) |
 | `js/crt.js`, `js/tilt.js` | CRT flicker; 3D tilt (DeviceOrientation/mouse) incl. glass glare parallax |
 | `js/events.js` | All user actions → state change → re-render → debounced save |
 | `js/main.js` | Boot: load → setup events → render → `syncCaps()` → SW registration |
@@ -87,8 +87,20 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   map.js `scaleMarks()` on `zoom`; the 44 px tap area never shrinks; the open place keeps ≥1.
 - LOG: journal → proposal (XP + skills only, never SPECIAL) → Accept/Reject.
 - Look & feel: CRT vignette/flicker, scanlines, bezel with rounded corners (+ screws ≥600px), glass
-  glare, physical tab keys, recessed panels, faint "PIBBOY 3000" plate, animated amber mascot
-  (stepped Vault-Boy-style gestures per tab; MAP = "scout"), tab swing transition, 3D tilt (opt-in).
+  glare, physical tab keys, recessed panels, faint "PIBBOY 3000" plate, animated mascot (the
+  owner's own cartoon since 2026-09-27; stepped Vault-Boy-style gestures per tab; MAP = "scout"),
+  tab swing transition, 3D tilt (opt-in).
+  **Mascot rig (2026-09-28, owner: "animate him like the Pip-Boy in Fallout 4"):** the picture is cut
+  by `tools/mascot-parts.py` into `images/mascot-parts.png` (6 picture-sized cells: back leg, front
+  leg, thumb arm, body, head, head with eyes shut). `index.html` stacks them as full-size `.mp` layers
+  (background-size 600%); each turns around its joint (`transform-origin` = the tool's `JOINTS`, as
+  % of 144×204). Each move = one `.mascot-move` keyframe (where he goes / faces) + part keyframes of
+  the same length (generated poses: legs ±8–12°, arm ±6–16°, head ±2–7°, body bob 1–2 px), all
+  `steps(1,end)`. Idle: breathing on `.mascot-body`, a blink every 5.3 s; mascot.js picks walk-left /
+  walk-right / thumbs every 10–20 s. At rest the layers rebuild the picture exactly (the tool checks);
+  moving parts carry a little of themselves under the part in front, so no hole shows.
+  `tests/mascot.test.js` keeps sheet, page, CSS joints and moves in sync. A new picture (same size
+  and pose): replace `images/mascot.png`, run the tool, check the cut lines.
 - Sounds: boot, tick (scroll/slider), press, tab, complete, levelUp, quest, discover, sold, error,
   step (skill ±), mapSelect; power-on screen; Settings panel (⚙ in the topbar): 3D tilt, Power-on, Sound, Custom sounds, backup/import/reset, credits.
 - Data safety: dual storage, backups with dated file names (share sheet on phones), a "Last backup"
@@ -190,11 +202,27 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   (ChatGPT's 8-phase "event OS" rewrite was declined in favour of the light event core, PR #9; a
   forensic "PIBBOY 2.0" audit prompt was answered with a short read-only audit instead, which found
   the data layer solid and led to the `safety-fixes` PR).
-- **The mascot**: the owner plans to remove it completely (said 2026-09-25), so mascot reactions to
-  rewards were declined. If confirmed, removing it touches: `index.html` (`#mascot`), `js/mascot.js`,
-  `images/mascot.png`, the `.mascot*` rules and keyframes in `css/terminal.css`, `js/tilt.js`
-  (its `mascot` layer), `js/events.js` (`ST.mascot.onTab`), `js/main.js` (`ST.mascot.init`),
-  `sw.js` `APP_SHELL`, README/HANDOFF.
+- **The mascot** stays: the owner had planned to remove it (2026-09-25), then replaced the Vault Boy
+  drawing with their own cartoon (2026-09-27): `images/mascot.png`, same 144×204 canvas, white
+  background cut out with soft edges, `transform-origin` moved to the new feet (52% 97%). The hand
+  on the hip was too small to read, so a Vault-Boy-style fist was drawn in (2026-09-28, redrawn the
+  same day from the owner's close-up of Vault Boy's hand: a round hand tucked under the end of the
+  sleeve, and on the outside the curled index finger, a line that splits under the sleeve and curls
+  in to a small round tip; colours of the thumb hand). Placed like Vault Boy's: level with the belt
+  and a little over the body's edge, not hanging below the belt (the owner's feedback); the old
+  hand under it was erased and the body's side line put back. It's part of the body layer. The owner asked about sending drawings of other poses: welcome, if they keep
+  the same character, size and framing on a white background (each could become a frame).
+  Upscaled the same day so he's sharp on a phone: the owner's original 144×204 JPEG went through
+  Real-ESRGAN "realesr-animevideov3" ×4 (the ncnn build from PyPI `realesrgan-ncnn-py`, run on CPU;
+  the "x4plus-anime" model changed the face, waifu2x failed on CPU), the background was cut out and
+  the fist drawn at ×4, then everything brought down to **288×408** (2×; the box is 54×76 CSS px,
+  162×228 device px on an iPhone). `images/mascot-parts.png` is 1728×408, ~79 KB. Mascot
+  reactions to rewards were declined; on 2026-09-28 the owner asked for Fallout 4 Pip-Boy-style
+  animation, so he's now a rig of moving parts (see §3). Removing him would touch: `index.html`
+  (`#mascot`), `js/mascot.js`, `images/mascot*.png`, `tools/mascot-parts.py`, `tests/mascot.test.js`,
+  the `.mascot*` / `.mp*` rules and keyframes in `css/terminal.css`,
+  `js/tilt.js` (its `mascot` layer), `js/events.js` (`ST.mascot.onTab`), `js/main.js`
+  (`ST.mascot.init`), `sw.js` `APP_SHELL`, README/HANDOFF.
 - Deferred: "PIBBOY 2.0" roadmap (reward engine, custom skills with XP, weekly/auto quests,
   achievements, dashboard). Owner chose to polish V1 first.
 
