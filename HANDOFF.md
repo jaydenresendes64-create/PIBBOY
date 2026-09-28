@@ -205,9 +205,12 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 - **The mascot** stays: the owner had planned to remove it (2026-09-25), then replaced the Vault Boy
   drawing with their own cartoon (2026-09-27): `images/mascot.png`, same 144×204 canvas, white
   background cut out with soft edges, `transform-origin` moved to the new feet (52% 97%). The hand
-  on the hip was too small to read, so a Vault-Boy-style fist was drawn in (2026-09-28, owner's
-  reference: the fist resting on the hip; same colours as the thumb hand: back of the hand on the
-  hip, curled fingers stacked on the outside, thumb across the top); it's part of the body layer.
+  on the hip was too small to read, so a Vault-Boy-style fist was drawn in (2026-09-28, redrawn the
+  same day from the owner's close-up of Vault Boy's hand: a round hand tucked under the end of the
+  sleeve, its left side along the body, and on the outside the curled index finger, a line that
+  splits under the sleeve and curls in to a small round tip; colours of the thumb hand); it's part
+  of the body layer. The owner asked about sending drawings of other poses: welcome, if they keep
+  the same character, size and framing on a white background (each could become a frame).
   Upscaled the same day so he's sharp on a phone: the owner's original 144×204 JPEG went through
   Real-ESRGAN "realesr-animevideov3" ×4 (the ncnn build from PyPI `realesrgan-ncnn-py`, run on CPU;
   the "x4plus-anime" model changed the face, waifu2x failed on CPU), the background was cut out and
