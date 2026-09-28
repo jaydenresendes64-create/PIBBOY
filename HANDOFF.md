@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of the `books` PR (2026-09-26, after PR #14). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-221/221 tests pass locally. `sw.js` cache: `v22`.
+222/222 tests pass locally. `sw.js` cache: `v22`.
 
 ## 1. What it is
 
@@ -91,11 +91,15 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   owner's own cartoon since 2026-09-27; stepped Vault-Boy-style gestures per tab; MAP = "scout"),
   tab swing transition, 3D tilt (opt-in).
   **Mascot rig (2026-09-28, owner: "animate him like the Pip-Boy in Fallout 4"):** the picture is cut
-  by `tools/mascot-parts.py` into `images/mascot-parts.png` (6 picture-sized cells: back leg, front
-  leg, thumb arm, body, head, head with eyes shut). `index.html` stacks them as full-size `.mp` layers
-  (background-size 600%); each turns around its joint (`transform-origin` = the tool's `JOINTS`, as
-  % of 144×204). Each move = one `.mascot-move` keyframe (where he goes / faces) + part keyframes of
-  the same length (generated poses: legs ±8–12°, arm ±6–16°, head ±2–7°, body bob 1–2 px), all
+  by `tools/mascot-parts.py` into `images/mascot-parts.png` (8 picture-sized cells: back leg, its
+  lower leg, front leg, its lower leg, thumb arm, body, head, head with eyes shut). `index.html` stacks
+  them as full-size `.mp` layers (background-size 800%), each lower leg nested in its leg so it turns
+  with the hip and bends again at the knee (added 2026-09-28, owner: "legs works"; each upper leg
+  carries a hidden round, outlined knee under its lower leg so a bend shows no gap); each turns
+  around its joint (`transform-origin` = the tool's `JOINTS`, as % of 144×204). Each move = one
+  `.mascot-move` keyframe (where he goes / faces) + part keyframes of the same length (generated
+  poses: legs −10–16°, knees 0 to −40° (negative = bent, boot back; the walk's passing frames bend
+  the swinging knee to −38°, the hop tucks both), arm ±6–16°, head ±2–7°, body bob 1–2 px), all
   `steps(1,end)`. Idle: breathing on `.mascot-body`, a blink every 5.3 s; mascot.js picks walk-left /
   walk-right / thumbs every 10–20 s. At rest the layers rebuild the picture exactly (the tool checks);
   moving parts carry a little of themselves under the part in front, so no hole shows.
@@ -216,7 +220,7 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   Real-ESRGAN "realesr-animevideov3" ×4 (the ncnn build from PyPI `realesrgan-ncnn-py`, run on CPU;
   the "x4plus-anime" model changed the face, waifu2x failed on CPU), the background was cut out and
   the fist drawn at ×4, then everything brought down to **288×408** (2×; the box is 54×76 CSS px,
-  162×228 device px on an iPhone). `images/mascot-parts.png` is 1728×408, ~79 KB. Mascot
+  162×228 device px on an iPhone). `images/mascot-parts.png` is 2304×408, ~82 KB. Mascot
   reactions to rewards were declined; on 2026-09-28 the owner asked for Fallout 4 Pip-Boy-style
   animation, so he's now a rig of moving parts (see §3). Removing him would touch: `index.html`
   (`#mascot`), `js/mascot.js`, `images/mascot*.png`, `tools/mascot-parts.py`, `tests/mascot.test.js`,

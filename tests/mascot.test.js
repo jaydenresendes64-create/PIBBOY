@@ -12,7 +12,7 @@ const { ROOT } = require('./helpers');
 const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
 const html = read('index.html'), css = read('css/terminal.css'), js = read('js/mascot.js'), tool = read('tools/mascot-parts.py');
 // Layers from back to front, and the sheet's cell each shows.
-const PARTS = ['mp-leg-back', 'mp-leg-front', 'mp-arm', 'mp-torso', 'mp-head', 'mp-blink'];
+const PARTS = ['mp-leg-back', 'mp-shin-back', 'mp-leg-front', 'mp-shin-front', 'mp-arm', 'mp-torso', 'mp-head', 'mp-blink'];
 const rule = cls => (css.match(new RegExp('\\.' + cls + '\\{([^}]*)\\}')) || [null, ''])[1];
 
 // The size of a PNG: [width, height].
@@ -25,25 +25,28 @@ test('the parts sheet: one picture-sized cell per part', () => {
   const [w, h] = pngSize('images/mascot-parts.png');
   assert.equal(w, PARTS.length * pw, 'width');
   assert.equal(h, ph, 'height');
-  assert.match(rule('mp'), /background:url\(\.\.\/images\/mascot-parts\.png\) no-repeat; background-size:600% 100%;/);
+  assert.match(rule('mp'), new RegExp('background:url\\(\\.\\./images/mascot-parts\\.png\\) no-repeat; background-size:' + PARTS.length * 100 + '% 100%;'));
 });
 
-test('the page stacks the parts back to front, the blink inside the head', () => {
+test('the page stacks the parts back to front, each lower leg inside its leg, the blink inside the head', () => {
   const at = PARTS.map(cls => html.indexOf('class="mp ' + cls + '"'));
   at.forEach((i, n) => assert.ok(i > 0, PARTS[n] + ' in the page'));
   assert.deepEqual(at.slice().sort((a, b) => a - b), at);
   assert.match(html, /<span class="mp mp-head"><span class="mp mp-blink"><\/span><\/span>/);
+  assert.match(html, /<span class="mp mp-leg-back"><span class="mp mp-shin-back"><\/span><\/span>/);
+  assert.match(html, /<span class="mp mp-leg-front"><span class="mp mp-shin-front"><\/span><\/span>/);
   assert.match(html, /<div class="mascot" id="mascot" aria-hidden="true">/);
 });
 
 test('each layer shows its own cell and turns around the joint the tool cut it for', () => {
   PARTS.forEach((cls, i) => {
-    const pos = i === 0 ? '0' : Math.round(i / (PARTS.length - 1) * 100) + '%';
-    assert.match(rule(cls), new RegExp('background-position:' + pos + ' 0;'), cls);
+    const pos = rule(cls).match(/background-position:([\d.]+)%? 0;/);
+    assert.ok(pos, cls + ' shows a cell');
+    assert.ok(Math.abs(pos[1] - i / (PARTS.length - 1) * 100) < 0.001, cls + ' shows cell ' + i + ': ' + pos[1]);
   });
   const joints = tool.match(/JOINTS = \{([^}]*)\}/)[1];
-  const found = [...joints.matchAll(/'(mp-[\w-]+)': \((\d+), (\d+)\)/g)];
-  assert.equal(found.length, 4);
+  const found = [...joints.matchAll(/'(mp-[\w-]+)': \(([\d.]+), ([\d.]+)\)/g)];
+  assert.equal(found.length, 6, 'head, arm, two hips, two knees');
   found.forEach(([, cls, x, y]) => {
     const origin = rule(cls).match(/transform-origin:([\d.]+)% ([\d.]+)%;/);
     assert.ok(origin, cls + ' has a joint');
@@ -67,6 +70,16 @@ test('every move has a whole-figure animation (its end plans the next walk)', ()
       assert.equal(p[2], whole[2], p[1] + ' lasts as long as ' + whole[1]);
       assert.ok(css.includes('@keyframes ' + p[1] + '{'), p[1] + ' exists');
     });
+  });
+});
+
+test('walking bends both knees, the boot going back', () => {
+  ['front', 'back'].forEach(side => {
+    const anim = css.match(new RegExp('data-move="walk-left"\\] \\.mp-shin-' + side + '[^{]*\\{ animation:(\\w+) '));
+    assert.ok(anim, side + ' knee moves in the walk');
+    const frames = css.match(new RegExp('@keyframes ' + anim[1] + '\\{(.*)\\}'))[1];
+    const angles = [...frames.matchAll(/rotate\((-?[\d.]+)deg\)/g)].map(m => +m[1]);
+    assert.ok(Math.min(...angles) <= -30 && Math.max(...angles) <= 0, side + ' knee: ' + angles.join(','));
   });
 });
 

@@ -164,18 +164,20 @@ button{ cursor:pointer; }
    (made by tools/mascot-parts.py from images/mascot.png) has one cell per
    part, each the size of the picture, so every part is a full-size layer
    showing its own cell. Each turns around its own joint (the JOINTS in
-   tools/mascot-parts.py): the legs at the hips, the thumb arm at the
-   shoulder, behind the body, the head at the neck. At rest they make the
-   picture exactly. */
+   tools/mascot-parts.py): the legs at the hips, each lower leg (inside its
+   leg, so it goes along) at the knee, the thumb arm at the shoulder, behind
+   the body, the head at the neck. At rest they make the picture exactly. */
 .mp{
   position:absolute; inset:0;
-  background:url(../images/mascot-parts.png) no-repeat; background-size:600% 100%;
+  background:url(../images/mascot-parts.png) no-repeat; background-size:800% 100%;
 }
 .mp-leg-back{ background-position:0 0; transform-origin:65.28% 70.1%; }
-.mp-leg-front{ background-position:20% 0; transform-origin:48.61% 70.1%; }
-.mp-arm{ background-position:40% 0; transform-origin:43.06% 46.57%; }
-.mp-torso{ background-position:60% 0; }
-.mp-head{ background-position:80% 0; transform-origin:56.25% 44.12%; }
+.mp-shin-back{ background-position:14.2857% 0; transform-origin:64.79% 80.39%; }
+.mp-leg-front{ background-position:28.5714% 0; transform-origin:48.61% 70.1%; }
+.mp-shin-front{ background-position:42.8571% 0; transform-origin:45.49% 80.54%; }
+.mp-arm{ background-position:57.1429% 0; transform-origin:43.06% 46.57%; }
+.mp-torso{ background-position:71.4286% 0; }
+.mp-head{ background-position:85.7143% 0; transform-origin:56.25% 44.12%; }
 /* The head with its eyes shut, shown for a blink every few seconds. */
 .mp-blink{ background-position:100% 0; opacity:0; animation:mascotBlink 5.3s steps(1,end) infinite; }
 @keyframes mascotBlink{ 0%{ opacity:0; } 93.5%{ opacity:1; } 95%{ opacity:0; } }
@@ -287,16 +289,20 @@ button{ cursor:pointer; }
 
 /* Each part's poses during each move (same length and timing as the move
    above; rotate() turns a part around its joint: a positive angle swings a
-   leg or the thumb arm to his front, forward as he walks; the body moves
-   up and down). */
+   leg or the thumb arm to his front, forward as he walks, a negative one
+   bends a knee, the boot going back; the body moves up and down). */
 /* walk-left / walk-right: three strides out, a look around, turn, three back. */
-@keyframes mascotWalkLegF{ 0%{ transform:rotate(12deg); } 4.41%{ transform:rotate(0deg); } 8.82%{ transform:rotate(-8deg); } 12.5%{ transform:rotate(0deg); } 16.18%{ transform:rotate(12deg); } 19.85%{ transform:rotate(0deg); } 64.7%{ transform:rotate(12deg); } 69.12%{ transform:rotate(0deg); } 72.8%{ transform:rotate(-8deg); } 76.47%{ transform:rotate(0deg); } 80.1%{ transform:rotate(12deg); } 83.82%{ transform:rotate(0deg); } 87.5%{ transform:rotate(-8deg); } 91.18%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
-@keyframes mascotWalkLegB{ 0%{ transform:rotate(-8deg); } 4.41%{ transform:rotate(0deg); } 8.82%{ transform:rotate(12deg); } 12.5%{ transform:rotate(0deg); } 16.18%{ transform:rotate(-8deg); } 19.85%{ transform:rotate(0deg); } 64.7%{ transform:rotate(-8deg); } 69.12%{ transform:rotate(0deg); } 72.8%{ transform:rotate(12deg); } 76.47%{ transform:rotate(0deg); } 80.1%{ transform:rotate(-8deg); } 83.82%{ transform:rotate(0deg); } 87.5%{ transform:rotate(12deg); } 91.18%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
+@keyframes mascotWalkLegF{ 0%{ transform:rotate(14deg); } 4.41%{ transform:rotate(-2deg); } 8.82%{ transform:rotate(-10deg); } 12.5%{ transform:rotate(10deg); } 16.18%{ transform:rotate(14deg); } 19.85%{ transform:rotate(-2deg); } 23.53%{ transform:rotate(0deg); } 64.7%{ transform:rotate(14deg); } 69.12%{ transform:rotate(-2deg); } 72.8%{ transform:rotate(-10deg); } 76.47%{ transform:rotate(10deg); } 80.1%{ transform:rotate(14deg); } 83.82%{ transform:rotate(-2deg); } 87.5%{ transform:rotate(-10deg); } 91.18%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
+@keyframes mascotWalkShinF{ 0%{ transform:rotate(-4deg); } 4.41%{ transform:rotate(0deg); } 8.82%{ transform:rotate(-14deg); } 12.5%{ transform:rotate(-38deg); } 16.18%{ transform:rotate(-4deg); } 19.85%{ transform:rotate(0deg); } 64.7%{ transform:rotate(-4deg); } 69.12%{ transform:rotate(0deg); } 72.8%{ transform:rotate(-14deg); } 76.47%{ transform:rotate(-38deg); } 80.1%{ transform:rotate(-4deg); } 83.82%{ transform:rotate(0deg); } 87.5%{ transform:rotate(-14deg); } 91.18%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
+@keyframes mascotWalkLegB{ 0%{ transform:rotate(-10deg); } 4.41%{ transform:rotate(10deg); } 8.82%{ transform:rotate(14deg); } 12.5%{ transform:rotate(-2deg); } 16.18%{ transform:rotate(-10deg); } 19.85%{ transform:rotate(10deg); } 23.53%{ transform:rotate(0deg); } 64.7%{ transform:rotate(-10deg); } 69.12%{ transform:rotate(10deg); } 72.8%{ transform:rotate(14deg); } 76.47%{ transform:rotate(-2deg); } 80.1%{ transform:rotate(-10deg); } 83.82%{ transform:rotate(10deg); } 87.5%{ transform:rotate(14deg); } 91.18%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
+@keyframes mascotWalkShinB{ 0%{ transform:rotate(-14deg); } 4.41%{ transform:rotate(-38deg); } 8.82%{ transform:rotate(-4deg); } 12.5%{ transform:rotate(0deg); } 16.18%{ transform:rotate(-14deg); } 19.85%{ transform:rotate(-38deg); } 23.53%{ transform:rotate(0deg); } 64.7%{ transform:rotate(-14deg); } 69.12%{ transform:rotate(-38deg); } 72.8%{ transform:rotate(-4deg); } 76.47%{ transform:rotate(0deg); } 80.1%{ transform:rotate(-14deg); } 83.82%{ transform:rotate(-38deg); } 87.5%{ transform:rotate(-4deg); } 91.18%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
 @keyframes mascotWalkArm{ 0%{ transform:rotate(-6deg); } 4.41%{ transform:rotate(0deg); } 8.82%{ transform:rotate(6deg); } 12.5%{ transform:rotate(0deg); } 16.18%{ transform:rotate(-6deg); } 19.85%{ transform:rotate(0deg); } 64.7%{ transform:rotate(-6deg); } 69.12%{ transform:rotate(0deg); } 72.8%{ transform:rotate(6deg); } 76.47%{ transform:rotate(0deg); } 80.1%{ transform:rotate(-6deg); } 83.82%{ transform:rotate(0deg); } 87.5%{ transform:rotate(6deg); } 91.18%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
 @keyframes mascotWalkHead{ 0%{ transform:rotate(2deg); } 4.41%{ transform:rotate(0deg); } 8.82%{ transform:rotate(-2deg); } 12.5%{ transform:rotate(0deg); } 16.18%{ transform:rotate(2deg); } 19.85%{ transform:rotate(0deg); } 38%{ transform:rotate(-6deg); } 48%{ transform:rotate(4deg); } 56%{ transform:rotate(0deg); } 64.7%{ transform:rotate(2deg); } 69.12%{ transform:rotate(0deg); } 72.8%{ transform:rotate(-2deg); } 76.47%{ transform:rotate(0deg); } 80.1%{ transform:rotate(2deg); } 83.82%{ transform:rotate(0deg); } 87.5%{ transform:rotate(-2deg); } 91.18%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
 @keyframes mascotWalkBody{ 0%{ transform:translateY(1px); } 4.41%{ transform:translateY(-1px); } 8.82%{ transform:translateY(1px); } 12.5%{ transform:translateY(-1px); } 16.18%{ transform:translateY(1px); } 19.85%{ transform:translateY(-1px); } 23.53%{ transform:translateY(1px); } 27.2%{ transform:translateY(0px); } 64.7%{ transform:translateY(1px); } 69.12%{ transform:translateY(-1px); } 72.8%{ transform:translateY(1px); } 76.47%{ transform:translateY(-1px); } 80.1%{ transform:translateY(1px); } 83.82%{ transform:translateY(-1px); } 87.5%{ transform:translateY(1px); } 95%{ transform:translateY(0px); } 100%{ transform:translateY(0px); } }
 .mascot-move[data-move="walk-left"] .mp-leg-front, .mascot-move[data-move="walk-right"] .mp-leg-front{ animation:mascotWalkLegF 3.4s steps(1,end); }
+.mascot-move[data-move="walk-left"] .mp-shin-front, .mascot-move[data-move="walk-right"] .mp-shin-front{ animation:mascotWalkShinF 3.4s steps(1,end); }
 .mascot-move[data-move="walk-left"] .mp-leg-back, .mascot-move[data-move="walk-right"] .mp-leg-back{ animation:mascotWalkLegB 3.4s steps(1,end); }
+.mascot-move[data-move="walk-left"] .mp-shin-back, .mascot-move[data-move="walk-right"] .mp-shin-back{ animation:mascotWalkShinB 3.4s steps(1,end); }
 .mascot-move[data-move="walk-left"] .mp-arm, .mascot-move[data-move="walk-right"] .mp-arm{ animation:mascotWalkArm 3.4s steps(1,end); }
 .mascot-move[data-move="walk-left"] .mp-head, .mascot-move[data-move="walk-right"] .mp-head{ animation:mascotWalkHead 3.4s steps(1,end); }
 .mascot-move[data-move="walk-left"] .mascot-body, .mascot-move[data-move="walk-right"] .mascot-body{ animation:mascotWalkBody 3.4s steps(1,end); }
@@ -306,32 +312,44 @@ button{ cursor:pointer; }
 .mascot-move[data-move="nod"] .mp-arm{ animation:mascotNodArm 0.75s steps(1,end); }
 .mascot-move[data-move="nod"] .mp-head{ animation:mascotNodHead 0.75s steps(1,end); }
 /* QUESTS: two strides out, turn, two back. */
-@keyframes mascotStrollLegF{ 0%{ transform:rotate(12deg); } 6.9%{ transform:rotate(0deg); } 13.79%{ transform:rotate(-8deg); } 20.7%{ transform:rotate(0deg); } 51.7%{ transform:rotate(12deg); } 58.62%{ transform:rotate(0deg); } 65.5%{ transform:rotate(-8deg); } 72.41%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
-@keyframes mascotStrollLegB{ 0%{ transform:rotate(-8deg); } 6.9%{ transform:rotate(0deg); } 13.79%{ transform:rotate(12deg); } 20.7%{ transform:rotate(0deg); } 51.7%{ transform:rotate(-8deg); } 58.62%{ transform:rotate(0deg); } 65.5%{ transform:rotate(12deg); } 72.41%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
+@keyframes mascotStrollLegF{ 0%{ transform:rotate(14deg); } 6.9%{ transform:rotate(-2deg); } 13.79%{ transform:rotate(-10deg); } 20.7%{ transform:rotate(10deg); } 27.59%{ transform:rotate(0deg); } 51.7%{ transform:rotate(14deg); } 58.62%{ transform:rotate(-2deg); } 65.5%{ transform:rotate(-10deg); } 72.41%{ transform:rotate(10deg); } 79.3%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
+@keyframes mascotStrollShinF{ 0%{ transform:rotate(-4deg); } 6.9%{ transform:rotate(0deg); } 13.79%{ transform:rotate(-14deg); } 20.7%{ transform:rotate(-38deg); } 27.59%{ transform:rotate(0deg); } 51.7%{ transform:rotate(-4deg); } 58.62%{ transform:rotate(0deg); } 65.5%{ transform:rotate(-14deg); } 72.41%{ transform:rotate(-38deg); } 79.3%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
+@keyframes mascotStrollLegB{ 0%{ transform:rotate(-10deg); } 6.9%{ transform:rotate(10deg); } 13.79%{ transform:rotate(14deg); } 20.7%{ transform:rotate(-2deg); } 27.59%{ transform:rotate(0deg); } 51.7%{ transform:rotate(-10deg); } 58.62%{ transform:rotate(10deg); } 65.5%{ transform:rotate(14deg); } 72.41%{ transform:rotate(-2deg); } 79.3%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
+@keyframes mascotStrollShinB{ 0%{ transform:rotate(-14deg); } 6.9%{ transform:rotate(-38deg); } 13.79%{ transform:rotate(-4deg); } 20.7%{ transform:rotate(0deg); } 51.7%{ transform:rotate(-14deg); } 58.62%{ transform:rotate(-38deg); } 65.5%{ transform:rotate(-4deg); } 72.41%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
 @keyframes mascotStrollArm{ 0%{ transform:rotate(-6deg); } 6.9%{ transform:rotate(0deg); } 13.79%{ transform:rotate(6deg); } 20.7%{ transform:rotate(0deg); } 51.7%{ transform:rotate(-6deg); } 58.62%{ transform:rotate(0deg); } 65.5%{ transform:rotate(6deg); } 72.41%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
 @keyframes mascotStrollHead{ 0%{ transform:rotate(2deg); } 6.9%{ transform:rotate(0deg); } 13.79%{ transform:rotate(-2deg); } 20.7%{ transform:rotate(0deg); } 51.7%{ transform:rotate(2deg); } 58.62%{ transform:rotate(0deg); } 65.5%{ transform:rotate(-2deg); } 72.41%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
 @keyframes mascotStrollBody{ 0%{ transform:translateY(1px); } 6.9%{ transform:translateY(-1px); } 13.79%{ transform:translateY(1px); } 20.7%{ transform:translateY(-1px); } 27.59%{ transform:translateY(0px); } 51.7%{ transform:translateY(1px); } 58.62%{ transform:translateY(-1px); } 65.5%{ transform:translateY(1px); } 72.41%{ transform:translateY(-1px); } 79.3%{ transform:translateY(1px); } 86.21%{ transform:translateY(0px); } 100%{ transform:translateY(0px); } }
 .mascot-move[data-move="stroll"] .mp-leg-front{ animation:mascotStrollLegF 1.45s steps(1,end); }
+.mascot-move[data-move="stroll"] .mp-shin-front{ animation:mascotStrollShinF 1.45s steps(1,end); }
 .mascot-move[data-move="stroll"] .mp-leg-back{ animation:mascotStrollLegB 1.45s steps(1,end); }
+.mascot-move[data-move="stroll"] .mp-shin-back{ animation:mascotStrollShinB 1.45s steps(1,end); }
 .mascot-move[data-move="stroll"] .mp-arm{ animation:mascotStrollArm 1.45s steps(1,end); }
 .mascot-move[data-move="stroll"] .mp-head{ animation:mascotStrollHead 1.45s steps(1,end); }
 .mascot-move[data-move="stroll"] .mascot-body{ animation:mascotStrollBody 1.45s steps(1,end); }
-/* ITEMS: legs apart to crouch, tucked in the air with the thumb raised, land. */
-@keyframes mascotHopLegF{ 0%{ transform:rotate(6deg); } 22.22%{ transform:rotate(-5deg); } 59.26%{ transform:rotate(0deg); } 77.78%{ transform:rotate(6deg); } 100%{ transform:rotate(0deg); } }
-@keyframes mascotHopLegB{ 0%{ transform:rotate(-6deg); } 22.22%{ transform:rotate(5deg); } 59.26%{ transform:rotate(0deg); } 77.78%{ transform:rotate(-6deg); } 100%{ transform:rotate(0deg); } }
+/* ITEMS: knees bent to crouch, tucked in the air with the thumb raised, land. */
+@keyframes mascotHopLegF{ 0%{ transform:rotate(10deg); } 22.22%{ transform:rotate(14deg); } 59.26%{ transform:rotate(2deg); } 77.78%{ transform:rotate(10deg); } 100%{ transform:rotate(0deg); } }
+@keyframes mascotHopShinF{ 0%{ transform:rotate(-16deg); } 22.22%{ transform:rotate(-36deg); } 59.26%{ transform:rotate(-8deg); } 77.78%{ transform:rotate(-16deg); } 100%{ transform:rotate(0deg); } }
+@keyframes mascotHopLegB{ 0%{ transform:rotate(2deg); } 22.22%{ transform:rotate(10deg); } 59.26%{ transform:rotate(0deg); } 77.78%{ transform:rotate(2deg); } 100%{ transform:rotate(0deg); } }
+@keyframes mascotHopShinB{ 0%{ transform:rotate(-14deg); } 22.22%{ transform:rotate(-36deg); } 59.26%{ transform:rotate(-8deg); } 77.78%{ transform:rotate(-14deg); } 100%{ transform:rotate(0deg); } }
 @keyframes mascotHopArm{ 0%{ transform:rotate(-4deg); } 22.22%{ transform:rotate(16deg); } 59.26%{ transform:rotate(8deg); } 77.78%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
 @keyframes mascotHopHead{ 0%{ transform:rotate(0deg); } 22.22%{ transform:rotate(3deg); } 59.26%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
 .mascot-move[data-move="hop"] .mp-leg-front{ animation:mascotHopLegF 0.54s steps(1,end); }
+.mascot-move[data-move="hop"] .mp-shin-front{ animation:mascotHopShinF 0.54s steps(1,end); }
 .mascot-move[data-move="hop"] .mp-leg-back{ animation:mascotHopLegB 0.54s steps(1,end); }
+.mascot-move[data-move="hop"] .mp-shin-back{ animation:mascotHopShinB 0.54s steps(1,end); }
 .mascot-move[data-move="hop"] .mp-arm{ animation:mascotHopArm 0.54s steps(1,end); }
 .mascot-move[data-move="hop"] .mp-head{ animation:mascotHopHead 0.54s steps(1,end); }
 /* MAP: braced, thumb raised, peering one way, then the other; a hop back. */
-@keyframes mascotScoutLegF{ 0%{ transform:rotate(6deg); } 36%{ transform:rotate(0deg); } 56%{ transform:rotate(6deg); } 74%{ transform:rotate(0deg); } 84%{ transform:rotate(-4deg); } 92%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
-@keyframes mascotScoutLegB{ 0%{ transform:rotate(-4deg); } 36%{ transform:rotate(0deg); } 56%{ transform:rotate(-4deg); } 74%{ transform:rotate(0deg); } 84%{ transform:rotate(4deg); } 92%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
+@keyframes mascotScoutLegF{ 0%{ transform:rotate(6deg); } 36%{ transform:rotate(0deg); } 56%{ transform:rotate(6deg); } 74%{ transform:rotate(0deg); } 84%{ transform:rotate(4deg); } 92%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
+@keyframes mascotScoutShinF{ 0%{ transform:rotate(-6deg); } 36%{ transform:rotate(0deg); } 56%{ transform:rotate(-6deg); } 74%{ transform:rotate(0deg); } 84%{ transform:rotate(-24deg); } 92%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
+@keyframes mascotScoutLegB{ 0%{ transform:rotate(-4deg); } 36%{ transform:rotate(0deg); } 56%{ transform:rotate(-4deg); } 74%{ transform:rotate(0deg); } 84%{ transform:rotate(8deg); } 92%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
+@keyframes mascotScoutShinB{ 0%{ transform:rotate(-6deg); } 36%{ transform:rotate(0deg); } 56%{ transform:rotate(-6deg); } 74%{ transform:rotate(0deg); } 84%{ transform:rotate(-24deg); } 92%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
 @keyframes mascotScoutArm{ 0%{ transform:rotate(8deg); } 18%{ transform:rotate(14deg); } 36%{ transform:rotate(0deg); } 56%{ transform:rotate(14deg); } 74%{ transform:rotate(0deg); } 84%{ transform:rotate(10deg); } 92%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
 @keyframes mascotScoutHead{ 0%{ transform:rotate(-4deg); } 18%{ transform:rotate(-7deg); } 36%{ transform:rotate(0deg); } 56%{ transform:rotate(-7deg); } 74%{ transform:rotate(0deg); } 100%{ transform:rotate(0deg); } }
 .mascot-move[data-move="scout"] .mp-leg-front{ animation:mascotScoutLegF 1.9s steps(1,end); }
+.mascot-move[data-move="scout"] .mp-shin-front{ animation:mascotScoutShinF 1.9s steps(1,end); }
 .mascot-move[data-move="scout"] .mp-leg-back{ animation:mascotScoutLegB 1.9s steps(1,end); }
+.mascot-move[data-move="scout"] .mp-shin-back{ animation:mascotScoutShinB 1.9s steps(1,end); }
 .mascot-move[data-move="scout"] .mp-arm{ animation:mascotScoutArm 1.9s steps(1,end); }
 .mascot-move[data-move="scout"] .mp-head{ animation:mascotScoutHead 1.9s steps(1,end); }
 /* LOG: head down, small strokes of the hand, like writing. */
