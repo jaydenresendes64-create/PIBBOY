@@ -204,7 +204,10 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   the data layer solid and led to the `safety-fixes` PR).
 - **The mascot** stays: the owner had planned to remove it (2026-09-25), then replaced the Vault Boy
   drawing with their own cartoon (2026-09-27): `images/mascot.png`, same 144×204 canvas, white
-  background cut out with soft edges, `transform-origin` moved to the new feet (52% 97%). Mascot
+  background cut out with soft edges, `transform-origin` moved to the new feet (52% 97%). The hand
+  on the hip was too small to read, so a Vault-Boy-style fist was drawn in (2026-09-28, owner's
+  reference: the fist resting on the hip; same colours as the thumb hand: back of the hand on the
+  hip, curled fingers stacked on the outside, thumb across the top); it's part of the body layer. Mascot
   reactions to rewards were declined; on 2026-09-28 the owner asked for Fallout 4 Pip-Boy-style
   animation, so he's now a rig of moving parts (see §3). Removing him would touch: `index.html`
   (`#mascot`), `js/mascot.js`, `images/mascot*.png`, `tools/mascot-parts.py`, `tests/mascot.test.js`,
