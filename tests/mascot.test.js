@@ -15,11 +15,16 @@ const html = read('index.html'), css = read('css/terminal.css'), js = read('js/m
 const PARTS = ['mp-leg-back', 'mp-leg-front', 'mp-arm', 'mp-torso', 'mp-head', 'mp-blink'];
 const rule = cls => (css.match(new RegExp('\\.' + cls + '\\{([^}]*)\\}')) || [null, ''])[1];
 
+// The size of a PNG: [width, height].
+const pngSize = f => { const png = fs.readFileSync(path.join(ROOT, f)); assert.equal(png.toString('ascii', 1, 4), 'PNG'); return [png.readUInt32BE(16), png.readUInt32BE(20)]; };
+
 test('the parts sheet: one picture-sized cell per part', () => {
-  const png = fs.readFileSync(path.join(ROOT, 'images/mascot-parts.png'));
-  assert.equal(png.toString('ascii', 1, 4), 'PNG');
-  assert.equal(png.readUInt32BE(16), PARTS.length * 144, 'width');
-  assert.equal(png.readUInt32BE(20), 204, 'height');
+  const [pw, ph] = pngSize('images/mascot.png');
+  assert.ok(pw % 144 === 0 && ph === 204 * pw / 144, 'the picture is a whole multiple of 144x204: ' + pw + 'x' + ph);
+  assert.ok(pw >= 288, 'big enough to stay sharp on a phone (3 device pixels per CSS pixel)');
+  const [w, h] = pngSize('images/mascot-parts.png');
+  assert.equal(w, PARTS.length * pw, 'width');
+  assert.equal(h, ph, 'height');
   assert.match(rule('mp'), /background:url\(\.\.\/images\/mascot-parts\.png\) no-repeat; background-size:600% 100%;/);
 });
 

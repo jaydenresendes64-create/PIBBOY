@@ -1,5 +1,5 @@
 """
-Cuts the mascot picture (images/mascot.png, 144x204) into the parts that
+Cuts the mascot picture (images/mascot.png) into the parts that
 css/terminal.css animates, like Vault Boy in a Fallout 4 Pip-Boy: each part
 turns around its own joint. Writes images/mascot-parts.png, one row of cells
 of the same size as the picture, in drawing order:
@@ -13,7 +13,11 @@ A part that turns tucks under the one in front of it: the arm and the legs
 carry a little more of themselves under the body, and the body some collar
 under the head, so turning never shows a hole.
 
-Only for a new picture (same size and pose): python tools/mascot-parts.py
+The picture can be any whole multiple of 144x204 (it is 288x408: upscaled
+2026-09-28, so he stays sharp on a phone); every position below is given in
+units of the 144x204 picture and scaled to the real one.
+
+Only for a new picture (same pose): python tools/mascot-parts.py
 Needs Python 3 with Pillow and numpy (pip install pillow numpy). The joints
 below must match the transform-origin values of the .mp-* rules in the CSS.
 """
@@ -27,25 +31,27 @@ OUT = os.path.join(ROOT, 'images', 'mascot-parts.png')
 
 im = np.array(Image.open(SRC).convert('RGBA')).astype(np.int32)
 H, W, _ = im.shape
-ys, xs = np.mgrid[0:H, 0:W]
+K = W / 144.0                                   # pixels per unit of the 144x204 picture
+assert W % 144 == 0 and H == 204 * W // 144, 'the picture must be a whole multiple of 144x204'
+ys, xs = np.mgrid[0:H, 0:W] / K                 # every pixel's place, in units
 opaque = im[:, :, 3] > 0
 
-# The joint each part turns around, in picture pixels. css/terminal.css gives
-# them as transform-origin percentages (x / 144, y / 204) on the .mp-* rules;
-# this script prints them.
+# The joint each part turns around, in units. css/terminal.css gives them as
+# transform-origin percentages (x / 144, y / 204) on the .mp-* rules; this
+# script prints them.
 JOINTS = {'mp-head': (81, 90), 'mp-arm': (62, 95), 'mp-leg-front': (70, 143), 'mp-leg-back': (94, 143)}
 
 # ---------- where each part is (picture pixels) ----------
 # The head: above the collar. The line follows the shoulders, dips under
 # the beard and leaves the two collar flaps to the body.
 def head_bottom(x):
-    points = [(0, 85), (66, 84), (70, 84), (74, 89), (76, 91), (86, 91), (89, 88), (92, 84), (W, 84)]
+    points = [(0, 85), (66, 84), (70, 84), (74, 89), (76, 91), (86, 91), (89, 88), (92, 84), (144, 84)]
     return np.interp(x, [p[0] for p in points], [p[1] for p in points])
-head = opaque & (xs >= 56) & (xs <= 110) & (ys < head_bottom(xs))
+head = opaque & (xs >= 56) & (xs < 111) & (ys < head_bottom(xs))
 # The thumb arm: left of the body's edge (x = 60). Under the armpit (y >= 100)
 # the two columns at the edge are the body's own outline.
 ARM_EDGE = 60
-arm = opaque & ~head & (((xs <= ARM_EDGE) & (ys < 100)) | ((xs <= ARM_EDGE - 2) & (ys < 112)))
+arm = opaque & ~head & (((xs < ARM_EDGE + 1) & (ys < 100)) | ((xs < ARM_EDGE - 1) & (ys < 112)))
 # The legs: below the belt, split along the crease between them.
 LEGS_TOP = 145
 def split(y):
@@ -64,6 +70,7 @@ def layer(mask):
 # Only where the part in front is fully opaque, so nothing shows at rest.
 def extend_right(cell, x_to, hidden):
     """The arm goes on under the body: each row's last pixel, repeated."""
+    x_to = int(round(x_to * K))
     for y in range(H):
         filled = np.nonzero(cell[y, :x_to, 3])[0]
         if not len(filled):
@@ -75,6 +82,7 @@ def extend_right(cell, x_to, hidden):
 
 def extend_up(cell, y_from, y_to, hidden):
     """A leg goes on up under the belt: its top row, repeated."""
+    y_from, y_to = int(round(y_from * K)), int(round(y_to * K))
     row = cell[y_from + 1]
     for y in range(y_to, y_from + 1):
         keep = (row[:, 3] > 0) & hidden[y] & (cell[y, :, 3] == 0)
@@ -83,7 +91,7 @@ def extend_up(cell, y_from, y_to, hidden):
 def fill_under(cell, region):
     """The collar under the head: the body's colours, spread inwards."""
     todo = region & (cell[:, :, 3] == 0)
-    for _ in range(40):
+    for _ in range(int(40 * K)):
         if not todo.any():
             break
         have = cell[:, :, 3] > 0
@@ -104,19 +112,21 @@ front_cell, back_cell = layer(front_leg), layer(back_leg)
 for cell in (front_cell, back_cell):
     extend_up(cell, LEGS_TOP, LEGS_TOP - 10, body & solid)
 body_cell = layer(body)
-fill_under(body_cell, head & solid & (ys >= 76) & (xs >= 62) & (xs <= 100))
+fill_under(body_cell, head & solid & (ys >= 76) & (xs >= 62) & (xs < 101))
 head_cell = layer(head)
 
 # ---------- the blink: the same head, eyes shut ----------
 def shut_eye(cell, x0, x1, y0, y1, lid_y, skin_at):
-    skin = cell[skin_at[1], skin_at[0]].copy()
+    px = lambda v: int(round(v * K))
+    skin = cell[px(skin_at[1]), px(skin_at[0])].copy()
     line = np.array([58, 30, 10, 255])
-    for x in range(x0, x1 + 1):
-        for y in range(y0, y1 + 1):
+    thick = max(1, int(round(K)))
+    for x in range(px(x0), px(x1 + 1)):
+        for y in range(px(y0), px(y1 + 1)):
             cell[y, x] = skin
-        t = (x - x0) / max(1, x1 - x0)
-        y = int(round(lid_y + 1.2 * (1 - (2 * t - 1) ** 2)))   # a small curve, like a closed lid
-        cell[y, x] = line
+        t = (x - px(x0)) / max(1, px(x1 + 1) - 1 - px(x0))
+        y = int(round((lid_y + 1.2 * (1 - (2 * t - 1) ** 2)) * K))   # a small curve, like a closed lid
+        cell[y:y + thick, x] = line
 blink_cell = head_cell.copy()
 shut_eye(blink_cell, 64, 72, 55, 60, 57, (68, 62))
 shut_eye(blink_cell, 80, 90, 55, 61, 58, (85, 63))
@@ -136,4 +146,4 @@ diff = np.abs(canvas - picture).max()
 print('wrote', os.path.relpath(OUT, ROOT), sheet.shape[1], 'x', sheet.shape[0],
       '| largest difference from the picture at rest:', round(float(diff), 1), '(of 255)')
 for name, (x, y) in JOINTS.items():
-    print('  .%s transform-origin: %s%% %s%%' % (name, round(100 * x / W, 2), round(100 * y / H, 2)))
+    print('  .%s transform-origin: %s%% %s%%' % (name, round(100 * x / 144, 2), round(100 * y / 204, 2)))

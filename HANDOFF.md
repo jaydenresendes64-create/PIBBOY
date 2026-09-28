@@ -207,7 +207,12 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   background cut out with soft edges, `transform-origin` moved to the new feet (52% 97%). The hand
   on the hip was too small to read, so a Vault-Boy-style fist was drawn in (2026-09-28, owner's
   reference: the fist resting on the hip; same colours as the thumb hand: back of the hand on the
-  hip, curled fingers stacked on the outside, thumb across the top); it's part of the body layer. Mascot
+  hip, curled fingers stacked on the outside, thumb across the top); it's part of the body layer.
+  Upscaled the same day so he's sharp on a phone: the owner's original 144×204 JPEG went through
+  Real-ESRGAN "realesr-animevideov3" ×4 (the ncnn build from PyPI `realesrgan-ncnn-py`, run on CPU;
+  the "x4plus-anime" model changed the face, waifu2x failed on CPU), the background was cut out and
+  the fist drawn at ×4, then everything brought down to **288×408** (2×; the box is 54×76 CSS px,
+  162×228 device px on an iPhone). `images/mascot-parts.png` is 1728×408, ~79 KB. Mascot
   reactions to rewards were declined; on 2026-09-28 the owner asked for Fallout 4 Pip-Boy-style
   animation, so he's now a rig of moving parts (see §3). Removing him would touch: `index.html`
   (`#mascot`), `js/mascot.js`, `images/mascot*.png`, `tools/mascot-parts.py`, `tests/mascot.test.js`,
