@@ -1,10 +1,10 @@
 /**
  * Mascot — the figure in the top-right corner, cut into parts that each move
  * (images/mascot-parts.png, from tools/mascot-parts.py), like Vault Boy in a
- * Fallout 4 Pip-Boy. How he moves lives in css/terminal.css: few poses,
- * steps() timing, and a blink now and then. This file only picks when: a
- * short walk or a thumbs-up every 10-20 s, and one gesture when the tab
- * changes. He never takes a tap (pointer-events:none), with
+ * Fallout 4 Pip-Boy. How he moves lives in css/terminal.css: smooth cartoon
+ * moves (written by tools/mascot-moves.py) and a blink now and then. This
+ * file only picks when: a short walk or a thumbs-up every 10-20 s, and one
+ * gesture when the tab changes. He never takes a tap (pointer-events:none), with
  * prefers-reduced-motion he stays still, and while the app is in the
  * background nothing is planned or played.
  */

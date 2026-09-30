@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of the `books` PR (2026-09-26, after PR #14). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-222/222 tests pass locally. `sw.js` cache: `v22`.
+223/223 tests pass locally. `sw.js` cache: `v22`.
 
 ## 1. What it is
 
@@ -97,11 +97,18 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   with the hip and bends again at the knee (added 2026-09-28, owner: "legs works"; each upper leg
   carries a hidden round, outlined knee under its lower leg so a bend shows no gap); each turns
   around its joint (`transform-origin` = the tool's `JOINTS`, as % of 144×204). Each move = one
-  `.mascot-move` keyframe (where he goes / faces) + part keyframes of the same length (generated
-  poses: legs −10–16°, knees 0 to −40° (negative = bent, boot back; the walk's passing frames bend
-  the swinging knee to −38°, the hop tucks both), arm ±6–16°, head ±2–7°, body bob 1–2 px), all
-  `steps(1,end)`. Idle: breathing on `.mascot-body`, a blink every 5.3 s; mascot.js picks walk-left /
-  walk-right / thumbs every 10–20 s. At rest the layers rebuild the picture exactly (the tool checks);
+  `.mascot-move` keyframe (where he goes / faces, squash and stretch) + part keyframes of the same
+  length (legs −10–16°, knees 0 to −40° (negative = bent, boot back; the swinging knee bends to −38°
+  as it passes, the hop tucks both), arm −7–18°, head −10–7°, body bob 1–2 px). **Smooth and
+  cartoon-like since 2026-09-30** (owner: "le plus fluide possible, cartoon comme Vault Boy"; before,
+  every move jumped between poses with `steps(1,end)`): `tools/mascot-moves.py` writes all the move
+  CSS (between "/* Cartoon animation, like Vault Boy" and "/* End of the moves made by
+  tools/mascot-moves.py. */") from per-part keys (time, value, easing): a wind-up before each move,
+  slow in/out, squash on landing and stretch in the air, overshoot then settle, the head a beat
+  late, turns as a flat-card spin (through a thin sliver, never invisible); every move starts and
+  ends at rest (tested). Change a move in the tool, never by hand in the CSS. Only the blink stays
+  instant (`steps`). Idle: breathing on `.mascot-body`, a slight head/thumb sway, a blink every
+  5.3 s; mascot.js picks walk-left / walk-right / thumbs every 10–20 s. At rest the layers rebuild the picture exactly (the tool checks);
   moving parts carry a little of themselves under the part in front, so no hole shows.
   `tests/mascot.test.js` keeps sheet, page, CSS joints and moves in sync. A new picture (same size
   and pose): replace `images/mascot.png`, run the tool, check the cut lines.

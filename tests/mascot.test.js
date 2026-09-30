@@ -15,6 +15,18 @@ const html = read('index.html'), css = read('css/terminal.css'), js = read('js/m
 const PARTS = ['mp-leg-back', 'mp-shin-back', 'mp-leg-front', 'mp-shin-front', 'mp-arm', 'mp-torso', 'mp-head', 'mp-blink'];
 const rule = cls => (css.match(new RegExp('\\.' + cls + '\\{([^}]*)\\}')) || [null, ''])[1];
 
+// The inside of `@keyframes name{ ... }` (braces counted, one line or several).
+const keyframes = name => {
+  const start = css.indexOf('@keyframes ' + name + '{');
+  if (start < 0) return null;
+  let depth = 0;
+  for (let i = css.indexOf('{', start); i < css.length; i++) {
+    if (css[i] === '{') depth++;
+    else if (css[i] === '}' && --depth === 0) return css.slice(css.indexOf('{', start) + 1, i);
+  }
+  return null;
+};
+
 // The size of a PNG: [width, height].
 const pngSize = f => { const png = fs.readFileSync(path.join(ROOT, f)); assert.equal(png.toString('ascii', 1, 4), 'PNG'); return [png.readUInt32BE(16), png.readUInt32BE(20)]; };
 
@@ -71,6 +83,24 @@ test('every move has a whole-figure animation (its end plans the next walk)', ()
       assert.ok(css.includes('@keyframes ' + p[1] + '{'), p[1] + ' exists');
     });
   });
+});
+
+test('smooth, cartoon moves: no jumps between poses, each starts and ends at rest', () => {
+  const rules = [...css.matchAll(/\.mascot-move\[data-move="[\w-]+"\][^{]*\{ animation:(\w+) ([\d.]+)s ([^;]+);/g)];
+  assert.ok(rules.length >= 20, 'moves and their parts: ' + rules.length);
+  rules.forEach(([, name, , timing]) => {
+    assert.ok(!/steps/.test(timing), name + ' moves smoothly, not in steps');
+    const frames = keyframes(name);
+    assert.ok(frames, name + ' has keyframes');
+    const keys = [...frames.matchAll(/([\d.]+)%\{ transform:([^;]+);/g)];
+    assert.ok(!/steps/.test(frames), name + ': no steps inside');
+    const first = keys[0], last = keys[keys.length - 1];
+    assert.equal(first[1], '0', name + ' starts at 0%');
+    assert.equal(last[1], '100', name + ' ends at 100%');
+    [first[2], last[2]].forEach(t => assert.match(t, /^(translate\(0,0\) scale\(1,1\) rotate\(0deg\)|rotate\(0deg\)|translateY\(0px\))$/, name + ' at rest: ' + t));
+  });
+  // the blink stays instant: a crossfade between open and shut eyes would look ghostly
+  assert.match(rule('mp-blink'), /animation:mascotBlink 5\.3s steps\(1,end\) infinite;/);
 });
 
 test('walking bends both knees, the boot going back', () => {

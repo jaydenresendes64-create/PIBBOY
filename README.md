@@ -101,7 +101,8 @@ data/places.txt     MAP: every country, region and city (15,000 people or more),
 data/regions/       MAP: one file per country with the shapes of its regions
 tools/              build-map-data.js, which makes data/ (see "Map data"); build-three.mjs, which makes
                     vendor/three/ from the parts listed in three-entry.mjs; mascot-parts.py, which cuts
-                    images/mascot.png into images/mascot-parts.png (Python with Pillow and numpy)
+                    images/mascot.png into images/mascot-parts.png (Python with Pillow and numpy);
+                    mascot-moves.py, which writes the mascot's moves into css/terminal.css (Python)
 fonts/              the two terminal fonts, VT323 and IBM Plex Mono (licence: fonts/OFL.txt)
 api/analyze.js      optional serverless AI function (not used on GitHub Pages, see below)
 tests/              automated tests (see "Run the tests")
