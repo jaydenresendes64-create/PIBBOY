@@ -1316,6 +1316,7 @@ canvas.item-model{
 .vital-btn.warn{ border-color:var(--danger); color:var(--danger); }
 .vital-btn.quiet{ border-color:var(--line); color:var(--text-dim); }
 .vital-btn:disabled{ opacity:0.6; cursor:default; }
+.vital-btn .btn-sub{ display:block; font-size:0.66rem; color:var(--text-dim); margin-top:2px; }
 .date-input{
   border:1px solid var(--line); border-radius:3px; background:var(--bg); color:var(--phosphor);
   padding:7px; font-size:0.85rem; min-height:40px; color-scheme:dark;
@@ -1352,3 +1353,14 @@ canvas.item-model{
 .vt td{ padding:4px 3px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
 .vt th:first-child, .vt td:first-child{ text-align:left; }
 .vt tr.avg td{ color:var(--amber); border-bottom:none; }
+/* The VITALS tab key's light (js/vitals.js markTab): seen from every tab.
+   Amber and slowly pulsing while an urge timer runs, steady when the round
+   is over, dim while today's check-in is still to do. */
+.tab-btn[data-alert]::after{
+  content:''; position:absolute; top:4px; right:4px; width:6px; height:6px; border-radius:50%;
+  background:var(--amber); box-shadow:0 0 6px rgba(255,154,46,0.8); pointer-events:none;
+}
+.tab-btn[data-alert="urge"]::after{ animation:tabLight 1.6s ease-in-out infinite; }
+.tab-btn[data-alert="due"]::after{ background:var(--phosphor-dim); box-shadow:none; }
+.tab-btn.active[data-alert]::after{ background:var(--bg); box-shadow:none; }
+@keyframes tabLight{ 50%{ opacity:0.35; } }

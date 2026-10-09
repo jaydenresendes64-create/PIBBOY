@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of the `books` PR (2026-09-26, after PR #14). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-236/236 tests pass locally. `sw.js` cache: `v23`.
+238/238 tests pass locally. `sw.js` cache: `v23`.
 
 ## 1. What it is
 
@@ -85,6 +85,11 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   milestones are paid here), never XP/level/skills/stats/items/wallet/journal; asked first with a
   summary computed on a copy; idempotent. Its seeded personal quests (dailies, a doctor's visit) were
   **not** put in the public code: they come with that import, or the owner adds them.
+  Fit pass (same day, owner: "optimise ça au max pour que ça fit bien"): the RobCo boot shows
+  `CHEM-FREE ... DAY nn (x TO next)` and `VITALS ... CHECK-IN DUE / CHECKED IN TODAY`; the VITALS tab key
+  gets a light (`data-alert` = urge / over / due, vitals.js `markTab`, CSS `.tab-btn[data-alert]::after`);
+  the end of an urge round is announced once a round from any tab (vitals.js `syncAlarm`: a timeout
+  to the end while the app is visible, a sound, a notice when VITALS isn't open).
 - QUESTS: several main quests (types **percent** slider, **streak** daily check-in, **caps** goal
   that follows the wallet; a percent or caps quest at 100% shows a **COMPLETE QUEST** button and only
   its tap pays, `mainReady()`), bonus objectives, side quests (XP + one skill +3)

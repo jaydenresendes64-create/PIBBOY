@@ -21,7 +21,10 @@ kept. Below, the last 7 entries with their averages. At the top, the **urge deco
 need (hungry, angry, lonely, tired, or none of these), read what to do first, and leave the room for a
 **20-minute timer** (it keeps running when the app is closed). At zero: **Rode it out** (**+40 XP
 and +1 SURVIVAL**, 3 times a day; logged every time) or **Still strong** (another round). The support
-line (1-800-265-2626, 24/7) and when to call 911 are always on the card.
+line (1-800-265-2626, 24/7) and when to call 911 are always on the card. When a round ends, the app says so
+whatever tab is open (a sound and a notice). A small light on the **VITALS** tab key shows, from every
+tab, a timer running (pulsing) or over (steady), or today's check-in still to do (dim). The RobCo boot
+also shows the chem-free day and whether today's check-in is done.
 
 **Chem-free streak** (top of STATUS): set the first chem-free day of the run; the card shows the day,
 the next milestone and the days to go. Milestones at **7, 14, 30, 60 and 90 days** (+150, +300, +600,

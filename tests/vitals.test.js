@@ -231,7 +231,7 @@ function screens(setup) {
   setup(a.ST, a.ST.app.state, a);
   a.ST.render.renderStatus();
   a.ST.vitals.render();
-  a.ST.vitals.onTab('status');                              // no clock left ticking
+  a.ST.vitals.stop();                                       // no clock or alarm left ticking
   return { status: a.elements['tab-status'].innerHTML, vitals: a.elements['tab-vitals'].innerHTML };
 }
 const EVIL = '"><img src=x onerror=alert(1)>';
@@ -263,7 +263,7 @@ test('VITALS: the sliders, the check-in button, the urge decoder\'s steps and th
   const running = screens(ST => { ST.startUrge('TIRED'); }).vitals;
   assert.match(running, /Lie down for 20 minutes[\s\S]*id="urge-clock" role="timer" aria-label="Time left">20:00</);
   const zero = screens((ST, s, a) => { ST.startUrge('TIRED'); a.setNow('2026-10-09T12:20:00'); }).vitals;
-  assert.match(zero, /data-vital="urge-won">Rode it out · \+40 XP</);
+  assert.match(zero, /data-vital="urge-won">Rode it out<span class="btn-sub">\+40 XP · \+1 SURVIVAL<\/span></);
   assert.match(zero, /data-vital="urge-again">Still strong</);
 });
 
@@ -286,4 +286,22 @@ test('helpers: the clock and the date box\'s format', () => {
   assert.equal(a.ST.vitals.clockText(-5), '00:00');
   assert.equal(a.ST.vitals.boxDate('2026-9-4'), '2026-09-04');
   assert.equal(a.ST.vitals.boxDate('nope'), '');
+});
+
+test('the VITALS tab key\'s light: check-in due, an urge timer running, then over; none once checked in', () => {
+  const a = loadApp({ files: FILES.vitals });
+  const ST2 = a.ST;
+  a.setNow('2026-10-09T12:00:00');
+  ST2.app.state = ST2.defaultState();
+  assert.equal(ST2.vitals.alertState(), 'due');
+  ST2.logVitals();
+  assert.equal(ST2.vitals.alertState(), '');
+  ST2.startUrge('ANGRY');
+  assert.equal(ST2.vitals.alertState(), 'urge');
+  a.setNow('2026-10-09T12:20:00');
+  assert.equal(ST2.vitals.alertState(), 'over');
+  ST2.urgeWon();
+  assert.equal(ST2.vitals.alertState(), '');
+  a.setNow('2026-10-10T08:00:00');                          // a new day: the next check-in
+  assert.equal(ST2.vitals.alertState(), 'due');
 });

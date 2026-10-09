@@ -45,6 +45,17 @@
     mains.filter(function(m){ return m.progressType==='streak'; }).forEach(function(m){
       out.push('  '+(m.questName || m.title).toUpperCase()+': DAY '+ST.currentStreak(m)+' / '+m.streakTarget);
     });
+    // The chem-free streak and today's VITALS check-in (js/vitals.js).
+    var cleanDay = ST.cleanDay ? ST.cleanDay() : null;
+    if (cleanDay!==null){
+      var next = ST.nextCleanMilestone();
+      out.push(dots('CHEM-FREE', 14)+(cleanDay<=0 ? 'RESTART TOMORROW' :
+        'DAY '+pad2(cleanDay)+(next ? '  ('+(next.days-ST.cleanFullDays())+' TO '+next.days+')' : '')));
+    }
+    if (ST.vitalsToday){
+      var checkIn = ST.vitalsToday(false);
+      out.push(dots('VITALS', 14)+(checkIn && checkIn.logged ? 'CHECKED IN TODAY' : 'CHECK-IN DUE'));
+    }
     if ((state.unspentSpecialPoints||0)>0) out.push(dots('S.P.E.C.I.A.L.', 14)+state.unspentSpecialPoints+' POINT'+(state.unspentSpecialPoints>1 ? 'S' : '')+' TO ASSIGN');
     if ((state.unspentPerkPoints||0)>0) out.push(dots('PERKS', 14)+state.unspentPerkPoints+' TO CHOOSE (PERK CHART)');
     var days = ST.backupDays(), rads = ST.rads();

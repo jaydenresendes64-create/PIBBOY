@@ -12,7 +12,10 @@
  *
  * The urge timer counts from its saved start, so it keeps going when the
  * app is closed; its clock only ticks on screen while the tab shows and the
- * app is in front.
+ * app is in front. When a round ends, the app says so whatever tab is
+ * open (a sound, a notice), once a round. A small light on the VITALS tab
+ * key shows, from every tab, an urge timer running or over, or today's
+ * check-in still to do.
  */
 (function(ST){
   'use strict';
@@ -120,7 +123,8 @@
       html += '<div class="urge-clock">00:00</div>'+
         '<p class="urge-tip">Twenty minutes down. Did it pass?</p>'+
         '<div class="urge-grid">'+
-          '<button class="vital-btn hot" data-vital="urge-won">Rode it out'+(paid ? ' · +'+ST.URGE_XP+' XP' : '')+'</button>'+
+          '<button class="vital-btn hot" data-vital="urge-won">Rode it out'+
+            (paid ? '<span class="btn-sub">+'+ST.URGE_XP+' XP · +1 SURVIVAL</span>' : '')+'</button>'+
           '<button class="vital-btn" data-vital="urge-again">Still strong</button>'+
         '</div>'+
         '<p class="vital-fine">Still strong: run another 20 minutes somewhere else, or call the support line, 24/7: '+
@@ -189,6 +193,8 @@
       '<div class="panel-title">Last 7 entries</div>'+tableHtml();
     tab.innerHTML = html;
     syncTicker();
+    syncAlarm();
+    markTab();
   }
   function shown(){
     var tab = el('tab-vitals');
@@ -202,6 +208,8 @@
     holder.innerHTML = urgeCardHtml();
     card.replaceWith(holder.firstChild);
     syncTicker();
+    syncAlarm();
+    markTab();
   }
 
   // ---------- the urge timer's clock ----------
@@ -216,8 +224,61 @@
     var clock = el('urge-clock'), left = ST.urgeLeft();
     if (left>0){ if (clock) clock.textContent = clockText(left); return; }
     stopTicker();
-    redrawUrge();               // at zero: ridden out, or another round
+    urgeOver();
+  }
+
+  // ---------- the end of a round, from any tab ----------
+  var alarm = null;
+  var announced = null;         // the round already announced (its start and number)
+  function syncAlarm(){
+    clearTimeout(alarm);
+    alarm = null;
+    var a = app.state && app.state.urges.active;
+    if (!a || document.visibilityState==='hidden') return;
+    var left = ST.urgeLeft();
+    if (left>0) alarm = setTimeout(urgeOver, left+50);
+    else announce();              // already drawn at zero: only the sound (and notice), once
+  }
+  // The round reached zero (the alarm, or the clock on screen): the card
+  // shows "Rode it out / Still strong", or on another tab the key's light
+  // changes; with a sound and, off VITALS, a notice, once a round.
+  function urgeOver(){
+    alarm = null;
+    var a = app.state && app.state.urges.active;
+    if (!a) return;
+    if (ST.urgeLeft()>0){ syncAlarm(); return; }
+    if (shown()) redrawUrge();    // which announces it
+    else { markTab(); announce(); }
+  }
+  function announce(){
+    var a = app.state.urges.active, round = a.start+':'+a.rounds;
+    if (announced===round) return;
+    announced = round;
     sound('quest');
+    if (!shown()) ST.render.showNotice('Urge timer: twenty minutes down. Did it pass? (VITALS)');
+  }
+  // Everything that ticks, stopped (the app in the background).
+  function stop(){
+    stopTicker();
+    clearTimeout(alarm);
+    alarm = null;
+  }
+
+  // ---------- the VITALS tab key ----------
+  var ALERTS = {urge:'VITALS: urge timer running', over:'VITALS: urge timer over, did it pass?', due:'VITALS: check-in due today'};
+  function alertState(){
+    var s = app.state;
+    if (!s) return '';
+    if (s.urges.active) return ST.urgeLeft()>0 ? 'urge' : 'over';
+    var e = ST.vitalsToday(false);
+    return e && e.logged ? '' : 'due';
+  }
+  function markTab(){
+    var key = document.querySelector('.tab-btn[data-tab="vitals"]');
+    if (!key) return;
+    var a = alertState();
+    if (a){ key.setAttribute('data-alert', a); key.setAttribute('aria-label', ALERTS[a]); }
+    else { key.removeAttribute('data-alert'); key.removeAttribute('aria-label'); }
   }
 
   // ---------- taps ----------
@@ -328,13 +389,17 @@
     document.body.addEventListener('input', onInput);
     document.body.addEventListener('change', onChange);
     document.addEventListener('visibilitychange', function(){
-      if (document.visibilityState==='hidden'){ stopTicker(); return; }
-      if (app.state && shown() && app.state.urges.active) redrawUrge();     // time went by
+      if (document.visibilityState==='hidden'){ stop(); return; }
+      if (!app.state) return;
+      if (shown() && app.state.urges.active) redrawUrge();     // time went by
+      else { syncAlarm(); markTab(); }                        // a round may have ended meanwhile
     });
+    syncAlarm();
+    markTab();
   }
 
   ST.vitals = {
-    init: init, render: render, onTab: onTab, streakCardHtml: streakCardHtml,
-    clockText: clockText, boxDate: boxDate
+    init: init, render: render, onTab: onTab, stop: stop, markTab: markTab, streakCardHtml: streakCardHtml,
+    clockText: clockText, boxDate: boxDate, alertState: alertState
   };
 })(window.StatusTerminal);
