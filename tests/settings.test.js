@@ -15,7 +15,7 @@ const panel = html.slice(html.indexOf('<div class="settings" id="settings" hidde
 
 test('every setting the scripts look for is in the panel, once', () => {
   assert.ok(panel.length < html.length, 'the settings panel is in the page');
-  ['tilt-btn', 'sound-btn', 'power-btn', 'sounds-btn', 'export-btn', 'import-btn', 'reset-btn',
+  ['tilt-btn', 'sound-btn', 'power-btn', 'sounds-btn', 'export-btn', 'import-btn', 'merge-btn', 'reset-btn',
     'reset-confirm-area', 'backup-age', 'ai-indicator', 'settings-close'].forEach(id => {
     assert.equal(html.split('id="' + id + '"').length - 1, 1, id + ' once in the page');
     assert.ok(panel.includes('id="' + id + '"'), id + ' in the settings');

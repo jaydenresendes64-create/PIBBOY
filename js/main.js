@@ -20,6 +20,7 @@
     ST.storage.load().then(function(saved){
       ST.app.state = saved || ST.defaultState();
       ST.events.setup();
+      if (ST.vitals) ST.vitals.init();            // VITALS and the chem-free streak's taps
       ST.render.switchTab('status');
       ST.render.renderAll();
       if (ST.holotapes) ST.holotapes.init();      // the LOG tab's recordings (on this device)
@@ -48,13 +49,18 @@
     }
     document.addEventListener('visibilitychange', function(){
       if (document.visibilityState==='hidden') leaving();
-      else ST.render.refreshIfNewDay();
+      else newDay();
     });
     window.addEventListener('pagehide', leaving);
     // A new day opens daily quests and streak check-ins again, even when the
-    // app was left open overnight or comes back from the browser's page cache.
-    window.addEventListener('pageshow', ST.render.refreshIfNewDay);
-    setInterval(ST.render.refreshIfNewDay, 60000);
+    // app was left open overnight or comes back from the browser's page cache;
+    // the chem-free streak's count goes up, maybe to a milestone.
+    window.addEventListener('pageshow', newDay);
+    setInterval(newDay, 60000);
+  }
+  function newDay(){
+    ST.render.refreshIfNewDay();
+    if (ST.app.state) ST.events.checkBobbleheads();
   }
 
   // Runs `fn` once the app is on show: after the power-on screen and the

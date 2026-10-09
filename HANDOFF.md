@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of the `books` PR (2026-09-26, after PR #14). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-223/223 tests pass locally. `sw.js` cache: `v22`.
+236/236 tests pass locally. `sw.js` cache: `v23`.
 
 ## 1. What it is
 
@@ -26,6 +26,7 @@ Plain scripts (not ES modules, so `index.html` still opens from disk) sharing
 | `js/render.js` | Builds every tab's HTML (escapes everything), toasts/banners, `switchTab` |
 | `js/items3d.js` | ITEMS 3D wireframe models (Three.js, dynamic `import()`), one shared WebGLRenderer copied into small 2D canvases |
 | `js/mascot.js` | Mascot gesture scheduling (moves are CSS keyframes, per body part: see §3 Look & feel) |
+| `js/vitals.js` | VITALS tab (check-in, urge decoder + its timer's clock, last 7 days) and STATUS's chem-free streak card; its buttons use `data-vital` (its own listeners), the rules are in state.js |
 | `js/crt.js`, `js/tilt.js` | CRT flicker; 3D tilt (DeviceOrientation/mouse) incl. glass glare parallax |
 | `js/events.js` | All user actions → state change → re-render → debounced save |
 | `js/main.js` | Boot: load → setup events → render → `syncCaps()` → SW registration |
@@ -65,9 +66,25 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 
 ## 3. Features implemented
 
-- STATUS: S.P.E.C.I.A.L. (STR, END, CHA, INT, AGI; raised **only** by confirmed level-up points),
-  skills (CONCENTRATION, KNOWLEDGE, SPEECH, SURVIVAL, COOKING, FINANCE, MUSIC, BUSINESS; −/+ allowed),
-  Lifetime stats.
+- STATUS: S.P.E.C.I.A.L. (STR, END, CHA, INT, AGI; raised by confirmed level-up points and by
+  **training**, see below), skills (CONCENTRATION, KNOWLEDGE, SPEECH, SURVIVAL, COOKING, FINANCE, MUSIC,
+  BUSINESS; −/+ allowed), Lifetime stats (+ chem-free days, urges ridden out, vitals check-ins).
+- **VITALS, chem-free streak, urge decoder, training (2026-10-09):** the owner built these in an
+  in-Claude copy of the app (a single page from the very first version, its own data in the artifact's
+  db) and asked to bring them here. state.js: `vitals` (one entry a day: six 0-10 levels, pulse, radN/radT
+  counters; `logVitals()` once a day = award('VITALS_CHECKIN', 15) + trains INT), `chems` (cleanSince =
+  day 1; `claimCleanMilestones()` pays 7/14/30/60/90 days once a run, called from events.js
+  `checkBobbleheads` after every change, at boot and on a new day (main.js `newDay`); claimed is kept
+  when the start date is corrected, so editing it never pays twice; `logLapse()` adds the run to
+  totalClean/best, restarts tomorrow, clears claimed), `urges` (`startUrge`, 20 min from a saved start,
+  `urgeWon()` only at zero: award('URGE_RESISTED', 40, +1 SURVIVAL), 3 paid a day, all logged),
+  `statTrain` + daily `stat` (`trainStat()`: every 300 XP = +1 stat, SPECIAL_TRAINED event; completeDaily
+  returns `trained`). Dates are 'YYYY-M-D' like the rest (the in-Claude backups' 'YYYY-MM-DD' are
+  normalized by sanitize). Settings → **Add from the old terminal**: `mergeOld(into, src)` adds only those
+  parts + daily/side quests missing by id or objective (lastDate reset, claimed not carried, so the
+  milestones are paid here), never XP/level/skills/stats/items/wallet/journal; asked first with a
+  summary computed on a copy; idempotent. Its seeded personal quests (dailies, a doctor's visit) were
+  **not** put in the public code: they come with that import, or the owner adds them.
 - QUESTS: several main quests (types **percent** slider, **streak** daily check-in, **caps** goal
   that follows the wallet; a percent or caps quest at 100% shows a **COMPLETE QUEST** button and only
   its tap pays, `mainReady()`), bonus objectives, side quests (XP + one skill +3)
@@ -151,7 +168,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 6. Heavy libraries (MapLibre, Three.js) are vendored, pinned, and loaded only when their tab opens.
 7. Plain scripts rather than ES modules so the app still runs from `file://`.
 8. S.P.E.C.I.A.L. keeps its 5 stats: **no LUK** (the owner doesn't believe in luck); PER only if the
-   owner asks (maybe later). Skills come from Analyze, the −/+ buttons and quests' `skillGains`:
+   owner asks (maybe later). Stats go up by level-up points and, since 2026-10-09 (the owner's own
+   design), by training: stat-tagged dailies and the VITALS check-in, 300 XP a point. Skills come from Analyze, the −/+ buttons and quests' `skillGains`:
    main quests, and **side quests** (+3 of one skill, `SIDE_SKILL_GAIN`, paid once by
    `completeSide()`; s1–s4 got theirs by migration). **Daily quests give XP only** (owner's choice
    2026-09-24: +1/day would max skills in months).
@@ -159,6 +177,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
    never completes from a slider slip or a wallet typo (the Complete button), and a backup export runs
    one at a time (a double tap on iPhone used to be able to drain the rads with no file saved).
    Holotapes and custom sounds are not in backups nor erased by Reset, and the UI says so.
+10. **Personal content stays out of the public repo**: the code holds generic features; the owner's own
+   habits, health notes and quests live only in their data (on the phone, in backups).
 
 ## 5. Workflow
 

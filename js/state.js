@@ -20,13 +20,30 @@
  *                                           // what happened, oldest first (record(); the latest
  *                                           // HISTORY_MAX); saves from before it start empty
  *   stats:  { STR,END,CHA,INT,AGI: number(0-10) },   // SPECIAL — see "S.P.E.C.I.A.L." below
+ *   statTrain: { STR,END,CHA,INT,AGI: number(0-TRAIN_PER_POINT) },   // training toward each stat's next
+ *                                           // point (trainStat); older saves: none yet
  *   skills: { CONCENTRATION,KNOWLEDGE,SPEECH,SURVIVAL,COOKING,FINANCE,MUSIC,BUSINESS: number(0-100) },
  *                                           // CONCENTRATION was SCIENCE: see migrate()
  *   quests: {
  *     mains: [ MainQuest ],                  // older saves had one, as `main`: see migrate()
  *     side:  [ { id, questName, name, xp, done,      // done ones stay, hidden, for the Lifetime count
  *                skillGains: [SkillGain] } ],        // paid once with the XP (completeSide); see migrate()
- *     daily: [ { id, questName, name, xp, lastDate:'YYYY-M-D'|null } ]  // done today: dailyDoneToday()
+ *     daily: [ { id, questName, name, xp, lastDate:'YYYY-M-D'|null,  // done today: dailyDoneToday()
+ *                stat?: one of STAT_KEYS } ]        // the stat it trains, when it has one (completeDaily)
+ *   },
+ *   chems: {                                // the chem-free streak (STATUS tab)
+ *     cleanSince: 'YYYY-M-D'|null,          // the run's first chem-free day (day 1); tomorrow after a lapse
+ *     best: number, totalClean: number,     // full days: the longest run before this one, and all of them
+ *     claimed: [ days ],                    // the CLEAN_MILESTONES paid in this run
+ *     lapses: [ 'YYYY-M-D' ]                // the latest LAPSES_MAX
+ *   },
+ *   vitals: [ { date:'YYYY-M-D', logged: boolean,   // VITALS: one entry a day (the latest VITALS_MAX);
+ *               energy, mood, hunger, tension, sleep, craving: number(0-10),   // logged: the day's
+ *               pulse: number(PULSE_MIN-PULSE_MAX)|null,   // check-in was paid (logVitals)
+ *               radN, radT: number(0-RAD_COUNT_MAX) } ],
+ *   urges: {                                // VITALS' urge decoder
+ *     active: { start: ms, need: one of URGE_NEEDS, rounds: number }|null,   // the timer running
+ *     log: [ { date:'YYYY-M-D', need, rounds } ]   // the urges ridden out, the latest URGES_MAX
  *   },
  *   inventory: [ { id, name, category: one of CATS,     // WEAPONS is gone: see migrate()
  *                  price?: number>=0 } ],    // asking price in CAD, optional, shown in THINGS TO SELL (SELL)
@@ -85,10 +102,11 @@
  * check-in), acceptJournal (a journal proposal), sellItem (SALE_XP, the
  * money in the wallet and a journal line), discoverPlace (CITY_XP or
  * REGION_XP, once per place), rewardRoute, readBook (BOOK_XP and its skill),
- * findBobbleheads. Milestones
+ * findBobbleheads, logVitals (the day's check-in), claimCleanMilestones
+ * (the chem-free streak), urgeWon (an urge ridden out). Milestones
  * without XP are recorded too (level-ups, perks, S.P.E.C.I.A.L. points,
  * backups, holotapes). Nothing else touches state.skills / state.xp;
- * events.js only adds the toasts.
+ * events.js and vitals.js only add the toasts.
  *
  * LOADING — every document the app takes in (a saved copy, a backup file,
  * another window's save) goes through sanitizeImported(), which runs
@@ -96,16 +114,19 @@
  * reaches saves in the browser and old backups alike; tests/migrate.test.js
  * keeps every earlier format.
  *
- * S.P.E.C.I.A.L.: `stats` only goes up one way. Each level-up adds one
+ * S.P.E.C.I.A.L.: `stats` goes up two ways. Each level-up adds one
  * unspentSpecialPoint; the player taps a stat in the STATUS tab's level-up
  * banner and confirms "Yes", which calls spendSpecialPoint(key) (grantStat,
- * and the point spent). No reward (quest, bonus objective, journal proposal) and no button
- * changes `stats` otherwise, and a journal proposal is XP + SkillGains only.
+ * and the point spent). And training (the owner's choice, 2026-10-09): a
+ * daily quest tagged with a stat, and the VITALS check-in (Intelligence),
+ * add their XP to that stat's training; every TRAIN_PER_POINT is one point
+ * (trainStat). No other reward (quest, bonus objective, journal proposal) and no button
+ * changes `stats`, and a journal proposal is XP + SkillGains only.
  *
  * SCRIPTS — every file attaches to one namespace, window.StatusTerminal, and
  * index.html loads them in dependency order: state → storage → ai → places →
  * weather → boot → render → mascot → crt → tilt → fog → map → bulk → routes → radar →
- * holotapes → events → main (map.js loads
+ * holotapes → vitals → events → main (map.js loads
  * MapLibre, vendor/maplibre/, the first time MAP opens: the one module, needing
  * http(s) like the map's lists). They are plain scripts rather than ES modules so the app
  * still runs when index.html is opened straight from disk (file://), where
@@ -136,6 +157,17 @@
   var CITY_XP = 50, REGION_XP = 100;
   // ITEMS → BOOKS (see "books" above).
   var BOOK_XP = 50, BOOK_SKILL_MAX = 5, BOOK_TITLE_MAX = 120, BOOK_AUTHOR_MAX = 80;
+  // VITALS, the chem-free streak and the urge decoder (see "vitals", "chems"
+  // and "urges" above), from the owner's own design (2026-10-09).
+  var VITAL_KEYS = ['energy','mood','hunger','tension','sleep','craving'];
+  var VITALS_XP = 15;                 // the day's check-in, once a day; it trains Intelligence as much
+  var VITALS_MAX = 400, PULSE_MIN = 30, PULSE_MAX = 220, RAD_COUNT_MAX = 99;
+  var CLEAN_MILESTONES = [{days:7, xp:150}, {days:14, xp:300}, {days:30, xp:600}, {days:60, xp:900}, {days:90, xp:1500}];
+  var LAPSES_MAX = 200;
+  var URGE_NEEDS = ['HUNGRY','ANGRY','LONELY','TIRED','NONE'];
+  var URGE_MS = 20*60*1000;           // one round of the urge timer
+  var URGE_XP = 40, URGE_XP_PER_DAY = 3, URGE_SKILL = 'SURVIVAL', URGES_MAX = 300;
+  var TRAIN_PER_POINT = 300;          // training XP for one S.P.E.C.I.A.L. point
   // Every country a place can be in (GeoNames' country list, as in data/places.txt).
   var COUNTRY_CODES = ('AD AE AF AG AI AL AM AN AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR '+
     'BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CS CU CV CW CX CY CZ DE DJ DK DM DO DZ '+
@@ -191,7 +223,11 @@
     books:[],                   // starts empty: add the ones you finish in ITEMS → BOOKS
     finances:{ holdings:[] },   // starts empty: add your own in ITEMS → wallet
     log:[],
-    map:{ cities:[], regions:[], pins:[], routes:[], discovered:[] }
+    map:{ cities:[], regions:[], pins:[], routes:[], discovered:[] },
+    statTrain:{STR:0,END:0,CHA:0,INT:0,AGI:0},
+    chems:{ cleanSince:null, best:0, totalClean:0, claimed:[], lapses:[] },
+    vitals:[],
+    urges:{ active:null, log:[] }
   };
 
   // Shared runtime state. `state` is the persisted document described above;
@@ -210,7 +246,9 @@
     perkChart: false,           // the STATUS tab's perk chart is open
     bobbleOpen: null,           // id of the bobblehead whose details show
     confirmPerk: null,          // id of the perk whose rank awaits "Yes"
-    addOpen: null               // the add form unfolded: 'main', 'side', 'daily' (QUESTS) or 'book' (ITEMS)
+    addOpen: null,              // the add form unfolded: 'main', 'side', 'daily' (QUESTS) or 'book' (ITEMS)
+    streakEdit: false,          // the chem-free streak's start date is being set (STATUS)
+    confirmLapse: false         // "Log a lapse?" awaits "Yes, log it"
   };
 
   function el(id){ return document.getElementById(id); }
@@ -277,6 +315,7 @@
     migrateInventory(doc);
     migrateMap(doc);
     migrateBooks(doc);
+    migrateVitals(doc);
     return doc;
   }
   // Side quests from before their skill gains: the app's first four (s1-s4,
@@ -368,6 +407,16 @@
   // Books came later: a save from before them has none yet.
   function migrateBooks(doc){
     if (!Array.isArray(doc.books)) doc.books = [];
+  }
+  // VITALS, the chem-free streak, urges and stat training came later (from
+  // the owner's in-Claude version, whose backups already have them, with
+  // dates written 'YYYY-MM-DD': sanitizeImported reads those). A save from
+  // before them has none yet: no check-in, no streak started, no training.
+  function migrateVitals(doc){
+    if (!Array.isArray(doc.vitals)) doc.vitals = [];
+    ['chems','urges','statTrain'].forEach(function(part){
+      if (!doc[part] || typeof doc[part]!=='object' || Array.isArray(doc[part])) doc[part] = {};
+    });
   }
   function has(obj, key){ return Object.prototype.hasOwnProperty.call(obj, key); }
   function mergeDefaults(loaded){
@@ -565,7 +614,8 @@
   var HISTORY_MAX = 2000;
   var EVENT_TYPES = ['QUEST_COMPLETED', 'BONUS_COMPLETED', 'DAILY_DONE', 'STREAK_CHECKIN', 'JOURNAL_ENTRY',
     'ITEM_SOLD', 'PLACE_DISCOVERED', 'ROUTE_ADDED', 'BOBBLEHEAD_FOUND', 'LEVEL_UP', 'PERK_TAKEN',
-    'SPECIAL_RAISED', 'BACKUP_MADE', 'HOLOTAPE_RECORDED', 'BOOK_READ'];
+    'SPECIAL_RAISED', 'BACKUP_MADE', 'HOLOTAPE_RECORDED', 'BOOK_READ',
+    'VITALS_CHECKIN', 'CLEAN_MILESTONE', 'URGE_RESISTED', 'SPECIAL_TRAINED'];
   function record(type, data, xp){
     var s = app.state;
     if (!Array.isArray(s.history)) s.history = [];
@@ -610,8 +660,9 @@
   // happened (an event type and its data) and its base XP and skills.
   //
   // Every skill point goes through grantSkill(), so the bounds and validity
-  // checks live in one place. grantStat() has a single caller: spending a
-  // level-up point, once the player confirmed it (spendSpecialPoint).
+  // checks live in one place. grantStat() has two callers: spending a
+  // level-up point, once the player confirmed it (spendSpecialPoint), and
+  // training (trainStat).
   function grantSkill(key, amount){
     var state = app.state;
     amount = Number(amount);
@@ -701,12 +752,15 @@
     return award('BONUS_COMPLETED', {name:b.name || '', quest:quest ? quest.questName || quest.title || '' : ''}, b.xp);
   }
   // A daily quest, once a day: its XP only (no skills, the owner's choice:
-  // a skill a day would reach 100 within months).
+  // a skill a day would reach 100 within months). One tagged with a stat
+  // trains it with that XP; `trained` then lists the stats it raised.
   function completeDaily(d){
     if (dailyDoneToday(d)) return null;
     d.lastDate = todayStr();
     app.state.lifetimeDailies = (app.state.lifetimeDailies||0) + 1;
-    return award('DAILY_DONE', {name:d.questName || d.name || ''}, d.xp);
+    var reward = award('DAILY_DONE', {name:d.questName || d.name || ''}, d.xp);
+    if (STAT_KEYS.indexOf(d.stat)!==-1) reward.trained = trainStat(d.stat, reward.xp);
+    return reward;
   }
   // A streak quest's check-in (after streakCheckIn): no XP of its own, only
   // what perks give (Iron Will); recorded either way.
@@ -758,6 +812,238 @@
   function countHolotape(seconds){
     app.state.lifetimeHolotapes = (app.state.lifetimeHolotapes||0) + 1;
     record('HOLOTAPE_RECORDED', {seconds:Math.round(Number(seconds)||0)}, 0);
+  }
+
+  // ---------- training S.P.E.C.I.A.L. ----------
+  // A daily quest tagged with a stat, and the VITALS check-in (Intelligence),
+  // train it: their XP adds up in statTrain, and every TRAIN_PER_POINT is one
+  // more point (recorded: SPECIAL_TRAINED), up to 10; at 10 the training
+  // stays full. Returns the stats raised (twice the same if it got 2 points).
+  function trainStat(key, amount){
+    var s = app.state, raised = [];
+    amount = Math.round(Number(amount));
+    if (STAT_KEYS.indexOf(key)===-1 || !(amount>0)) return raised;
+    var v = (Number(s.statTrain[key])||0) + amount;
+    while (v>=TRAIN_PER_POINT && (Number(s.stats[key])||0)<10){
+      v -= TRAIN_PER_POINT;
+      grantStat(key, 1);
+      record('SPECIAL_TRAINED', {stat:key, value:s.stats[key]}, 0);
+      raised.push(key);
+    }
+    s.statTrain[key] = Math.min(v, TRAIN_PER_POINT);
+    return raised;
+  }
+
+  // ---------- VITALS: the day's check-in ----------
+  // One entry a day in state.vitals, made by the day's first change: six
+  // levels from 0 to 10 (5 until moved), the resting pulse, two counters.
+  // The check-in itself is paid once a day (logVitals): VITALS_XP, which
+  // trains Intelligence as much. What changes after it is kept, unpaid.
+  function dayNumber(date){
+    var m = DATE.exec(date || '');
+    return m ? Date.UTC(+m[1], +m[2]-1, +m[3])/864e5 : NaN;
+  }
+  function byDate(a, b){ return dayNumber(a.date)-dayNumber(b.date); }
+  function vitalsToday(create){
+    var s = app.state, today = todayStr();
+    var e = s.vitals.filter(function(v){ return v.date===today; })[0] || null;
+    if (!e && create){
+      e = {date:today, logged:false};
+      VITAL_KEYS.forEach(function(k){ e[k] = 5; });
+      e.pulse = null; e.radN = 0; e.radT = 0;
+      s.vitals.push(e);
+      if (s.vitals.length>VITALS_MAX) s.vitals = s.vitals.slice(-VITALS_MAX);
+    }
+    return e;
+  }
+  // A level moved (0-10, whole). Returns the value kept, or null for an
+  // unknown level or a value that isn't a number.
+  function setVital(key, value){
+    var v = Math.round(Number(value));
+    if (VITAL_KEYS.indexOf(key)===-1 || String(value).trim()==='' || !isFinite(v)) return null;
+    return (vitalsToday(true)[key] = clamp(v, 0, 10));
+  }
+  // The resting pulse typed: kept when it's a pulse (PULSE_MIN-PULSE_MAX),
+  // else none. Returns what's kept.
+  function setPulse(value){
+    var text = String(value===undefined || value===null ? '' : value).trim(), v = Math.round(Number(text));
+    return (vitalsToday(true).pulse = text && isFinite(v) && v>=PULSE_MIN && v<=PULSE_MAX ? v : null);
+  }
+  // One more (dir > 0) or one less on a counter, 'N' or 'T'.
+  function stepRads(which, dir){
+    var e = vitalsToday(true), field = which==='T' ? 'radT' : 'radN';
+    return (e[field] = clamp((Number(e[field])||0) + (Number(dir)>0 ? 1 : -1), 0, RAD_COUNT_MAX));
+  }
+  // The day's check-in, once: null when it was logged already, else
+  // award()'s result with `trained` (the stats it raised).
+  function logVitals(){
+    var e = vitalsToday(true);
+    if (e.logged) return null;
+    e.logged = true;
+    var reward = award('VITALS_CHECKIN', {}, VITALS_XP);
+    reward.trained = trainStat('INT', reward.xp);
+    return reward;
+  }
+  // The latest `n` entries, newest first.
+  function lastVitals(n){
+    return app.state.vitals.slice().sort(byDate).reverse().slice(0, n);
+  }
+
+  // ---------- the chem-free streak ----------
+  // chems.cleanSince is the run's first chem-free day: that day is day 1,
+  // and the full days done are one less. After a lapse the run starts again
+  // tomorrow (day 0 today). Each milestone (CLEAN_MILESTONES) is paid once a
+  // run, as soon as it's reached (claimCleanMilestones): correcting the
+  // start date never pays one twice. A lapse keeps the days done (they go
+  // into totalClean, and best), and takes nothing back.
+  function cleanDay(){
+    var d = daysSince(app.state.chems.cleanSince);
+    return d===null ? null : d+1;
+  }
+  function cleanFullDays(){ var d = cleanDay(); return d===null ? 0 : Math.max(0, d-1); }
+  function cleanTotal(){ return (Number(app.state.chems.totalClean)||0) + cleanFullDays(); }
+  function cleanBest(){ return Math.max(Number(app.state.chems.best)||0, cleanFullDays()); }
+  function nextCleanMilestone(){
+    var done = cleanFullDays();
+    return CLEAN_MILESTONES.filter(function(m){ return done<m.days; })[0] || null;
+  }
+  // The run's first day, set or corrected: a date up to today. Returns false
+  // for anything else.
+  function setCleanStart(date){
+    date = normalizeDate(date);
+    var d = daysSince(date);
+    if (!date || d===null || d<0) return false;
+    app.state.chems.cleanSince = date;
+    return true;
+  }
+  // The milestones reached and not paid yet in this run: each one its
+  // reward (CLEAN_MILESTONE). Returns [{days, xp, leveled}], [] for none.
+  function claimCleanMilestones(){
+    var c = app.state.chems, done = cleanFullDays(), paid = [];
+    CLEAN_MILESTONES.forEach(function(m){
+      if (done<m.days || c.claimed.indexOf(m.days)!==-1) return;
+      c.claimed.push(m.days);
+      var reward = award('CLEAN_MILESTONE', {days:m.days}, m.xp);
+      paid.push({days:m.days, xp:reward.xp, leveled:reward.leveled});
+    });
+    return paid;
+  }
+  // A lapse today: the run's days are kept in the totals, and the next run
+  // starts tomorrow. False when no run was started.
+  function logLapse(){
+    var c = app.state.chems, today = todayStr();
+    if (!c.cleanSince) return false;
+    var run = cleanFullDays();
+    c.totalClean = (Number(c.totalClean)||0) + run;
+    c.best = Math.max(Number(c.best)||0, run);
+    if (c.lapses[c.lapses.length-1]!==today) c.lapses.push(today);
+    if (c.lapses.length>LAPSES_MAX) c.lapses = c.lapses.slice(-LAPSES_MAX);
+    var tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate()+1);
+    c.cleanSince = tomorrow.getFullYear()+'-'+(tomorrow.getMonth()+1)+'-'+tomorrow.getDate();
+    c.claimed = [];
+    return true;
+  }
+
+  // ---------- the urge decoder ----------
+  // Name the real need, then a timer of URGE_MS (urges.active, so it keeps
+  // running when the app is closed). At zero: ridden out (urgeWon: URGE_XP
+  // and +1 SURVIVAL, at most URGE_XP_PER_DAY times a day; logged either
+  // way), or another round.
+  function startUrge(need){
+    app.state.urges.active = {start:Date.now(), need:URGE_NEEDS.indexOf(need)!==-1 ? need : 'NONE', rounds:1};
+    return app.state.urges.active;
+  }
+  // What's left of the round, in ms: 0 when it's over or none runs.
+  function urgeLeft(){
+    var a = app.state.urges.active;
+    return a ? clamp(URGE_MS - (Date.now() - a.start), 0, URGE_MS) : 0;
+  }
+  function urgeAgain(){
+    var a = app.state.urges.active;
+    if (!a) return false;
+    a.start = Date.now();
+    a.rounds = (a.rounds||1) + 1;
+    return true;
+  }
+  function cancelUrge(){ app.state.urges.active = null; }
+  function urgesToday(){
+    var today = todayStr();
+    return app.state.urges.log.filter(function(u){ return u.date===today; }).length;
+  }
+  // Ridden out, once the round is over: null before that (or when none
+  // runs); else award()'s result, or {xp:0, capped:true} past the day's cap.
+  function urgeWon(){
+    var u = app.state.urges, a = u.active;
+    if (!a || urgeLeft()>0) return null;
+    var paid = urgesToday()<URGE_XP_PER_DAY;
+    u.log.push({date:todayStr(), need:a.need, rounds:a.rounds||1});
+    if (u.log.length>URGES_MAX) u.log = u.log.slice(-URGES_MAX);
+    u.active = null;
+    if (!paid) return {xp:0, leveled:false, skillGains:[], capped:true};
+    return award('URGE_RESISTED', {need:a.need, rounds:a.rounds||1}, URGE_XP, [{skill:URGE_SKILL, amount:1}]);
+  }
+
+  // ---------- the old terminal's data ----------
+  // The owner's in-Claude version (one page, with its own data) has VITALS,
+  // the streak, urges and training too. Its backup can be added to this
+  // app's data: those parts, and the daily and side quests this app doesn't
+  // have yet (same id or same objective); never its XP, level, skills,
+  // stats, items, wallet or journal, which this app has its own of. `src`
+  // comes from sanitizeImported(); `into` is the state to add to (a copy, to
+  // say first what would be added). Adding the same file twice adds nothing.
+  // Nothing is paid here: a streak milestone reached is paid afterwards, by
+  // claimCleanMilestones. Returns what was added.
+  function mergeOld(into, src){
+    var added = {vitals:0, streak:false, lapses:0, urges:0, dailies:0, side:0, training:false};
+    // Check-ins: the days this app has none for.
+    var days = {};
+    into.vitals.forEach(function(v){ days[v.date] = true; });
+    src.vitals.forEach(function(v){
+      if (days[v.date]) return;
+      days[v.date] = true;
+      into.vitals.push(clone(v));
+      added.vitals++;
+    });
+    into.vitals = into.vitals.sort(byDate).slice(-VITALS_MAX);
+    // The streak: its start when this app has none; the longest and the total days.
+    var c = into.chems, o = src.chems;
+    if (!c.cleanSince && o.cleanSince){ c.cleanSince = o.cleanSince; added.streak = true; }
+    c.best = Math.max(c.best, o.best);
+    c.totalClean = Math.max(c.totalClean, o.totalClean);
+    o.lapses.forEach(function(d){
+      if (c.lapses.indexOf(d)!==-1) return;
+      c.lapses.push(d);
+      added.lapses++;
+    });
+    c.lapses = c.lapses.sort(function(a, b){ return dayNumber(a)-dayNumber(b); }).slice(-LAPSES_MAX);
+    // Urges ridden out: the ones from before every one here.
+    var first = into.urges.log.length ? dayNumber(into.urges.log[0].date) : Infinity;
+    var older = src.urges.log.filter(function(u){ return dayNumber(u.date)<first; });
+    into.urges.log = older.map(clone).concat(into.urges.log).slice(-URGES_MAX);
+    added.urges = older.length;
+    // Training: the further of the two, stat by stat.
+    STAT_KEYS.forEach(function(k){
+      if (src.statTrain[k]>into.statTrain[k]){ into.statTrain[k] = src.statTrain[k]; added.training = true; }
+    });
+    // Quests: the daily ones (to do today) and the open side ones this app lacks.
+    function known(list, q){
+      var objective = foldName(q.name);
+      return list.some(function(x){ return x.id===q.id || (objective && foldName(x.name)===objective); });
+    }
+    src.quests.daily.forEach(function(q){
+      if (known(into.quests.daily, q)) return;
+      var copy = clone(q);
+      copy.lastDate = null;
+      into.quests.daily.push(copy);
+      added.dailies++;
+    });
+    src.quests.side.forEach(function(q){
+      if (q.done || known(into.quests.side, q)) return;
+      into.quests.side.push(clone(q));
+      added.side++;
+    });
+    return added;
   }
 
   // ---------- bobbleheads ----------
@@ -937,6 +1223,10 @@
     }).slice(-HISTORY_MAX);
     STAT_KEYS.forEach(function(k){ s.stats[k] = clamp(Math.round(num(s.stats[k], 0)), 0, 10); });
     SKILL_KEYS.forEach(function(k){ s.skills[k] = clamp(Math.round(num(s.skills[k], 0)), 0, 100); });
+    // Training: a whole number from 0 to TRAIN_PER_POINT for each stat.
+    var train = s.statTrain;
+    s.statTrain = {};
+    STAT_KEYS.forEach(function(k){ s.statTrain[k] = clamp(Math.round(num(train[k], 0)), 0, TRAIN_PER_POINT); });
 
     s.quests.mains = records(s.quests.mains, function(m){
       m.id = safeId(m.id);
@@ -964,6 +1254,7 @@
       fixQuest(q);
       fixQuestName(q);
       q.lastDate = normalizeDate(q.lastDate);
+      if (STAT_KEYS.indexOf(q.stat)===-1) delete q.stat;
     });
 
     s.inventory = records(s.inventory, function(i){
@@ -1003,7 +1294,52 @@
     s.lastBackup = normalizeDate(s.lastBackup);
     s.log = log.slice(-LOG_MAX);
     sanitizeMap(s.map);
+    sanitizeVitals(s);
     return s;
+  }
+
+  // VITALS, the streak and the urges: each field rebuilt from what's known
+  // of it (dates 'YYYY-MM-DD' from the in-Claude version become 'YYYY-M-D').
+  function dates(list){
+    var seen = {};
+    return (Array.isArray(list) ? list : []).map(normalizeDate).filter(function(d){
+      if (!d || seen[d]) return false;
+      seen[d] = true;
+      return true;
+    }).sort(function(a, b){ return dayNumber(a)-dayNumber(b); });
+  }
+  function urgeNeed(v){ return URGE_NEEDS.indexOf(v)!==-1 ? v : 'NONE'; }
+  function rounds(v){ return Math.max(1, Math.round(num(v, 1))); }
+  function sanitizeVitals(s){
+    var chems = s.chems, milestones = CLEAN_MILESTONES.map(function(m){ return m.days; });
+    s.chems = {
+      cleanSince: normalizeDate(chems.cleanSince),
+      best: Math.max(0, Math.round(num(chems.best, 0))),
+      totalClean: Math.max(0, Math.round(num(chems.totalClean, 0))),
+      claimed: milestones.filter(function(d){ return Array.isArray(chems.claimed) && chems.claimed.some(function(c){ return num(c, 0)===d; }); }),
+      lapses: dates(chems.lapses).slice(-LAPSES_MAX)
+    };
+    // One entry a day: a second one for the same day replaces the first.
+    var byDay = {};
+    records(s.vitals, function(){}).forEach(function(v){
+      var date = normalizeDate(v.date);
+      if (!date) return;
+      var out = {date:date, logged:v.logged===true};
+      VITAL_KEYS.forEach(function(k){ out[k] = clamp(Math.round(num(v[k], 5)), 0, 10); });
+      var pulse = Math.round(num(v.pulse, 0));
+      out.pulse = pulse>=PULSE_MIN && pulse<=PULSE_MAX ? pulse : null;
+      out.radN = clamp(Math.round(num(v.radN, 0)), 0, RAD_COUNT_MAX);
+      out.radT = clamp(Math.round(num(v.radT, 0)), 0, RAD_COUNT_MAX);
+      byDay[date] = out;
+    });
+    s.vitals = Object.keys(byDay).map(function(d){ return byDay[d]; }).sort(byDate).slice(-VITALS_MAX);
+    var urges = s.urges, a = urges.active, start = a && typeof a==='object' ? num(a.start, 0) : 0;
+    s.urges = {
+      active: start>0 ? {start:start, need:urgeNeed(a.need), rounds:rounds(a.rounds)} : null,
+      log: records(urges.log, function(){}).map(function(u){
+        return {date:normalizeDate(u.date), need:urgeNeed(u.need), rounds:rounds(u.rounds)};
+      }).filter(function(u){ return u.date; }).slice(-URGES_MAX)
+    };
   }
 
   // The map's places. A place with no usable position (coordinates out of
@@ -1147,6 +1483,38 @@
   ST.BOOK_TITLE_MAX = BOOK_TITLE_MAX;
   ST.BOOK_AUTHOR_MAX = BOOK_AUTHOR_MAX;
   ST.REGION_XP = REGION_XP;
+  ST.VITAL_KEYS = VITAL_KEYS;
+  ST.VITALS_XP = VITALS_XP;
+  ST.PULSE_MIN = PULSE_MIN;
+  ST.PULSE_MAX = PULSE_MAX;
+  ST.CLEAN_MILESTONES = CLEAN_MILESTONES;
+  ST.URGE_NEEDS = URGE_NEEDS;
+  ST.URGE_MS = URGE_MS;
+  ST.URGE_XP = URGE_XP;
+  ST.URGE_XP_PER_DAY = URGE_XP_PER_DAY;
+  ST.TRAIN_PER_POINT = TRAIN_PER_POINT;
+  ST.trainStat = trainStat;
+  ST.vitalsToday = vitalsToday;
+  ST.setVital = setVital;
+  ST.setPulse = setPulse;
+  ST.stepRads = stepRads;
+  ST.logVitals = logVitals;
+  ST.lastVitals = lastVitals;
+  ST.cleanDay = cleanDay;
+  ST.cleanFullDays = cleanFullDays;
+  ST.cleanTotal = cleanTotal;
+  ST.cleanBest = cleanBest;
+  ST.nextCleanMilestone = nextCleanMilestone;
+  ST.setCleanStart = setCleanStart;
+  ST.claimCleanMilestones = claimCleanMilestones;
+  ST.logLapse = logLapse;
+  ST.startUrge = startUrge;
+  ST.urgeLeft = urgeLeft;
+  ST.urgeAgain = urgeAgain;
+  ST.cancelUrge = cancelUrge;
+  ST.urgesToday = urgesToday;
+  ST.urgeWon = urgeWon;
+  ST.mergeOld = mergeOld;
   ST.COUNTRY_CODES = COUNTRY_CODES;
   ST.REGION_CODE = REGION_CODE;
   ST.app = app;

@@ -7,6 +7,7 @@
  *   const app = loadApp({files: FILES.storage});   // + storage.js
  *   const app = loadApp({files: FILES.places});    // state.js + places.js (the MAP tab's logic)
  *   const app = loadApp({files: FILES.fog});       // + fog.js (the fog's maths; no WebGL needed)
+ *   const app = loadApp({files: FILES.vitals});    // + render.js and vitals.js (VITALS, the streak card)
  *   app.ST          the window.StatusTerminal namespace
  *   app.setNow(d)   moves the clock (new Date(), Date.now()) to date `d`
  *
@@ -31,6 +32,7 @@ const FILES = {
   holotapes: ['js/state.js', 'js/holotapes.js'],
   storage: ['js/state.js', 'js/storage.js'],
   render: ['js/state.js', 'js/storage.js', 'js/ai.js', 'js/render.js'],
+  vitals: ['js/state.js', 'js/storage.js', 'js/ai.js', 'js/render.js', 'js/vitals.js'],
   events: ['js/state.js', 'js/storage.js', 'js/ai.js', 'js/render.js', 'js/events.js']
 };
 
