@@ -150,7 +150,9 @@ js/events.js        user actions
 js/main.js          startup
 sw.js               service worker: offline use (network first for the app, so updates show right away)
 manifest.webmanifest name, colours and icons (icons/) for installing on a phone
-images/mascot.png   the mascot's picture (288x408), the source of his parts (not loaded by the app)
+images/vaultboy/    the Vault Boy walking on the level bar, one outfit per tier: lvl05, 10, 20, 30, 50
+                    (308x420; none below level 5, lvl50 from 50 on; js/render.js syncWalker)
+images/mascot.png   the old corner mascot's picture (288x408), the source of his parts (hidden since 2026-10-10)
 images/mascot-parts.png  the mascot cut into parts that each move (legs, knees, thumb arm, body, head, blink)
 data/map-style.json MAP: the map's own amber Pip-Boy style (colours, line widths, labels, by zoom)
 data/places.txt     MAP: every country, region and city (15,000 people or more), for searching

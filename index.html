@@ -81,6 +81,11 @@
           <span class="level-num" id="hdr-level">07</span>
         </div>
         <div class="xp-bar-outer"><div class="xp-bar-fill" id="hdr-xp-fill"></div></div>
+        <!-- The Vault Boy walking on the level bar, from level 5; his outfit follows the level
+             (js/render.js syncWalker). Taps go through him. -->
+        <div class="vaultboy" id="vaultboy-walk" aria-hidden="true" hidden>
+          <div class="vaultboy-step"><div class="vaultboy-flip"><img id="vaultboy" class="vaultboy-img" alt="" aria-hidden="true" draggable="false"></div></div>
+        </div>
         <div class="xp-row">
           <div class="xp-text" id="hdr-xp-text"></div>
           <!-- Rads: days without a backup (js/state.js rads()); a tap backs up (RadAway). -->
