@@ -14,6 +14,29 @@ to turn it by hand.
 skill points at once (a BOOK READ banner), and the book joins the list with the day you finished it,
 the latest first. Removing a book from the list keeps what it gave.
 
+**VITALS** (its own tab, from your in-Claude version): the day's **check-in**: energy, mood, hunger,
+tension, sleep and craving from 0 to 10, the resting pulse, and two counters (RADS // type N and T).
+**Log check-in** gives **+15 XP** once a day and trains Intelligence; what you change after it is
+kept. Below, the last 7 entries with their averages. At the top, the **urge decoder**: name the real
+need (hungry, angry, lonely, tired, or none of these), read what to do first, and leave the room for a
+**20-minute timer** (it keeps running when the app is closed). At zero: **Rode it out** (**+40 XP
+and +1 SURVIVAL**, 3 times a day; logged every time) or **Still strong** (another round). The support
+line (1-800-265-2626, 24/7) and when to call 911 are always on the card. When a round ends, the app says so
+whatever tab is open (a sound and a notice). A small light on the **VITALS** tab key shows, from every
+tab, a timer running (pulsing) or over (steady), or today's check-in still to do (dim). The RobCo boot
+also shows the chem-free day and whether today's check-in is done.
+
+**Chem-free streak** (top of STATUS): set the first chem-free day of the run; the card shows the day,
+the next milestone and the days to go. Milestones at **7, 14, 30, 60 and 90 days** (+150, +300, +600,
++900, +1,500 XP), each paid once a run, by itself, the moment it's reached; correcting the start date
+never pays one twice. **Log a lapse** asks first: the run's days stay in your totals (and best run),
+no XP is lost, and the count starts again tomorrow. **Urge? Decode it** opens the urge decoder.
+
+**Training** S.P.E.C.I.A.L.: a daily quest can train a stat (pick it when adding: "Trains STR"...). Its
+XP adds up under that stat in STATUS (`TRAIN 120/300`), and every **300 XP** is **+1 point** (a
+TRAINED banner), up to 10. The VITALS check-in trains Intelligence the same way. Level-up points still
+work as before.
+
 **Perks** (STATUS tab): each level-up gives a perk point as well as its S.P.E.C.I.A.L. point. Open the
 **Perk chart** and take a perk (it asks first); each rank needs its stat a little higher. Every perk
 changes a real reward: **Wanderer** (END 3) +25 XP a rank for each new route · **Cartographer** (INT 4)
@@ -53,8 +76,9 @@ the slider, or a typo in the wallet, pays nothing (slide back, or fix the wallet
 A streak quest completes with the check-in that reaches its target.
 
 Side quests can raise a skill too: **+3** of the skill picked when adding one (the first four: KNOWLEDGE,
-FINANCE, SURVIVAL, MUSIC), given once with the XP. Daily quests give XP only. Skills otherwise come from
-Analyze and the − / + buttons.
+FINANCE, SURVIVAL, MUSIC), given once with the XP. Daily quests give XP only (and can train a
+S.P.E.C.I.A.L. stat, see Training). Skills otherwise come from Analyze, the − / + buttons, books and
+urges ridden out.
 
 In QUESTS, each list's add form stays folded behind its **+ New main / side / daily quest** button
 until you tap it (the cursor goes into its first box); **Cancel** folds and empties it, and adding a
@@ -88,6 +112,7 @@ js/bulk.js          MAP: "Add several places" (paste a list, review it, reveal i
 js/routes.js        MAP: routes (road trips): stops, the road traced once (OSRM), its line and card
 js/radar.js         MAP: the scanner, a radar sweep whose blips are real undiscovered cities
 js/holotapes.js     LOG: holotapes, voice recordings kept on the device (their own IndexedDB)
+js/vitals.js        VITALS (check-in, urge decoder, last 7 days) and STATUS's chem-free streak card
 vendor/maplibre/    MapLibre GL JS 6.11.2, the map library (licence: vendor/maplibre/LICENSE.txt)
 vendor/three/       Three.js r186, only the parts ITEMS uses (licence: vendor/three/LICENSE)
 js/events.js        user actions
@@ -95,13 +120,14 @@ js/main.js          startup
 sw.js               service worker: offline use (network first for the app, so updates show right away)
 manifest.webmanifest name, colours and icons (icons/) for installing on a phone
 images/mascot.png   the mascot's picture (288x408), the source of his parts (not loaded by the app)
-images/mascot-parts.png  the mascot cut into parts that each move (legs, thumb arm, body, head, blink)
+images/mascot-parts.png  the mascot cut into parts that each move (legs, knees, thumb arm, body, head, blink)
 data/map-style.json MAP: the map's own amber Pip-Boy style (colours, line widths, labels, by zoom)
 data/places.txt     MAP: every country, region and city (15,000 people or more), for searching
 data/regions/       MAP: one file per country with the shapes of its regions
 tools/              build-map-data.js, which makes data/ (see "Map data"); build-three.mjs, which makes
                     vendor/three/ from the parts listed in three-entry.mjs; mascot-parts.py, which cuts
-                    images/mascot.png into images/mascot-parts.png (Python with Pillow and numpy)
+                    images/mascot.png into images/mascot-parts.png (Python with Pillow and numpy);
+                    mascot-moves.py, which writes the mascot's moves into css/terminal.css (Python)
 fonts/              the two terminal fonts, VT323 and IBM Plex Mono (licence: fonts/OFL.txt)
 api/analyze.js      optional serverless AI function (not used on GitHub Pages, see below)
 tests/              automated tests (see "Run the tests")
@@ -140,7 +166,10 @@ in the app to bring it over.
 
 The **⚙** in the topbar (beside the date) opens Settings, over the app: **Display** (3D tilt, the
 power-on screen and its RobCo boot), **Sound** (sound on/off, Custom sounds), **Data** (Export backup
-= RadAway, with the last backup's date; Import backup; Reset progress, which asks first; holotapes and
+= RadAway, with the last backup's date; Import backup; **Add from the old terminal**: from a backup of
+your in-Claude version, it adds only its VITALS check-ins, chem-free streak, urges, training and the
+daily / side quests not here yet, after saying what (adding the same file twice adds nothing); Reset
+progress, which asks first; holotapes and
 custom sounds are in neither the backup nor the reset, they stay on the device, and it says so) and
 **About** (the journal's analysis mode and the credits). Each setting is a whole row to tap, its
 state shown as `[ ON ]` / `[ OFF ]`. × , Escape or a tap outside closes it.
@@ -354,7 +383,8 @@ next to a commit means a test failed.
 
 - **History:** everything that happens is recorded as an event, in order: quests, dailies, bonus
   objectives, check-ins, journal entries, sales, places discovered, routes, bobbleheads, level-ups,
-  perks, S.P.E.C.I.A.L. points, backups, holotapes (with the XP each gave, perks included). The
+  perks, S.P.E.C.I.A.L. points (spent or trained), backups, holotapes, VITALS check-ins, chem-free
+  milestones, urges ridden out (with the XP each gave, perks included). The
   latest 2,000 are kept, in the save and in backups. Nothing shows it yet: it's the base for a weekly
   summary, quests that progress by themselves, and statistics. A save from before it starts empty.
 

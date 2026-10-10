@@ -54,8 +54,11 @@
     var value = num(app.state.stats[key]);
     var segs='';
     for (var i=1;i<=10;i++){ segs += '<span class="seg'+(i<=value?' filled':'')+'"></span>'; }
+    // Training toward the next point (daily quests tagged with this stat).
+    var train = num(app.state.statTrain && app.state.statTrain[key]);
     return '<div class="stat-row">'+
-      '<div class="stat-label">'+STAT_LABELS[key]+'</div>'+
+      '<div class="stat-label">'+STAT_LABELS[key]+
+        (train>0 && value<10 ? '<span class="stat-train">TRAIN '+train+'/'+ST.TRAIN_PER_POINT+'</span>' : '')+'</div>'+
       '<div class="seg-bar">'+segs+'</div>'+
       '<div class="stat-value">'+value+'</div>'+
     '</div>';
@@ -99,6 +102,7 @@
           '</div>')+
       '</div>';
     }
+    if (ST.vitals) html += ST.vitals.streakCardHtml();       // the chem-free streak (js/vitals.js)
     html += '<div class="panel-title">S.P.E.C.I.A.L.</div>';
     STAT_KEYS.forEach(function(k){ html += statRowHtml(k); });
     html += perksHtml();
@@ -106,11 +110,17 @@
     SKILL_KEYS.forEach(function(k){ html += skillRowHtml(k); });
     html += bobbleheadsHtml();
     html += '<div class="panel-title">Lifetime</div><div class="stats-grid">'+
-      '<div class="stats-cell"><div class="stats-num">'+commas(state.lifetimeXp||0)+'</div><div class="stats-label">Total XP earned</div></div>'+
-      '<div class="stats-cell"><div class="stats-num">'+state.quests.side.filter(function(q){return q.done;}).length+'</div><div class="stats-label">Side quests done</div></div>'+
-      '<div class="stats-cell"><div class="stats-num">'+commas(ST.logEntryCount())+'</div><div class="stats-label">Log entries</div></div>'+
+      statsCell(commas(state.lifetimeXp||0), 'Total XP earned')+
+      statsCell(state.quests.side.filter(function(q){return q.done;}).length, 'Side quests done')+
+      statsCell(commas(ST.logEntryCount()), 'Log entries')+
+      statsCell(commas(ST.cleanTotal()), 'Chem-free days, all runs')+
+      statsCell(state.urges.log.length, 'Urges ridden out')+
+      statsCell(state.vitals.filter(function(v){ return v.logged; }).length, 'Vitals check-ins')+
     '</div>';
     el('tab-status').innerHTML = html;
+  }
+  function statsCell(value, label){
+    return '<div class="stats-cell"><div class="stats-num">'+escapeHtml(value)+'</div><div class="stats-label">'+label+'</div></div>';
   }
 
   // ---------- perks ----------
@@ -516,7 +526,8 @@
       html += '<div class="quest-item">'+
         '<button class="complete-btn'+(doneToday?' done':'')+'" data-action="daily-toggle" data-id="'+attr(q.id)+'" '+(doneToday?'disabled':'')+' aria-label="Mark done today: '+about(q.questName, q.name)+'">'+(doneToday?'&#10003;':'&#9675;')+'</button>'+
         questTextHtml('daily', q)+
-        '<span class="quest-xp">+'+num(q.xp)+' XP</span>'+
+        // A daily that trains a stat says which: "+20 XP · STR".
+        '<span class="quest-xp">+'+num(q.xp)+' XP'+(STAT_KEYS.indexOf(q.stat)!==-1 ? '<span class="quest-gain" title="Trains '+STAT_LABELS[q.stat]+'">trains '+q.stat+'</span>' : '')+'</span>'+
         '<button class="remove-btn" data-action="daily-remove" data-id="'+attr(q.id)+'" aria-label="Remove: '+about(q.questName, q.name)+'">&times;</button>'+
       '</div>'+
       removeConfirmHtml('daily', q.id, 'Remove this quest?');
@@ -525,6 +536,10 @@
       '<input type="text" class="field-full" id="new-daily-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
       '<input type="text" class="field-objective" id="new-daily-objective" placeholder="Daily habit..." required aria-label="Objective">'+
       '<input type="number" id="new-daily-xp" value="15" min="5" max="100" aria-label="XP reward">'+
+      '<select id="new-daily-stat" aria-label="Stat it trains">'+
+        '<option value="">No stat</option>'+
+        STAT_KEYS.map(function(k){ return '<option value="'+k+'">Trains '+k+'</option>'; }).join('')+
+      '</select>'+
       '<button id="add-daily-btn">Add</button>');
 
     var tab = el('tab-quests');
@@ -730,12 +745,16 @@
   // has changed since the quests were drawn (the app stayed open, or came
   // back from the background), draw them again; not while something is being
   // typed there, the next check does it.
+  // The chem-free streak's day count (STATUS) and the day's check-in
+  // (VITALS) start afresh too.
   function refreshIfNewDay(){
     if (!app.state || questsDay===todayStr()) return;
     var typing = document.activeElement;
-    if (typing && /^(INPUT|SELECT|TEXTAREA)$/.test(typing.tagName) && typing.closest('#tab-quests')) return;
+    if (typing && /^(INPUT|SELECT|TEXTAREA)$/.test(typing.tagName) && typing.closest('#tab-quests, #tab-status, #tab-vitals')) return;
     renderHeader();
     renderQuests();
+    renderStatus();
+    if (ST.vitals) ST.vitals.render();
   }
 
   // Settings' backup line: "Last backup: 3 days ago", in the warning
@@ -770,6 +789,7 @@
   function renderAll(){
     renderHeader();
     renderStatus();
+    if (ST.vitals) ST.vitals.render();
     renderQuests();
     renderInventory();
     renderLog();
@@ -827,6 +847,19 @@
     perkName.textContent = name+(rank>1 ? ' (rank '+rank+')' : '');
     sound('perk');
     toast('levelup-banner quest-banner', 'PERK ACQUIRED: ', 3200).appendChild(perkName);
+  }
+  // A S.P.E.C.I.A.L. point from training (a daily tagged with the stat, the
+  // VITALS check-in).
+  function showTrained(stat){
+    var statName = document.createElement('span');
+    statName.textContent = '+1 '+(STAT_LABELS[stat] || stat);
+    sound('perk');
+    toast('levelup-banner quest-banner', 'TRAINED: ', 3200).appendChild(statName);
+  }
+  // A chem-free milestone reached (its XP comes in its own toast).
+  function showMilestone(days){
+    sound('quest', 0.25);
+    toast('levelup-banner quest-banner', 'CHEM-FREE — '+num(days)+' DAYS', 3600);
   }
   function showBookRead(title){
     var bookTitle = document.createElement('span');
@@ -886,7 +919,7 @@
     if (swing) sound('tab');
     shownTab = name;
     if (ST.items3d) ST.items3d.show(name==='items');
-    ['status','quests','items','map','log'].forEach(function(t){
+    ['status','vitals','quests','items','map','log'].forEach(function(t){
       var panel = el('tab-'+t);
       panel.style.display = (t===name)?'block':'none';
       panel.classList.toggle('tab-enter', swing && t===name);
@@ -917,6 +950,8 @@
     showBobbleheads: showBobbleheads,
     showSold: showSold,
     showBookRead: showBookRead,
+    showTrained: showTrained,
+    showMilestone: showMilestone,
     showDiscovered: showDiscovered,
     showSaveWarning: showSaveWarning,
     showConflictWarning: showConflictWarning,

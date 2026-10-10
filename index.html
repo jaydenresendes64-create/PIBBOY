@@ -37,6 +37,7 @@
 <script defer src="js/routes.js"></script>
 <script defer src="js/radar.js"></script>
 <script defer src="js/holotapes.js"></script>
+<script defer src="js/vitals.js"></script>
 <script defer src="js/events.js"></script>
 <script defer src="js/main.js"></script>
 </head>
@@ -56,7 +57,7 @@
          Cut into parts that each move, like Vault Boy in a Fallout 4 Pip-Boy (tools/mascot-parts.py). -->
     <div class="mascot" id="mascot" aria-hidden="true">
       <div class="mascot-move"><div class="mascot-body">
-        <span class="mp mp-leg-back"></span><span class="mp mp-leg-front"></span><span class="mp mp-arm"></span><span class="mp mp-torso"></span><span class="mp mp-head"><span class="mp mp-blink"></span></span>
+        <span class="mp mp-leg-back"><span class="mp mp-shin-back"></span></span><span class="mp mp-leg-front"><span class="mp mp-shin-front"></span></span><span class="mp mp-arm"></span><span class="mp mp-torso"></span><span class="mp mp-head"><span class="mp mp-blink"></span></span>
       </div></div>
     </div>
 
@@ -92,6 +93,7 @@
 
       <nav class="tabs">
         <button class="tab-btn" data-tab="status">STATUS</button>
+        <button class="tab-btn" data-tab="vitals">VITALS</button>
         <button class="tab-btn" data-tab="quests">QUESTS</button>
         <button class="tab-btn" data-tab="items">ITEMS</button>
         <button class="tab-btn" data-tab="map">MAP</button>
@@ -99,6 +101,8 @@
       </nav>
 
       <section class="tab-content" id="tab-status"></section>
+      <!-- The day's check-in and the urge decoder (js/vitals.js). -->
+      <section class="tab-content" id="tab-vitals" style="display:none"></section>
       <section class="tab-content" id="tab-quests" style="display:none"></section>
       <section class="tab-content" id="tab-items" style="display:none"></section>
       <!-- Built the first time it's opened (js/map.js), with MapLibre (vendor/maplibre/). -->
@@ -106,6 +110,7 @@
       <section class="tab-content" id="tab-log" style="display:none"></section>
 
       <input type="file" id="import-file" accept="application/json,.json" hidden>
+      <input type="file" id="merge-file" accept="application/json,.json" hidden>
     </div>
   </main>
 
@@ -134,6 +139,9 @@
       <p class="set-note backup-age" id="backup-age"></p>
       <p class="set-note">The backup holds your progress. Holotapes and custom sounds stay on this device only: share a tape to keep a copy.</p>
       <button class="set-link" id="import-btn">Import backup</button>
+      <button class="set-link" id="merge-btn">Add from the old terminal</button>
+      <p class="set-note">From a backup of the in-Claude version: its VITALS check-ins, chem-free streak, urges,
+        training, and the daily and side quests not here yet. Nothing else changes.</p>
       <button class="set-link set-danger" id="reset-btn">Reset progress</button>
       <div class="set-confirm" id="reset-confirm-area"></div>
 

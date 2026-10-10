@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of the `books` PR (2026-09-26, after PR #14). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-221/221 tests pass locally. `sw.js` cache: `v22`.
+238/238 tests pass locally. `sw.js` cache: `v23`.
 
 ## 1. What it is
 
@@ -26,6 +26,7 @@ Plain scripts (not ES modules, so `index.html` still opens from disk) sharing
 | `js/render.js` | Builds every tab's HTML (escapes everything), toasts/banners, `switchTab` |
 | `js/items3d.js` | ITEMS 3D wireframe models (Three.js, dynamic `import()`), one shared WebGLRenderer copied into small 2D canvases |
 | `js/mascot.js` | Mascot gesture scheduling (moves are CSS keyframes, per body part: see §3 Look & feel) |
+| `js/vitals.js` | VITALS tab (check-in, urge decoder + its timer's clock, last 7 days) and STATUS's chem-free streak card; its buttons use `data-vital` (its own listeners), the rules are in state.js |
 | `js/crt.js`, `js/tilt.js` | CRT flicker; 3D tilt (DeviceOrientation/mouse) incl. glass glare parallax |
 | `js/events.js` | All user actions → state change → re-render → debounced save |
 | `js/main.js` | Boot: load → setup events → render → `syncCaps()` → SW registration |
@@ -65,9 +66,30 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 
 ## 3. Features implemented
 
-- STATUS: S.P.E.C.I.A.L. (STR, END, CHA, INT, AGI; raised **only** by confirmed level-up points),
-  skills (CONCENTRATION, KNOWLEDGE, SPEECH, SURVIVAL, COOKING, FINANCE, MUSIC, BUSINESS; −/+ allowed),
-  Lifetime stats.
+- STATUS: S.P.E.C.I.A.L. (STR, END, CHA, INT, AGI; raised by confirmed level-up points and by
+  **training**, see below), skills (CONCENTRATION, KNOWLEDGE, SPEECH, SURVIVAL, COOKING, FINANCE, MUSIC,
+  BUSINESS; −/+ allowed), Lifetime stats (+ chem-free days, urges ridden out, vitals check-ins).
+- **VITALS, chem-free streak, urge decoder, training (2026-10-09):** the owner built these in an
+  in-Claude copy of the app (a single page from the very first version, its own data in the artifact's
+  db) and asked to bring them here. state.js: `vitals` (one entry a day: six 0-10 levels, pulse, radN/radT
+  counters; `logVitals()` once a day = award('VITALS_CHECKIN', 15) + trains INT), `chems` (cleanSince =
+  day 1; `claimCleanMilestones()` pays 7/14/30/60/90 days once a run, called from events.js
+  `checkBobbleheads` after every change, at boot and on a new day (main.js `newDay`); claimed is kept
+  when the start date is corrected, so editing it never pays twice; `logLapse()` adds the run to
+  totalClean/best, restarts tomorrow, clears claimed), `urges` (`startUrge`, 20 min from a saved start,
+  `urgeWon()` only at zero: award('URGE_RESISTED', 40, +1 SURVIVAL), 3 paid a day, all logged),
+  `statTrain` + daily `stat` (`trainStat()`: every 300 XP = +1 stat, SPECIAL_TRAINED event; completeDaily
+  returns `trained`). Dates are 'YYYY-M-D' like the rest (the in-Claude backups' 'YYYY-MM-DD' are
+  normalized by sanitize). Settings → **Add from the old terminal**: `mergeOld(into, src)` adds only those
+  parts + daily/side quests missing by id or objective (lastDate reset, claimed not carried, so the
+  milestones are paid here), never XP/level/skills/stats/items/wallet/journal; asked first with a
+  summary computed on a copy; idempotent. Its seeded personal quests (dailies, a doctor's visit) were
+  **not** put in the public code: they come with that import, or the owner adds them.
+  Fit pass (same day, owner: "optimise ça au max pour que ça fit bien"): the RobCo boot shows
+  `CHEM-FREE ... DAY nn (x TO next)` and `VITALS ... CHECK-IN DUE / CHECKED IN TODAY`; the VITALS tab key
+  gets a light (`data-alert` = urge / over / due, vitals.js `markTab`, CSS `.tab-btn[data-alert]::after`);
+  the end of an urge round is announced once a round from any tab (vitals.js `syncAlarm`: a timeout
+  to the end while the app is visible, a sound, a notice when VITALS isn't open).
 - QUESTS: several main quests (types **percent** slider, **streak** daily check-in, **caps** goal
   that follows the wallet; a percent or caps quest at 100% shows a **COMPLETE QUEST** button and only
   its tap pays, `mainReady()`), bonus objectives, side quests (XP + one skill +3)
@@ -91,13 +113,24 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   owner's own cartoon since 2026-09-27; stepped Vault-Boy-style gestures per tab; MAP = "scout"),
   tab swing transition, 3D tilt (opt-in).
   **Mascot rig (2026-09-28, owner: "animate him like the Pip-Boy in Fallout 4"):** the picture is cut
-  by `tools/mascot-parts.py` into `images/mascot-parts.png` (6 picture-sized cells: back leg, front
-  leg, thumb arm, body, head, head with eyes shut). `index.html` stacks them as full-size `.mp` layers
-  (background-size 600%); each turns around its joint (`transform-origin` = the tool's `JOINTS`, as
-  % of 144×204). Each move = one `.mascot-move` keyframe (where he goes / faces) + part keyframes of
-  the same length (generated poses: legs ±8–12°, arm ±6–16°, head ±2–7°, body bob 1–2 px), all
-  `steps(1,end)`. Idle: breathing on `.mascot-body`, a blink every 5.3 s; mascot.js picks walk-left /
-  walk-right / thumbs every 10–20 s. At rest the layers rebuild the picture exactly (the tool checks);
+  by `tools/mascot-parts.py` into `images/mascot-parts.png` (8 picture-sized cells: back leg, its
+  lower leg, front leg, its lower leg, thumb arm, body, head, head with eyes shut). `index.html` stacks
+  them as full-size `.mp` layers (background-size 800%), each lower leg nested in its leg so it turns
+  with the hip and bends again at the knee (added 2026-09-28, owner: "legs works"; each upper leg
+  carries a hidden round, outlined knee under its lower leg so a bend shows no gap); each turns
+  around its joint (`transform-origin` = the tool's `JOINTS`, as % of 144×204). Each move = one
+  `.mascot-move` keyframe (where he goes / faces, squash and stretch) + part keyframes of the same
+  length (legs −10–16°, knees 0 to −40° (negative = bent, boot back; the swinging knee bends to −38°
+  as it passes, the hop tucks both), arm −7–18°, head −10–7°, body bob 1–2 px). **Smooth and
+  cartoon-like since 2026-09-30** (owner: "le plus fluide possible, cartoon comme Vault Boy"; before,
+  every move jumped between poses with `steps(1,end)`): `tools/mascot-moves.py` writes all the move
+  CSS (between "/* Cartoon animation, like Vault Boy" and "/* End of the moves made by
+  tools/mascot-moves.py. */") from per-part keys (time, value, easing): a wind-up before each move,
+  slow in/out, squash on landing and stretch in the air, overshoot then settle, the head a beat
+  late, turns as a flat-card spin (through a thin sliver, never invisible); every move starts and
+  ends at rest (tested). Change a move in the tool, never by hand in the CSS. Only the blink stays
+  instant (`steps`). Idle: breathing on `.mascot-body`, a slight head/thumb sway, a blink every
+  5.3 s; mascot.js picks walk-left / walk-right / thumbs every 10–20 s. At rest the layers rebuild the picture exactly (the tool checks);
   moving parts carry a little of themselves under the part in front, so no hole shows.
   `tests/mascot.test.js` keeps sheet, page, CSS joints and moves in sync. A new picture (same size
   and pose): replace `images/mascot.png`, run the tool, check the cut lines.
@@ -140,7 +173,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 6. Heavy libraries (MapLibre, Three.js) are vendored, pinned, and loaded only when their tab opens.
 7. Plain scripts rather than ES modules so the app still runs from `file://`.
 8. S.P.E.C.I.A.L. keeps its 5 stats: **no LUK** (the owner doesn't believe in luck); PER only if the
-   owner asks (maybe later). Skills come from Analyze, the −/+ buttons and quests' `skillGains`:
+   owner asks (maybe later). Stats go up by level-up points and, since 2026-10-09 (the owner's own
+   design), by training: stat-tagged dailies and the VITALS check-in, 300 XP a point. Skills come from Analyze, the −/+ buttons and quests' `skillGains`:
    main quests, and **side quests** (+3 of one skill, `SIDE_SKILL_GAIN`, paid once by
    `completeSide()`; s1–s4 got theirs by migration). **Daily quests give XP only** (owner's choice
    2026-09-24: +1/day would max skills in months).
@@ -148,6 +182,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
    never completes from a slider slip or a wallet typo (the Complete button), and a backup export runs
    one at a time (a double tap on iPhone used to be able to drain the rads with no file saved).
    Holotapes and custom sounds are not in backups nor erased by Reset, and the UI says so.
+10. **Personal content stays out of the public repo**: the code holds generic features; the owner's own
+   habits, health notes and quests live only in their data (on the phone, in backups).
 
 ## 5. Workflow
 
@@ -216,7 +252,7 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   Real-ESRGAN "realesr-animevideov3" ×4 (the ncnn build from PyPI `realesrgan-ncnn-py`, run on CPU;
   the "x4plus-anime" model changed the face, waifu2x failed on CPU), the background was cut out and
   the fist drawn at ×4, then everything brought down to **288×408** (2×; the box is 54×76 CSS px,
-  162×228 device px on an iPhone). `images/mascot-parts.png` is 1728×408, ~79 KB. Mascot
+  162×228 device px on an iPhone). `images/mascot-parts.png` is 2304×408, ~82 KB. Mascot
   reactions to rewards were declined; on 2026-09-28 the owner asked for Fallout 4 Pip-Boy-style
   animation, so he's now a rig of moving parts (see §3). Removing him would touch: `index.html`
   (`#mascot`), `js/mascot.js`, `images/mascot*.png`, `tools/mascot-parts.py`, `tests/mascot.test.js`,

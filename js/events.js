@@ -29,10 +29,12 @@
   function redrawAddForm(form){ if (form.tab==='items') renderInventory(); else renderQuests(); }
   var checkPlaying = false;     // a check button's animation is running
 
-  // A reward's toasts (what state.js gave): the XP and skills, a level-up.
-  function showXp(amount, leveled, skillGains){
+  // A reward's toasts (what state.js gave): the XP and skills, a level-up,
+  // and the S.P.E.C.I.A.L. points it trained (a daily tagged with a stat).
+  function showXp(amount, leveled, skillGains, trained){
     R.showXpToast(Number(amount)||0, skillGains);
     if (leveled) R.showLevelUp();
+    (trained || []).forEach(function(stat){ R.showTrained(stat); });
     renderHeader();
   }
   // After a check button (side quest, daily quest, bonus objective, streak
@@ -88,7 +90,10 @@
     var q = readNewQuest('new-daily');
     if (!q) return;
     var xp = readWhole('new-daily-xp', 15, 5, 100);
-    app.state.quests.daily.push({id:genId(),questName:q.questName,name:q.objective,xp:xp,lastDate:null});
+    var daily = {id:genId(),questName:q.questName,name:q.objective,xp:xp,lastDate:null};
+    var stat = el('new-daily-stat').value;               // the stat it trains, if any
+    if (ST.STAT_KEYS.indexOf(stat)!==-1) daily.stat = stat;
+    app.state.quests.daily.push(daily);
     R.clearTyped('new-daily-');
     app.addOpen = null;
     renderQuests(); scheduleSave();
@@ -377,6 +382,8 @@
     app.confirmMove = null;
     app.confirmSpecial = null;
     app.confirmPerk = null;
+    app.confirmLapse = false;
+    app.streakEdit = false;
   }
   // A whole new state (a backup, a reset): drawn, caps quests brought up to
   // date with its wallet, and saved; the settings close on it.
@@ -412,9 +419,11 @@
     el('settings-btn').setAttribute('aria-expanded', 'false');
     el('reset-confirm-area').innerHTML = '';
     pendingImport = null;
+    pendingMerge = null;
     if (refocus!==false) el('settings-btn').focus();
   }
   function importBackup(file){
+    pendingMerge = null;
     ST.storage.readJsonFile(file).then(function(raw){
       var imported = ST.sanitizeImported(raw);
       if (!imported) throw new Error('Not a Status Terminal backup');
@@ -439,8 +448,61 @@
     pendingImport = null;
     el('reset-confirm-area').innerHTML = '';
   }
+  // ---------- the old terminal's data ----------
+  // A backup of the owner's in-Claude version: what it has that this app
+  // keeps is added (state.js mergeOld), after a question saying what: its
+  // VITALS check-ins, chem-free streak, urges, training, and the daily and
+  // side quests not here yet. XP, level and everything else stay as they are.
+  var pendingMerge = null;
+  function mergeSummary(added){
+    var parts = [];
+    function count(n, one, many){ if (n) parts.push(n+' '+(n===1 ? one : many)); }
+    count(added.vitals, 'check-in', 'check-ins');
+    if (added.streak) parts.push('the chem-free streak');
+    count(added.lapses, 'lapse date', 'lapse dates');
+    count(added.urges, 'urge ridden out', 'urges ridden out');
+    count(added.dailies, 'daily quest', 'daily quests');
+    count(added.side, 'side quest', 'side quests');
+    if (added.training) parts.push('S.P.E.C.I.A.L. training');
+    return parts;
+  }
+  function mergeBackup(file){
+    pendingImport = null;
+    ST.storage.readJsonFile(file).then(function(raw){
+      var src = ST.sanitizeImported(raw);
+      if (!src) throw new Error('Not a Status Terminal backup');
+      // On a copy first: only what it would add.
+      var parts = mergeSummary(ST.mergeOld(JSON.parse(JSON.stringify(app.state)), src));
+      if (!parts.length){
+        pendingMerge = null;
+        el('reset-confirm-area').innerHTML = '<span class="confirm-ok">Nothing new to add from that file.</span>';
+        return;
+      }
+      pendingMerge = src;
+      el('reset-confirm-area').innerHTML =
+        '<span class="confirm-ok">Add '+parts.join(', ')+'? Your XP, level and everything else stay as they are.</span>'+
+        '<button id="merge-confirm-btn">Yes, add</button>'+
+        '<button id="merge-cancel-btn">Cancel</button>';
+    }).catch(function(){
+      pendingMerge = null;
+      if (ST.sfx) ST.sfx.play('error');
+      el('reset-confirm-area').innerHTML = '<span class="reset-warning">That file isn’t a Status Terminal backup.</span>';
+    });
+  }
+  function confirmMerge(){
+    if (!pendingMerge) return;
+    ST.mergeOld(app.state, pendingMerge);
+    pendingMerge = null;
+    el('reset-confirm-area').innerHTML = '';
+    renderAll();
+    ST.storage.saveNow();             // a streak milestone reached is paid just after (checkBobbleheads)
+    closeSettings(false);
+    R.showNotice('Added from the old terminal');
+  }
+
   function showResetConfirm(){
     pendingImport = null;
+    pendingMerge = null;
     el('reset-confirm-area').innerHTML =
       '<span class="reset-warning">Erase all progress? Holotapes and custom sounds stay on this device.</span>'+
       '<button id="reset-confirm-btn">Yes, erase</button>'+
@@ -473,7 +535,7 @@
   // (remove, sell, move) closes the others.
   function reward(btn, result){
     if (!result) return;
-    showXp(result.xp, result.leveled, result.skillGains);
+    showXp(result.xp, result.leveled, result.skillGains, result.trained);
     afterCheck(btn);
   }
   var ACTIONS = {
@@ -664,6 +726,9 @@
     'import-btn': function(){ el('import-file').click(); },
     'import-confirm-btn': confirmImport,
     'import-cancel-btn': cancelImport,
+    'merge-btn': function(){ el('merge-file').click(); },
+    'merge-confirm-btn': confirmMerge,
+    'merge-cancel-btn': function(){ pendingMerge = null; el('reset-confirm-area').innerHTML = ''; },
     'reset-btn': showResetConfirm,
     'reset-confirm-btn': doReset,
     'reset-cancel-btn': function(){ el('reset-confirm-area').innerHTML = ''; }
@@ -675,6 +740,7 @@
       var tab = tabBtn.getAttribute('data-tab');
       R.switchTab(tab);
       if (tab==='map' && ST.map) ST.map.show();
+      if (ST.vitals) ST.vitals.onTab(tab);
       if (ST.mascot) ST.mascot.onTab(tab);
       return;
     }
@@ -691,16 +757,25 @@
     if (button) button();
   }
 
-  // Bobbleheads found by the last change (state.js findBobbleheads): a
-  // banner, their XP, and the STATUS tab drawn again. Runs after every
-  // change (storage.onChange), and once at startup for the ones a save
-  // already earned.
+  // What the state as it is now has earned: the chem-free streak's
+  // milestones reached (state.js claimCleanMilestones) and the bobbleheads
+  // found (findBobbleheads): a banner each, their XP, and the STATUS tab
+  // drawn again. Runs after every change (storage.onChange), once at
+  // startup for what a save already earned, and when a new day starts (the
+  // streak's count goes up by itself).
   function checkBobbleheads(){
     if (!app.state) return;
+    var milestones = ST.claimCleanMilestones();
+    milestones.forEach(function(m){
+      R.showMilestone(m.days);
+      showXp(m.xp, m.leveled);
+    });
     var found = ST.findBobbleheads();
-    if (!found) return;
-    R.showBobbleheads(found.found);
-    showXp(found.xp, found.leveled);
+    if (found){
+      R.showBobbleheads(found.found);
+      showXp(found.xp, found.leveled);
+    }
+    if (!found && !milestones.length) return;
     renderStatus();
     scheduleSave();
   }
@@ -730,10 +805,10 @@
         // Only a wrong price needs redrawing (the stored one put back): a
         // redraw here would replace the row under a tap on its Sold button.
         if (readPrice(e.target)===undefined) renderInventory();
-      } else if (e.target.id==='import-file'){
-        var file = e.target.files && e.target.files[0];
+      } else if (e.target.id==='import-file' || e.target.id==='merge-file'){
+        var file = e.target.files && e.target.files[0], merge = e.target.id==='merge-file';
         e.target.value = '';
-        if (file) importBackup(file);
+        if (file){ if (merge) mergeBackup(file); else importBackup(file); }
       }
     });
     document.body.addEventListener('input', function(e){

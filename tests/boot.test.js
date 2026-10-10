@@ -61,3 +61,17 @@ test('boot: level-up points, a backup due, and no weather', () => {
   assert.match(text, /RADS\.+ 1000 {2}\(NO BACKUP YET\)\n>> RADAWAY ADVISED: TAP THE RAD METER/);
   assert.match(text, /WEATHER\.+ NO SIGNAL\n\nWELCOME/);
 });
+
+test('boot: the chem-free streak\'s day and today\'s VITALS check-in', () => {
+  const s = fresh();
+  app.setNow('2026-10-09T08:00:00');
+  let text = ST.boot.lines(s, null).join('\n');
+  assert.doesNotMatch(text, /CHEM-FREE/);                                  // no run started: no line
+  assert.match(text, /VITALS\.+ CHECK-IN DUE\n/);
+  ST.setCleanStart('2026-09-24');
+  ST.logVitals();
+  text = ST.boot.lines(s, null).join('\n');
+  assert.match(text, /CHEM-FREE\.+ DAY 16 {2}\(15 TO 30\)\nVITALS\.+ CHECKED IN TODAY\n/);
+  ST.logLapse();
+  assert.match(ST.boot.lines(s, null).join('\n'), /CHEM-FREE\.+ RESTART TOMORROW\n/);
+});
