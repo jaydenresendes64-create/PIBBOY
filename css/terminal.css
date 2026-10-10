@@ -492,6 +492,52 @@ button{ cursor:pointer; }
   width:0%; transition:width 0.5s ease-out;
 }
 .xp-text{ margin-top:5px; font-size:0.78rem; color:var(--text-dim); letter-spacing:0.04em; }
+
+/* The Vault Boy on the level bar (js/render.js syncWalker picks his picture
+   by level; none below 5). Placed right after the bar, so where he'd sit in
+   the flow is the bar's bottom edge: lifted by the bar's height and 98% of
+   his frame, his feet (at 98% of the frame) stand on the bar's top edge.
+   He walks its whole length and back (6 s each way), turning round on the
+   way back; the turn is on an inner layer so the walk keeps its direction.
+   Frame 140px high (110px under 360px), the pictures' 770:1050. Taps go
+   through him; under the rad meter, over the bar. Still and centred with
+   Reduce Motion. The old corner mascot (#mascot) no longer shows. */
+.mascot{ display:none; }
+.vaultboy{
+  --vb-h:140px; --vb-w:calc(var(--vb-h) * 770 / 1050);
+  position:absolute; left:0; right:0; height:var(--vb-h);
+  margin-top:calc(-14px - var(--vb-h) * 0.98);
+  overflow:hidden; pointer-events:none;
+  user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
+}
+.vaultboy[hidden]{ display:none; }
+@media (max-width:359px){
+  .vaultboy{ --vb-h:110px; }
+}
+.vaultboy-step{
+  position:absolute; inset:0;
+  animation:vaultboyWalk 6s ease-in-out infinite alternate;
+}
+.vaultboy-flip{
+  position:absolute; left:0; bottom:0; width:var(--vb-w); height:var(--vb-h);
+  transform-origin:50% 98%;
+  animation:vaultboyTurn 12s step-end infinite;
+}
+.vaultboy-img{ display:block; width:100%; height:100%; -webkit-user-drag:none; }
+@keyframes vaultboyWalk{
+  from{ transform:translateX(0); }
+  to{ transform:translateX(calc(100% - var(--vb-w))); }
+}
+/* Facing the way he walks: as is going right, mirrored coming back. */
+@keyframes vaultboyTurn{
+  0%{ transform:none; }
+  50%{ transform:scaleX(-1); }
+  100%{ transform:scaleX(-1); }
+}
+@media (prefers-reduced-motion:reduce){
+  .vaultboy-step{ animation:none; transform:translateX(calc(50% - var(--vb-w) / 2)); }
+  .vaultboy-flip{ animation:none; transform:none; }
+}
 /* The XP line, with the rad meter on its right (js/render.js renderBackup). */
 .xp-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:5px; }
 .xp-row .xp-text{ margin-top:0; }

@@ -48,6 +48,31 @@
     el('hdr-xp-fill').style.width = pct+'%';
     el('hdr-xp-text').textContent = commas(state.xp)+' / '+commas(state.xpToNext)+' XP';
     renderBackup();             // the rad meter beside it (first XP without a backup: rads)
+    syncWalker();
+  }
+
+  // ---------- the Vault Boy on the level bar ----------
+  // He walks on the XP bar (css/terminal.css .vaultboy) from level 5, and
+  // his outfit follows the level: images/vaultboy/lvl05, 10, 20, 30 and 50
+  // (kept from 50 on; none below 5). The picture changes only with the tier.
+  var WALKER_TIERS = [50, 30, 20, 10, 5];
+  function walkerSprite(level){
+    level = Number(level) || 0;
+    for (var i=0;i<WALKER_TIERS.length;i++){
+      var t = WALKER_TIERS[i];
+      if (level>=t) return 'images/vaultboy/lvl'+(t<10 ? '0' : '')+t+'.png';
+    }
+    return null;
+  }
+  var walkerOn;                 // the picture on show (undefined before the first call)
+  function syncWalker(){
+    var walk = el('vaultboy-walk'), img = el('vaultboy');
+    if (!walk || !img || !app.state) return;
+    var sprite = walkerSprite(app.state.level);
+    if (sprite===walkerOn) return;
+    walkerOn = sprite;
+    if (sprite) img.src = sprite;
+    walk.hidden = !sprite;
   }
 
   function statRowHtml(key){
@@ -995,6 +1020,8 @@
     showLoadError: showLoadError,
     clearTyped: clearTyped,
     playCheck: playCheck,
-    switchTab: switchTab
+    switchTab: switchTab,
+    walkerSprite: walkerSprite,
+    syncWalker: syncWalker
   };
 })(window.StatusTerminal);

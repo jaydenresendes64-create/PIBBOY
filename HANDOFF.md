@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
-State as of the morning-path PR (2026-10-10, after PR #18). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-258/258 tests pass locally. `sw.js` cache: `v24`.
+State as of the Vault Boy walker PR (2026-10-10, after PR #19). Live: https://jaydenresendes64-create.github.io/PIBBOY/
+262/262 tests pass locally. `sw.js` cache: `v25`.
 
 ## 1. What it is
 
@@ -155,6 +155,16 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   glare, physical tab keys, recessed panels, faint "PIBBOY 3000" plate, animated mascot (the
   owner's own cartoon since 2026-09-27; stepped Vault-Boy-style gestures per tab; MAP = "scout"),
   tab swing transition, 3D tilt (opt-in).
+  **Vault Boy walker (2026-10-10, owner's spec + 5 PNGs of their cartoon):** `#vaultboy-walk` right
+  after `.xp-bar-outer` in `.level-block`; `.vaultboy` (absolute, `margin-top: -14px - 98% of the frame`
+  from its static place under the bar, so the feet at 98% of the frame sit on the bar's top edge),
+  `.vaultboy-step` walks the bar (6 s ease-in-out alternate, translateX to `100% - frame width`),
+  `.vaultboy-flip` mirrors on the way back (12 s step-end, so the walk keeps its direction). Frame
+  140px (110px under 360px), 770:1050. Reduced Motion: still, centred. render.js `walkerSprite(level)`
+  / `syncWalker()` (end of `renderHeader()`): none < 5, lvl05 / 10 / 20 / 30 / 50 (50+ forever), src
+  changed only on a new tier. The PNGs were scaled from 770×1050 to 308×420 (3× the 140px frame,
+  ~105 KB each instead of ~500 KB). The old corner mascot is `display:none` (`.mascot`), its markup,
+  js/mascot.js and the rig kept; tests in `tests/vaultboy.test.js`.
   **Mascot rig (2026-09-28, owner: "animate him like the Pip-Boy in Fallout 4"):** the picture is cut
   by `tools/mascot-parts.py` into `images/mascot-parts.png` (8 picture-sized cells: back leg, its
   lower leg, front leg, its lower leg, thumb arm, body, head, head with eyes shut). `index.html` stacks
