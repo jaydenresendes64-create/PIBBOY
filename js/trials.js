@@ -305,6 +305,7 @@
       if (!asking || asking.id!==t.id) return;
       var r = ST.logTrial(t.id, asking.value);
       if (!r) return;
+      save(true);                           // saved first: drawing the screen can't lose it
       if (r.record) ST.render.showRecord(t.name, valueText(t, r.entry.value));
       if (r.reward){ sound('complete'); showReward(r.reward); }
       else ST.render.showNotice('Saved — today’s XP for this trial was earned already');
@@ -313,7 +314,6 @@
       draft = {id:null, text:''};
       redraw();
       ST.render.renderStatus();             // the training under the stats
-      save(true);
     },
     'remove': function(t, btn){ app.trialRemove = {id:t.id, t:Number(btn.getAttribute('data-t'))}; redraw('[data-trial="remove-no"]'); },
     'remove-no': function(){ app.trialRemove = null; redraw(); },

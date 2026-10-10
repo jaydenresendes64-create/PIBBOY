@@ -188,3 +188,33 @@ test('a hostile daily name stays inert in the next step', () => {
   assert.doesNotMatch(html, /<img/);
   assert.match(html, /NEXT: &quot;&gt;&lt;img/);
 });
+
+test('a reward is saved before the screen is drawn: a drawing error can\'t lose the check-in, an urge or a trial', t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
+  const a = app();
+  const ST = a.ST, clicks = [];
+  a.context.document.body.addEventListener = (type, fn) => { if (type === 'click') clicks.push(fn); };
+  ST.vitals.init();
+  ST.trials.init();
+  const saved = [];
+  ST.storage.saveNow = () => { saved.push(JSON.parse(JSON.stringify(ST.app.state))); return Promise.resolve('ok'); };
+  ST.render.renderStatus = () => { throw new Error('drawing failed'); };
+  const tap = attrs => clicks.forEach(fn => fn({ target: { closest: sel => (sel.slice(1, -1) in attrs ? { disabled: false, getAttribute: k => attrs[k] || null } : null) } }));
+
+  assert.throws(() => tap({ 'data-vital': 'vitals-log' }), /drawing failed/);
+  assert.equal(saved.length, 1);
+  assert.equal(saved[0].vitals[0].logged, true);
+  assert.equal(saved[0].lifetimeXp, 15);
+
+  ST.startUrge('TIRED');
+  a.setNow('2026-10-10T08:20:00');
+  assert.throws(() => tap({ 'data-vital': 'urge-won' }), /drawing failed/);
+  assert.equal(saved.length, 2);
+  assert.equal(saved[1].urges.log.length, 1);
+
+  ST.app.trialConfirm = { id: 'pushups', value: 20 };
+  assert.throws(() => tap({ 'data-trial': 'save-yes', 'data-id': 'pushups' }), /drawing failed/);
+  assert.equal(saved.length, 3);
+  assert.deepEqual(saved[2].trials.log.map(r => [r.id, r.value]), [['pushups', 20]]);
+  ST.vitals.stop(); ST.trials.stop();
+});

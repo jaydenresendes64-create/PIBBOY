@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of the amber Vault Boy rig PR (2026-10-10, after PR #20). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-266/266 tests pass locally. `sw.js` cache: `v26`.
+267/267 tests pass locally. `sw.js` cache: `v26`.
 
 ## 1. What it is
 
@@ -133,6 +133,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   The radN / radT counters ("RADS // type N / T", the owner's own private counters, tapped through
   the day; their meaning stays out of the public code) are on the folded card too (`countsHtml()`),
   since folding had hidden them behind "Edit check-in" (2026-10-10).
+  Rewards are saved before the screen is drawn (vitals-log, urge-won, trials save-yes), like
+  events.js `afterCheck()`: a drawing error can't lose them (ChatGPT audit, 2026-10-10; tested).
 - **Skill sources (2026-10-10, a Grok render.js the owner sent):** STATUS skills are buttons
   (`data-action="skill"` toggles `app.skillOpen`, events.js); open: Earned / Coming from state.js
   `skillSources(key)` (mains/side by their skillGains and done/completed, books, and history events with

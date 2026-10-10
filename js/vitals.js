@@ -499,14 +499,15 @@
     },
     'urge-again': function(){ if (ST.urgeAgain()){ redrawUrge(); save(true); } },
     'urge-cancel': function(){ ST.cancelUrge(); render(); save(); },
+    // A reward is saved first: drawing the screen afterwards can't lose it.
     'urge-won': function(){
       var r = ST.urgeWon();
       if (!r) return;
+      save(true);
       if (r.capped) ST.render.showNotice('Logged — today’s XP for urges is used up');
       else { sound('complete'); showReward(r); }
       render();
       ST.render.renderStatus();     // the Lifetime count, the skill
-      save(true);
     },
     'rad': function(btn, key){
       var dir = parseInt(btn.getAttribute('data-dir') || '0', 10);
@@ -517,12 +518,12 @@
     'vitals-log': function(){
       var r = ST.logVitals();
       if (!r) return;
+      save(true);
       sound('complete');
       showReward(r);
       app.vitalsEdit = false;
       redraw('[data-vital="go"], [data-vital="checkin-edit"]');    // folded: the report, the next step
       ST.render.renderStatus();
-      save(true);
     },
     // The logged check-in, opened again to change it, and folded back.
     'checkin-edit': function(){ app.vitalsEdit = true; redraw('.vital-range'); },
