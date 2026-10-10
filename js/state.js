@@ -18,7 +18,9 @@
  *                                           // stay on the device: js/holotapes.js)
  *   history: [ { t: ms, type: EVENT_TYPES, xp: number, data: { name: string|number } } ],
  *                                           // what happened, oldest first (record(); the latest
- *                                           // HISTORY_MAX); saves from before it start empty
+ *                                           // HISTORY_MAX); saves from before it start empty;
+ *                                           // data.skills 'KNOWLEDGE:3,FINANCE:1': the skill points
+ *                                           // a reward gave (award()); older events have none
  *   stats:  { STR,END,CHA,INT,AGI: number(0-10) },   // SPECIAL — see "S.P.E.C.I.A.L." below
  *   statTrain: { STR,END,CHA,INT,AGI: number(0-TRAIN_PER_POINT) },   // training toward each stat's next
  *                                           // point (trainStat); older saves: none yet
@@ -274,9 +276,10 @@
     confirmSpecial: null,       // SPECIAL key whose level-up point awaits "Yes"
     perkChart: false,           // the STATUS tab's perk chart is open
     bobbleOpen: null,           // id of the bobblehead whose details show
+    skillOpen: null,            // the skill whose sources show (STATUS)
     confirmPerk: null,          // id of the perk whose rank awaits "Yes"
     addOpen: null,              // the add form unfolded: 'main', 'side', 'daily' (QUESTS) or 'book' (ITEMS)
-    streakEdit: false,          // the chem-free streak's start date is being set (STATUS)
+    streakEdit: false,          // the chem-free streak's start date is being set (VITALS)
     confirmLapse: false,        // "Log a lapse?" awaits "Yes, log it"
     vitalsView: 'checkin',      // VITALS shows 'checkin' or 'trials'
     trialOpen: null,            // id of the trial whose panel (timer, result) is open
@@ -706,6 +709,42 @@
     if (SKILL_KEYS.indexOf(key)===-1 || !amount || !isFinite(amount)) return;
     state.skills[key] = clamp((Number(state.skills[key])||0)+amount, 0, 100);
   }
+  // Where a skill's points came from, and what's still to come: main and
+  // side quests (their skillGains: done, or still open), books, and the
+  // other rewards that gave some (journal entries, urges ridden out), from
+  // the history's data.skills. Amounts before perks; the starting values
+  // aren't listed. {earned: [{name, amount}], coming: [...]}.
+  function skillSources(key){
+    var s = app.state, earned = [], coming = [];
+    function gainOf(list){
+      var n = 0;
+      (list || []).forEach(function(g){ if (g && g.skill===key) n += Number(g.amount) || 0; });
+      return n;
+    }
+    s.quests.mains.forEach(function(m){
+      var n = gainOf(m.skillGains);
+      if (n>0) (m.completed ? earned : coming).push({name:m.questName || m.title || 'Main quest', amount:n});
+    });
+    s.quests.side.forEach(function(q){
+      var n = gainOf(q.skillGains);
+      if (n>0) (q.done ? earned : coming).push({name:q.questName || q.name || 'Side quest', amount:n});
+    });
+    (s.books || []).forEach(function(b){
+      var n = gainOf(b.skillGains);
+      if (n>0) earned.push({name:b.title || 'Book', amount:n});
+    });
+    var NAMES = {JOURNAL_ENTRY:'Journal', URGE_RESISTED:'Urge ridden out'};
+    (s.history || []).forEach(function(e){
+      if (!e.data || typeof e.data.skills!=='string' || e.type==='QUEST_COMPLETED' || e.type==='BOOK_READ') return;
+      var n = 0;
+      e.data.skills.split(',').forEach(function(part){
+        var bits = part.split(':');
+        if (bits[0]===key) n += Number(bits[1]) || 0;
+      });
+      if (n>0) earned.push({name:NAMES[e.type] || String(e.data.name || e.type), amount:n});
+    });
+    return {earned:earned, coming:coming};
+  }
   function grantStat(key, amount){
     var state = app.state;
     amount = Number(amount);
@@ -756,9 +795,13 @@
   // Pays a reward: {xp, leveled, skillGains} (what was given, for the toasts).
   // The event goes in the history before the level-ups it causes.
   function award(type, data, xp, gains){
-    var r = withPerks(type, xp, gains);
+    var r = withPerks(type, xp, gains), d = {};
     r.gains.forEach(function(g){ grantSkill(g.skill, g.amount); });
-    record(type, data, r.xp);
+    // The skill points it gave go in the event too ("KNOWLEDGE:3,FINANCE:1"):
+    // STATUS shows where each skill's points came from (skillSources).
+    Object.keys(data || {}).forEach(function(k){ d[k] = data[k]; });
+    if (r.gains.length) d.skills = r.gains.map(function(g){ return g.skill+':'+g.amount; }).join(',');
+    record(type, d, r.xp);
     return {xp:r.xp, leveled:gainXp(r.xp), skillGains:r.gains};
   }
   // A main quest whose bar is full (a percentage or a Caps goal at 100%)
@@ -1815,6 +1858,7 @@
   ST.currentStreak = currentStreak;
   ST.streakCheckIn = streakCheckIn;
   ST.grantSkill = grantSkill;
+  ST.skillSources = skillSources;
   ST.grantStat = grantStat;
   ST.gainXp = gainXp;
   ST.mainReady = mainReady;

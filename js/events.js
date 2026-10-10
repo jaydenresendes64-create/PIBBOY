@@ -8,7 +8,6 @@
   'use strict';
 
   var el = ST.el, clamp = ST.clamp, genId = ST.genId;
-  var grantSkill = ST.grantSkill;
   var app = ST.app;
   var R = ST.render;
   var renderHeader = R.renderHeader, renderStatus = R.renderStatus, renderQuests = R.renderQuests,
@@ -596,9 +595,11 @@
       renderStatus();
       focusStatus('[data-action="bobble"][data-key="'+key+'"]');
     },
+    // A skill tapped: where its points came from, under it (tap again to close).
     'skill': function(btn, id, key){
-      grantSkill(key, parseInt(btn.getAttribute('data-dir')||'0', 10));
-      renderStatus(); scheduleSave();
+      app.skillOpen = app.skillOpen===key ? null : key;
+      renderStatus();
+      focusStatus('[data-action="skill"][data-key="'+key+'"]');
     },
     // Quests: every reward through state.js, once (completeSide/Daily/Bonus).
     'quest-complete': function(btn, id){

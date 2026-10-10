@@ -104,8 +104,11 @@ A streak quest completes with the check-in that reaches its target.
 
 Side quests can raise a skill too: **+3** of the skill picked when adding one (the first four: KNOWLEDGE,
 FINANCE, SURVIVAL, MUSIC), given once with the XP. Daily quests give XP only (and can train a
-S.P.E.C.I.A.L. stat, see Training). Skills otherwise come from Analyze, the − / + buttons, books and
-urges ridden out.
+S.P.E.C.I.A.L. stat, see Training). Skills otherwise come from Analyze, books and urges ridden out.
+In STATUS, tap a skill to see where its points came from (**Earned**: quests done, books, journal
+entries, urges ridden out) and what's still to come (**Coming**: open quests that give it); under each
+skill, a short line says the next one coming or the latest earned. Skills have no − / + buttons: their
+points come from what you do.
 
 In QUESTS, each list's add form stays folded behind its **+ New main / side / daily quest** button
 until you tap it (the cursor goes into its first box); **Cancel** folds and empties it, and adding a
@@ -226,7 +229,7 @@ speaker" filter so they sound mechanical and lo-fi:
 | complete | a quest, bonus objective, daily quest or streak check-in |
 | level up / quest / discover / sold | the LEVEL UP, QUEST COMPLETED, DISCOVERED and SOLD banners |
 | error | a failed save, a rejected import |
-| step / map select | a skill's − / + button / a place opened on the MAP |
+| step / map select | a − / + button (VITALS' counters) / a place opened on the MAP |
 
 When the app opens, a black screen says **TAP TO POWER ON**; the tap plays the boot sound while the
 screen lights up like a tube (browsers only allow sound after a tap). Two switches in Settings, remembered on

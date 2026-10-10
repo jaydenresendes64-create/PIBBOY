@@ -685,16 +685,26 @@ button{ cursor:pointer; }
   color:var(--phosphor); background:var(--panel-alt); font-size:0.9rem; line-height:1;
 }
 
-.skill-row{
-  display:grid; grid-template-columns:6.5rem 1fr 2em auto; align-items:center;
-  gap:8px; padding:6px 0; border-bottom:1px solid var(--line);
-}
+/* A skill: the whole row is a button; tapped, where its points came from
+   shows under it (js/render.js skillRowHtml). */
+.skill-row{ border-bottom:1px solid var(--line); }
 .skill-row:last-child{ border-bottom:none; }
+.skill-hit{ display:block; width:100%; padding:8px 0; text-align:left; min-height:40px; }
+.skill-head{ display:grid; grid-template-columns:6.5rem 1fr 2em; align-items:center; gap:8px; }
 /* The label column fits the longest skill, CONCENTRATION (13 letters). */
 .skill-label{ font-size:0.72rem; letter-spacing:0.04em; color:var(--text-dim); white-space:nowrap; }
-.skill-bar{ height:8px; background:var(--panel-alt); border:1px solid var(--line); border-radius:2px; overflow:hidden; }
-.skill-fill{ height:100%; background:var(--phosphor-dim); transition:width 0.4s ease-out; }
+.skill-row.open .skill-label{ color:var(--amber); }
+.skill-bar{ display:block; height:8px; background:var(--panel-alt); border:1px solid var(--line); border-radius:2px; overflow:hidden; }
+.skill-fill{ display:block; height:100%; background:var(--phosphor-dim); transition:width 0.4s ease-out; }
 .skill-value{ text-align:right; font-size:0.78rem; color:var(--amber); }
+.skill-sub{ display:block; margin-top:3px; padding-left:calc(6.5rem + 8px); font-size:0.64rem; color:var(--text-dim); overflow-wrap:anywhere; }
+.skill-detail{ margin:0 0 8px; padding:8px 10px; border:1px solid var(--line); border-radius:3px; background:var(--panel-alt); font-size:0.76rem; }
+.skill-detail-title{ font-size:0.62rem; letter-spacing:0.12em; color:var(--text-dim); text-transform:uppercase; margin:6px 0 2px; }
+.skill-detail-title:first-child{ margin-top:0; }
+.skill-src{ display:flex; justify-content:space-between; gap:10px; padding:2px 0; color:var(--phosphor); }
+.skill-src span:first-child{ min-width:0; overflow-wrap:anywhere; }
+.skill-src span:last-child{ color:var(--amber); }
+.skill-empty{ margin:2px 0; color:var(--text-dim); }
 
 .main-quest-card{ border:1px solid var(--line); border-radius:3px; padding:10px; background:var(--panel-alt); }
 .main-quest-card + .main-quest-card{ margin-top:10px; }

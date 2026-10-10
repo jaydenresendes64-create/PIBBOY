@@ -64,17 +64,46 @@
     '</div>';
   }
 
+  // A skill: tap it to see where its points came from and what's still to
+  // come (ST.skillSources). Points come from rewards only: quests, books,
+  // the journal (Analyze), urges ridden out.
+  function skillSub(src){
+    if (src.coming.length){
+      var c = src.coming[0];
+      return '+'+c.amount+' coming · '+c.name+(src.coming.length>1 ? ' (+'+(src.coming.length-1)+' more)' : '');
+    }
+    if (src.earned.length){
+      var last = src.earned[src.earned.length-1];
+      return '+'+last.amount+' · '+last.name;
+    }
+    return '';
+  }
+  function skillDetailHtml(src){
+    function lines(list, empty){
+      if (!list.length) return '<p class="skill-empty">'+empty+'</p>';
+      return list.map(function(r){
+        return '<div class="skill-src"><span>'+escapeHtml(r.name)+'</span><span>+'+num(r.amount)+'</span></div>';
+      }).join('');
+    }
+    return '<div class="skill-detail">'+
+      '<div class="skill-detail-title">Earned</div>'+lines(src.earned, 'Nothing logged yet.')+
+      '<div class="skill-detail-title">Coming</div>'+lines(src.coming, 'No open quest gives this.')+
+    '</div>';
+  }
   function skillRowHtml(key){
     var value = num(app.state.skills[key]);
     var pct = clamp(value,0,100);
-    return '<div class="skill-row">'+
-      '<div class="skill-label">'+key+'</div>'+
-      '<div class="skill-bar"><div class="skill-fill" style="width:'+pct+'%"></div></div>'+
-      '<div class="skill-value">'+value+'</div>'+
-      '<div class="stepper">'+
-        '<button class="step-btn" data-action="skill" data-key="'+key+'" data-dir="-1" aria-label="Decrease '+key+'">-</button>'+
-        '<button class="step-btn" data-action="skill" data-key="'+key+'" data-dir="1" aria-label="Increase '+key+'">+</button>'+
-      '</div>'+
+    var src = ST.skillSources(key), open = app.skillOpen===key, sub = skillSub(src);
+    return '<div class="skill-row'+(open ? ' open' : '')+'">'+
+      '<button class="skill-hit" data-action="skill" data-key="'+key+'" aria-expanded="'+open+'">'+
+        '<span class="skill-head">'+
+          '<span class="skill-label">'+key+'</span>'+
+          '<span class="skill-bar"><span class="skill-fill" style="width:'+pct+'%"></span></span>'+
+          '<span class="skill-value">'+value+'</span>'+
+        '</span>'+
+        (sub ? '<span class="skill-sub">'+escapeHtml(sub)+'</span>' : '')+
+      '</button>'+
+      (open ? skillDetailHtml(src) : '')+
     '</div>';
   }
 
@@ -107,6 +136,7 @@
     html += perksHtml();
     html += '<div class="panel-title">Skills</div>';
     SKILL_KEYS.forEach(function(k){ html += skillRowHtml(k); });
+    html += '<p class="vital-fine">Tap a skill: where its points came from. They come from quests, books, the journal and urges ridden out.</p>';
     html += bobbleheadsHtml();
     html += '<div class="panel-title">Lifetime</div><div class="stats-grid">'+
       statsCell(commas(state.lifetimeXp||0), 'Total XP earned')+

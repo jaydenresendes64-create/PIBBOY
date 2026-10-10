@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of the morning-path PR (2026-10-10, after PR #18). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-255/255 tests pass locally. `sw.js` cache: `v24`.
+258/258 tests pass locally. `sw.js` cache: `v24`.
 
 ## 1. What it is
 
@@ -69,7 +69,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 
 - STATUS: S.P.E.C.I.A.L. (STR, END, CHA, INT, AGI; raised by confirmed level-up points and by
   **training**, see below), skills (CONCENTRATION, KNOWLEDGE, SPEECH, SURVIVAL, COOKING, FINANCE, MUSIC,
-  BUSINESS; −/+ allowed), Lifetime stats (+ chem-free days, urges ridden out, vitals check-ins).
+  BUSINESS; tap one for its sources: `skillSources()` in state.js, Earned / Coming; no −/+ since
+  2026-10-10, from a Grok render.js the owner brought), Lifetime stats (+ chem-free days, urges ridden out, vitals check-ins).
 - **VITALS, chem-free streak, urge decoder, training (2026-10-09):** the owner built these in an
   in-Claude copy of the app (a single page from the very first version, its own data in the artifact's
   db) and asked to bring them here. state.js: `vitals` (one entry a day: six 0-10 levels, pulse, radN/radT
@@ -123,6 +124,15 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   300 XP a point (not 100), SURVIVAL is a skill (shown read-only on the urge card after a ride-out),
   fold happens on log (no separate "close morning" tap), UI stays in English, and the lock is a
   setting. Tested in `tests/morning.test.js`.
+- **Skill sources (2026-10-10, a Grok render.js the owner sent):** STATUS skills are buttons
+  (`data-action="skill"` toggles `app.skillOpen`, events.js); open: Earned / Coming from state.js
+  `skillSources(key)` (mains/side by their skillGains and done/completed, books, and history events with
+  `data.skills` other than QUEST_COMPLETED/BOOK_READ, so nothing counts twice). The −/+ steppers are gone.
+  award() adds `data.skills` ('KNOWLEDGE:3,FINANCE:1', after perks) to each event that gave skill points;
+  it fits eventData (strings ≤200, ≤8 keys), so no migration. Not taken from that file: its
+  `syncMorningLock()` (vitals.js `markTab()` already locks, and respects the setting), its `<div>`s
+  inside a `<button>`, and its history parsing of a `data.skills` that award() didn't write yet.
+  Tested in `tests/skills.test.js`.
 - QUESTS: several main quests (types **percent** slider, **streak** daily check-in, **caps** goal
   that follows the wallet; a percent or caps quest at 100% shows a **COMPLETE QUEST** button and only
   its tap pays, `mainReady()`), bonus objectives, side quests (XP + one skill +3)
@@ -207,7 +217,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 7. Plain scripts rather than ES modules so the app still runs from `file://`.
 8. S.P.E.C.I.A.L. keeps its 5 stats: **no LUK** (the owner doesn't believe in luck); PER only if the
    owner asks (maybe later). Stats go up by level-up points and, since 2026-10-09 (the owner's own
-   design), by training: stat-tagged dailies, the VITALS check-in and TRIALS, 300 XP a point. Skills come from Analyze, the −/+ buttons and quests' `skillGains`:
+   design), by training: stat-tagged dailies, the VITALS check-in and TRIALS, 300 XP a point. Skills come from Analyze, books, urges and quests' `skillGains` (the −/+ buttons were removed
+   2026-10-10; award() now records each reward's skill points in the event, `data.skills`):
    main quests, and **side quests** (+3 of one skill, `SIDE_SKILL_GAIN`, paid once by
    `completeSide()`; s1–s4 got theirs by migration). **Daily quests give XP only** (owner's choice
    2026-09-24: +1/day would max skills in months).
