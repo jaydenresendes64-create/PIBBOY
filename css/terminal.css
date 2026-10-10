@@ -1495,6 +1495,9 @@ canvas.item-model{
 .streak-soon{ color:var(--amber); }
 .checkin-done{ border:1px solid var(--amber-dim); border-radius:3px; background:var(--panel-alt); padding:12px; margin-bottom:14px; }
 .checkin-line{ font-size:0.76rem; letter-spacing:0.06em; color:var(--phosphor); }
+/* The day's two counters stay on the folded card: a tap on + any time. */
+.checkin-done .checkin-line{ margin-bottom:8px; }
+.vital-fine.count-hint{ margin:4px 0 0; }
 .field-report{ font-size:0.84rem; line-height:1.5; margin:8px 0 0; }
 .field-tag{ color:var(--amber); letter-spacing:0.08em; }
 .next-step{

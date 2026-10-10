@@ -154,6 +154,13 @@
       '<button class="step-btn" data-vital="rad" data-key="'+key+'" data-dir="1" aria-label="One more, '+label+'">+</button>'+
     '</div></div>';
   }
+  // The day's two counters, a tap on + each time, any time of the day:
+  // on the check-in card, folded or not.
+  function countsHtml(e){
+    return countRowHtml('N', 'RADS // type N', e ? e.radN : 0)+
+      countRowHtml('T', 'RADS // type T', e ? e.radT : 0)+
+      '<p class="vital-fine count-hint">Tap + each time, any time of the day. It saves on its own.</p>';
+  }
   // The average of the numbers given (null left out), one decimal; – for none.
   function average(values){
     values = values.filter(function(v){ return v!==null; });
@@ -277,6 +284,7 @@
       var step = nextStep();
       return html+'<div class="checkin-done">'+
         '<div class="checkin-line">CHECK-IN · DONE ✓ · '+briefText(e)+'</div>'+
+        countsHtml(e)+
         '<p class="field-report"><span class="field-tag">FIELD REPORT //</span> '+escapeHtml(fieldReport())+'</p>'+
         (step ? '<div class="next-step"><span class="next-text">NEXT: '+escapeHtml(step.name)+
             ' <span class="next-kind">'+(step.kind==='trial' ? 'trial due' : 'daily')+'</span></span>'+
@@ -296,8 +304,7 @@
     });
     html += '<div class="count-row"><label for="pulse-input">Resting pulse, bpm</label>'+
         '<input type="number" class="pulse-input" id="pulse-input" inputmode="numeric" min="'+ST.PULSE_MIN+'" max="'+ST.PULSE_MAX+'" placeholder="--" value="'+(e && e.pulse ? num(e.pulse) : '')+'"></div>'+
-      countRowHtml('N', 'RADS // type N', e ? e.radN : 0)+
-      countRowHtml('T', 'RADS // type T', e ? e.radT : 0)+
+      countsHtml(e)+
       '<div class="vital-btns">'+
         (e && e.logged
           ? '<button class="vital-btn" data-vital="checkin-fold">Done ✓</button><span class="vital-sub inline">Changes save on their own.</span>'
@@ -502,8 +509,9 @@
       save(true);
     },
     'rad': function(btn, key){
-      ST.stepRads(key, parseInt(btn.getAttribute('data-dir') || '0', 10));
-      render();
+      var dir = parseInt(btn.getAttribute('data-dir') || '0', 10);
+      ST.stepRads(key, dir);
+      redraw('[data-vital="rad"][data-key="'+key+'"][data-dir="'+dir+'"]');
       save();
     },
     'vitals-log': function(){

@@ -108,6 +108,22 @@ test('logged: the check-in folds into one line, a field report from the state an
   assert.doesNotMatch(vitals(calm), /NEXT:/);
 });
 
+test('the day\'s two counters stay on the folded check-in: a tap on + any time of the day, still logged', () => {
+  const a = app(ST => { ST.logVitals(); ST.stepRads('N', 1); ST.stepRads('N', 1); ST.stepRads('T', 1); });
+  const html = vitals(a);
+  assert.match(html, /CHECK-IN · DONE ✓[\s\S]*?<span>RADS \/\/ type N<\/span>[\s\S]*?<span class="count-num">2<\/span><button class="step-btn" data-vital="rad" data-key="N" data-dir="1"/);
+  assert.match(html, /<span>RADS \/\/ type T<\/span>[\s\S]*?<span class="count-num">1<\/span>/);
+  assert.match(html, /Tap \+ each time, any time of the day\. It saves on its own\./);
+  assert.doesNotMatch(html, /class="vital-range"/);               // still folded
+  a.setNow('2026-10-10T22:30:00');                               // the evening: one more
+  a.ST.stepRads('N', 1);
+  const e = a.ST.vitalsToday(false);
+  assert.deepEqual([e.radN, e.radT, e.logged], [3, 1, true]);
+  a.setNow('2026-10-11T07:00:00');                               // a new day starts from 0
+  a.ST.stepRads('T', 1);
+  assert.deepEqual([a.ST.vitalsToday(false).radN, a.ST.vitalsToday(false).radT], [0, 1]);
+});
+
 test('the next step: a trial due, else the daily quest left longest', () => {
   const a = app((ST, s) => {
     ST.TRIALS.forEach(t => ST.logTrial(t.id, 10));               // no trial due
