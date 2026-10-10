@@ -34,8 +34,9 @@ above them ("Yesterday · energy 4 · sleep 3 · craving 7"), so a day like yest
 the button, the Intelligence training (`INT 5 · TRAIN 15/300`). Once logged, the check-in folds into one
 line and a **FIELD REPORT** written from your day ("Sleep low. Craving high. INT 5 · TRAIN 30/300.
 2 dailies left. 1 trial due. Chem-free day 11 (4 to 14).") and the **NEXT** step: a trial that's due
-(**Go** opens it), else the daily quest left the longest (**Go** opens QUESTS). **Edit check-in**
-opens it again. **Check-in first**: until the day's check-in is logged, QUESTS, ITEMS, MAP and LOG wait
+(**Go** opens it), else the daily quest left the longest (**Go** opens QUESTS). The two counters
+(RADS // type N and T) stay on the folded card: a tap on **+** each time, any time of the day; the
+"Last 7 entries" table gives their average. **Edit check-in** opens it again. **Check-in first**: until the day's check-in is logged, QUESTS, ITEMS, MAP and LOG wait
 (their keys are dimmed; a tap says "Check-in first"); STATUS, VITALS and the urge decoder stay open.
 Turn it off in Settings → Morning.
 
