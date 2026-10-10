@@ -19,6 +19,14 @@
 (function(ST){
   'use strict';
 
+  // The 1 km trial can start a Strava run: the button opens the iPhone
+  // Shortcuts app on a shortcut the owner makes once, named SHORTCUT_NAME,
+  // whose action starts a run in Strava (or just opens Strava). There's no
+  // link that starts a Strava recording by itself, and the time comes back
+  // by hand (the 1 km split, typed in).
+  var RUN_TRIAL = 'km', SHORTCUT_NAME = 'PIBBOY Run';
+  var STRAVA_SHORTCUT = 'shortcuts://run-shortcut?name='+encodeURIComponent(SHORTCUT_NAME);
+
   var el = ST.el, escapeHtml = ST.escapeHtml, attr = ST.escapeHtml, app = ST.app;
 
   function num(v){ var n = Number(v); return isFinite(n) ? n : 0; }
@@ -87,15 +95,18 @@
     return t.timer==='countdown' ? clock(Math.ceil((t.seconds*1000-ms)/1000)) : clock(Math.floor(ms/1000));
   }
   function panelHtml(t){
-    var id = attr(t.id), on = running(t), reps = t.unit==='reps';
+    var id = attr(t.id), on = running(t), reps = t.unit==='reps', strava = t.id===RUN_TRIAL;
     var html = '<div class="trial-panel">';
     if (t.timer!=='counter'){
       html += '<div class="trial-clock" id="trial-clock" role="timer">'+escapeHtml(clockNow(t))+'</div>'+
         '<div class="vital-btns">'+(on ?
           (t.timer==='stopwatch' ? '<button class="vital-btn hot" data-trial="stop" data-id="'+id+'">Stop</button>' : '')+
           '<button class="vital-btn quiet" data-trial="cancel" data-id="'+id+'">Cancel timer</button>' :
-          '<button class="vital-btn hot" data-trial="start" data-id="'+id+'">'+(t.timer==='countdown' ? 'Start '+t.seconds+' s' : 'Start timer')+'</button>')+
-        '</div>';
+          '<button class="vital-btn hot" data-trial="start" data-id="'+id+'">'+(t.timer==='countdown' ? 'Start '+t.seconds+' s' : 'Start timer')+'</button>'+
+          (strava ? '<a class="vital-btn hot trial-strava" href="'+STRAVA_SHORTCUT+'">Run with Strava</a>' : ''))+
+        '</div>'+
+        (strava && !on ? '<p class="vital-fine trial-hint">Run with Strava opens your “'+SHORTCUT_NAME+'” shortcut (Shortcuts app), '+
+          'which starts a Strava run. Back here, type your 1 km time from Strava and save it.</p>' : '');
     }
     if (reps){
       html += '<button class="trial-tap" data-trial="count" data-id="'+id+'" aria-label="One more rep">'+

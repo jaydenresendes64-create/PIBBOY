@@ -196,3 +196,13 @@ test('the clock\'s format', () => {
   const a = loadApp({ files: FILES.vitals });
   assert.deepEqual([0, 9, 60, 92, 600].map(a.ST.trials.clock), ['0:00', '0:09', '1:00', '1:32', '10:00']);
 });
+
+test('the 1 km trial: a button that opens the "PIBBOY Run" shortcut (a Strava run), not on the other trials', () => {
+  const km = screen(ST => { ST.app.trialOpen = 'km'; });
+  assert.match(km, /<a class="vital-btn hot trial-strava" href="shortcuts:\/\/run-shortcut\?name=PIBBOY%20Run">Run with Strava<\/a>/);
+  assert.match(km, /opens your “PIBBOY Run” shortcut \(Shortcuts app\), which starts a Strava run\. Back here, type your 1 km time/);
+  const running = screen(ST => { ST.app.trialOpen = 'km'; ST.startTrial('km'); });
+  assert.doesNotMatch(running, /trial-strava/);                  // the stopwatch is running: Stop and Cancel only
+  const plank = screen(ST => { ST.app.trialOpen = 'plank'; });
+  assert.doesNotMatch(plank, /trial-strava|shortcuts:/);
+});

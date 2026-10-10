@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of the amber Vault Boy rig PR (2026-10-10, after PR #20). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-265/265 tests pass locally. `sw.js` cache: `v26`.
+266/266 tests pass locally. `sw.js` cache: `v26`.
 
 ## 1. What it is
 
@@ -106,6 +106,12 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   the urge ticker/announce only count on the CHECK-IN view (`urgeShown`). render.js `showRecord()`
   (NEW RECORD banner). Boot line `TRIALS ... N DUE THIS WEEK / ALL DONE THIS WEEK`.
   Tested in `tests/trials.test.js`; checked live with Playwright (timers, tap counter, confirm, reload).
+  1 km + Strava (2026-10-10, owner: "open Strava and start the run"): trials.js shows, on the `km`
+  trial's panel (not while its stopwatch runs), a link `shortcuts://run-shortcut?name=PIBBOY%20Run`
+  (Apple's documented URL to run a shortcut). Strava has no documented link that starts a recording;
+  its Siri shortcut (start a run/walk) goes in the owner's "PIBBOY Run" shortcut. The result is typed
+  back by hand (Strava's 1 km split): reading it automatically would need Strava's API, whose OAuth
+  needs a client secret, so a server; not on GitHub Pages.
 - **Morning path (2026-10-10, from a Grok prompt the owner brought, reviewed against the code):** the
   app opens on VITALS (main.js; index.html shows #tab-vitals first). vitals.js `order()`: urge decoder
   first if `urges.active` or a craving ≥ 6 (today's logged check-in, else yesterday's: `lastCheckIn().ago===1`),
