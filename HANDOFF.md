@@ -109,7 +109,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   app opens on VITALS (main.js; index.html shows #tab-vitals first). vitals.js `order()`: urge decoder
   first if `urges.active` or a craving ≥ 6 (today's logged check-in, else yesterday's: `lastCheckIn().ago===1`),
   streak first when the next milestone is tomorrow (`next.days - cleanFullDays() === 1`), else the
-  check-in; the three cards are always there, then "Last 7 entries". The streak card moved off STATUS
+  check-in; the others follow in the usual order check-in, streak, urge (owner's "Patch 2": the streak
+  stays in sight under the field report); the three cards are always there, then "Last 7 entries". The streak card moved off STATUS
   (Lifetime keeps the total). state.js `lastCheckIn()` (latest logged entry before today + `ago`);
   `vitalsToday(true)` seeds the six levels from it (5 without one; pulse/counters start empty), and the
   sliders show the same before the first move. Logged → folded (`app.vitalsEdit` reopens it, session

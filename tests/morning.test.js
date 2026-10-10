@@ -32,7 +32,7 @@ function logOn(a, day, levels) {
 
 test('the cards\' order: the check-in first, the urge decoder after a high craving or while a timer runs, the streak the day before a milestone', () => {
   const fresh = app();
-  assert.deepEqual(fresh.plain(fresh.ST.vitals.order()), ['checkin', 'urge', 'streak']);
+  assert.deepEqual(fresh.plain(fresh.ST.vitals.order()), ['checkin', 'streak', 'urge']);
 
   const craving = app((ST, s, a) => logOn(a, '2026-10-09', { craving: 7 }));
   assert.deepEqual(craving.plain(craving.ST.vitals.order()), ['urge', 'checkin', 'streak']);

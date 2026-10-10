@@ -29,7 +29,7 @@ also shows the chem-free day and whether today's check-in is done.
 **The morning** (the app opens on **VITALS**): the screen says what to do today. Its three cards come
 in the order that matters today: the **urge decoder** first while its timer runs or after a craving of
 6 or more (today's check-in, or yesterday's), the **chem-free streak** first the day before a milestone
-("Day 7. Tomorrow: +150 XP."), else the **check-in**. The sliders start from your last check-in, shown
+("Day 7. Tomorrow: +150 XP."), else the **check-in**, then the streak, then the urge decoder. The sliders start from your last check-in, shown
 above them ("Yesterday · energy 4 · sleep 3 · craving 7"), so a day like yesterday is one tap. Under
 the button, the Intelligence training (`INT 5 · TRAIN 15/300`). Once logged, the check-in folds into one
 line and a **FIELD REPORT** written from your day ("Sleep low. Craving high. INT 5 · TRAIN 30/300.

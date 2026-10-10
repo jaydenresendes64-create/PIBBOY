@@ -8,7 +8,8 @@
  * The morning path (2026-10-10): the app opens here. The three cards come
  * in the order that matters today (order()): the urge decoder first while
  * its timer runs or after a high craving, the streak first the day before
- * a milestone, else the check-in. The sliders start from the last
+ * a milestone, else the check-in (then the streak, in sight under the
+ * field report, then the urge decoder). The sliders start from the last
  * check-in. Once logged, the check-in folds into one line, a field report
  * (fieldReport(), from the state) and the next step (nextStep(): a trial
  * due, else the daily quest left longest). Until it's logged, QUESTS,
@@ -217,10 +218,11 @@
   }
   // The CHECK-IN view's three cards, the one that matters most today first:
   // the urge decoder (a timer, or a high craving), the streak (a milestone
-  // tomorrow), else the check-in. They're always all there.
+  // tomorrow), else the check-in; the others after it in their usual order
+  // (check-in, streak, urge). They're always all there.
   function order(){
     var first = app.state.urges.active || cravingHigh() ? 'urge' : milestoneTomorrow() ? 'streak' : 'checkin';
-    return [first].concat(['checkin', 'urge', 'streak'].filter(function(b){ return b!==first; }));
+    return [first].concat(['checkin', 'streak', 'urge'].filter(function(b){ return b!==first; }));
   }
   // "INT 4 · TRAIN 150/300", as on STATUS ("INT 10 · MAX" at 10).
   function trainText(stat){
