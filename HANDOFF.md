@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
-State as of the TRIALS PR (2026-10-10, after PR #17). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-248/248 tests pass locally. `sw.js` cache: `v24`.
+State as of the morning-path PR (2026-10-10, after PR #18). Live: https://jaydenresendes64-create.github.io/PIBBOY/
+258/258 tests pass locally. `sw.js` cache: `v24`.
 
 ## 1. What it is
 
@@ -26,7 +26,7 @@ Plain scripts (not ES modules, so `index.html` still opens from disk) sharing
 | `js/render.js` | Builds every tab's HTML (escapes everything), toasts/banners, `switchTab` |
 | `js/items3d.js` | ITEMS 3D wireframe models (Three.js, dynamic `import()`), one shared WebGLRenderer copied into small 2D canvases |
 | `js/mascot.js` | Mascot gesture scheduling (moves are CSS keyframes, per body part: see §3 Look & feel) |
-| `js/vitals.js` | VITALS tab with its CHECK-IN / TRIALS sub-tabs (`app.vitalsView`; check-in, urge decoder + its timer's clock, last 7 days) and STATUS's chem-free streak card; its buttons use `data-vital` (its own listeners), the rules are in state.js |
+| `js/vitals.js` | VITALS tab with its CHECK-IN / TRIALS sub-tabs (`app.vitalsView`; check-in, urge decoder + its timer's clock, chem-free streak card, last 7 days), the morning path (`order`, `fieldReport`, `nextStep`) and Check-in first (`locked`); its buttons use `data-vital` (its own listeners), the rules are in state.js |
 | `js/trials.js` | VITALS → TRIALS screen (`ST.trials.html()` drawn by vitals.js `render()`): cards, the open trial's panel (3-2-1, stopwatch/countdown clock, tap counter, save confirm, last results), the timer loop + wake lock; buttons use `data-trial` (its own listeners), the rules are in state.js |
 | `js/crt.js`, `js/tilt.js` | CRT flicker; 3D tilt (DeviceOrientation/mouse) incl. glass glare parallax |
 | `js/events.js` | All user actions → state change → re-render → debounced save |
@@ -69,7 +69,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 
 - STATUS: S.P.E.C.I.A.L. (STR, END, CHA, INT, AGI; raised by confirmed level-up points and by
   **training**, see below), skills (CONCENTRATION, KNOWLEDGE, SPEECH, SURVIVAL, COOKING, FINANCE, MUSIC,
-  BUSINESS; −/+ allowed), Lifetime stats (+ chem-free days, urges ridden out, vitals check-ins).
+  BUSINESS; tap one for its sources: `skillSources()` in state.js, Earned / Coming; no −/+ since
+  2026-10-10, from a Grok render.js the owner brought), Lifetime stats (+ chem-free days, urges ridden out, vitals check-ins).
 - **VITALS, chem-free streak, urge decoder, training (2026-10-09):** the owner built these in an
   in-Claude copy of the app (a single page from the very first version, its own data in the artifact's
   db) and asked to bring them here. state.js: `vitals` (one entry a day: six 0-10 levels, pulse, radN/radT
@@ -105,6 +106,33 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   the urge ticker/announce only count on the CHECK-IN view (`urgeShown`). render.js `showRecord()`
   (NEW RECORD banner). Boot line `TRIALS ... N DUE THIS WEEK / ALL DONE THIS WEEK`.
   Tested in `tests/trials.test.js`; checked live with Playwright (timers, tap counter, confirm, reload).
+- **Morning path (2026-10-10, from a Grok prompt the owner brought, reviewed against the code):** the
+  app opens on VITALS (main.js; index.html shows #tab-vitals first). vitals.js `order()`: urge decoder
+  first if `urges.active` or a craving ≥ 6 (today's logged check-in, else yesterday's: `lastCheckIn().ago===1`),
+  streak first when the next milestone is tomorrow (`next.days - cleanFullDays() === 1`), else the
+  check-in; the others follow in the usual order check-in, streak, urge (owner's "Patch 2": the streak
+  stays in sight under the field report); the three cards are always there, then "Last 7 entries". The streak card moved off STATUS
+  (Lifetime keeps the total). state.js `lastCheckIn()` (latest logged entry before today + `ago`);
+  `vitalsToday(true)` seeds the six levels from it (5 without one; pulse/counters start empty), and the
+  sliders show the same before the first move. Logged → folded (`app.vitalsEdit` reopens it, session
+  only): one line, `fieldReport()` (sleep ≤ 3, craving ≥ 6, INT training, dailies left, trials due,
+  chem-free day like the boot line) and `nextStep()` (first trial due, else the daily with the oldest
+  lastDate, `go` → TRIALS with that trial open, or QUESTS). Check-in first: `locked(tab)` for
+  quests/items/map/log until today's check-in is logged; events.js refuses the tab tap with a notice;
+  keys get `.locked` + aria-disabled in `markTab()`; device pref `status_terminal_checkin_first`
+  ('0' = off), Settings → Morning. No new data, no new XP path. Changed from Grok's text: training is
+  300 XP a point (not 100), SURVIVAL is a skill (shown read-only on the urge card after a ride-out),
+  fold happens on log (no separate "close morning" tap), UI stays in English, and the lock is a
+  setting. Tested in `tests/morning.test.js`.
+- **Skill sources (2026-10-10, a Grok render.js the owner sent):** STATUS skills are buttons
+  (`data-action="skill"` toggles `app.skillOpen`, events.js); open: Earned / Coming from state.js
+  `skillSources(key)` (mains/side by their skillGains and done/completed, books, and history events with
+  `data.skills` other than QUEST_COMPLETED/BOOK_READ, so nothing counts twice). The −/+ steppers are gone.
+  award() adds `data.skills` ('KNOWLEDGE:3,FINANCE:1', after perks) to each event that gave skill points;
+  it fits eventData (strings ≤200, ≤8 keys), so no migration. Not taken from that file: its
+  `syncMorningLock()` (vitals.js `markTab()` already locks, and respects the setting), its `<div>`s
+  inside a `<button>`, and its history parsing of a `data.skills` that award() didn't write yet.
+  Tested in `tests/skills.test.js`.
 - QUESTS: several main quests (types **percent** slider, **streak** daily check-in, **caps** goal
   that follows the wallet; a percent or caps quest at 100% shows a **COMPLETE QUEST** button and only
   its tap pays, `mainReady()`), bonus objectives, side quests (XP + one skill +3)
@@ -189,7 +217,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 7. Plain scripts rather than ES modules so the app still runs from `file://`.
 8. S.P.E.C.I.A.L. keeps its 5 stats: **no LUK** (the owner doesn't believe in luck); PER only if the
    owner asks (maybe later). Stats go up by level-up points and, since 2026-10-09 (the owner's own
-   design), by training: stat-tagged dailies, the VITALS check-in and TRIALS, 300 XP a point. Skills come from Analyze, the −/+ buttons and quests' `skillGains`:
+   design), by training: stat-tagged dailies, the VITALS check-in and TRIALS, 300 XP a point. Skills come from Analyze, books, urges and quests' `skillGains` (the −/+ buttons were removed
+   2026-10-10; award() now records each reward's skill points in the event, `data.skills`):
    main quests, and **side quests** (+3 of one skill, `SIDE_SKILL_GAIN`, paid once by
    `completeSide()`; s1–s4 got theirs by migration). **Daily quests give XP only** (owner's choice
    2026-09-24: +1/day would max skills in months).

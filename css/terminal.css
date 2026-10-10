@@ -685,16 +685,26 @@ button{ cursor:pointer; }
   color:var(--phosphor); background:var(--panel-alt); font-size:0.9rem; line-height:1;
 }
 
-.skill-row{
-  display:grid; grid-template-columns:6.5rem 1fr 2em auto; align-items:center;
-  gap:8px; padding:6px 0; border-bottom:1px solid var(--line);
-}
+/* A skill: the whole row is a button; tapped, where its points came from
+   shows under it (js/render.js skillRowHtml). */
+.skill-row{ border-bottom:1px solid var(--line); }
 .skill-row:last-child{ border-bottom:none; }
+.skill-hit{ display:block; width:100%; padding:8px 0; text-align:left; min-height:40px; }
+.skill-head{ display:grid; grid-template-columns:6.5rem 1fr 2em; align-items:center; gap:8px; }
 /* The label column fits the longest skill, CONCENTRATION (13 letters). */
 .skill-label{ font-size:0.72rem; letter-spacing:0.04em; color:var(--text-dim); white-space:nowrap; }
-.skill-bar{ height:8px; background:var(--panel-alt); border:1px solid var(--line); border-radius:2px; overflow:hidden; }
-.skill-fill{ height:100%; background:var(--phosphor-dim); transition:width 0.4s ease-out; }
+.skill-row.open .skill-label{ color:var(--amber); }
+.skill-bar{ display:block; height:8px; background:var(--panel-alt); border:1px solid var(--line); border-radius:2px; overflow:hidden; }
+.skill-fill{ display:block; height:100%; background:var(--phosphor-dim); transition:width 0.4s ease-out; }
 .skill-value{ text-align:right; font-size:0.78rem; color:var(--amber); }
+.skill-sub{ display:block; margin-top:3px; padding-left:calc(6.5rem + 8px); font-size:0.64rem; color:var(--text-dim); overflow-wrap:anywhere; }
+.skill-detail{ margin:0 0 8px; padding:8px 10px; border:1px solid var(--line); border-radius:3px; background:var(--panel-alt); font-size:0.76rem; }
+.skill-detail-title{ font-size:0.62rem; letter-spacing:0.12em; color:var(--text-dim); text-transform:uppercase; margin:6px 0 2px; }
+.skill-detail-title:first-child{ margin-top:0; }
+.skill-src{ display:flex; justify-content:space-between; gap:10px; padding:2px 0; color:var(--phosphor); }
+.skill-src span:first-child{ min-width:0; overflow-wrap:anywhere; }
+.skill-src span:last-child{ color:var(--amber); }
+.skill-empty{ margin:2px 0; color:var(--text-dim); }
 
 .main-quest-card{ border:1px solid var(--line); border-radius:3px; padding:10px; background:var(--panel-alt); }
 .main-quest-card + .main-quest-card{ margin-top:10px; }
@@ -1365,6 +1375,25 @@ canvas.item-model{
 .tab-btn.active[data-alert]::after{ background:var(--bg); box-shadow:none; }
 @keyframes tabLight{ 50%{ opacity:0.35; } }
 .tab-btn[data-alert="trial"]::after{ animation:tabLight 1.6s ease-in-out infinite; }
+
+/* ---------- the morning path (js/vitals.js) ----------
+   A tab waiting for the day's check-in (Check-in first): dimmed, still
+   tappable (the tap says why). The logged check-in folded into one line,
+   the field report and the next step. */
+.tab-btn.locked:not(.active){ opacity:0.45; border-style:dashed; }
+.vital-sub.yesterday{ color:var(--amber); margin:0 0 6px; }
+.vital-sub.train-line{ margin:8px 0 0; color:var(--amber); }
+.streak-soon{ color:var(--amber); }
+.checkin-done{ border:1px solid var(--amber-dim); border-radius:3px; background:var(--panel-alt); padding:12px; margin-bottom:14px; }
+.checkin-line{ font-size:0.76rem; letter-spacing:0.06em; color:var(--phosphor); }
+.field-report{ font-size:0.84rem; line-height:1.5; margin:8px 0 0; }
+.field-tag{ color:var(--amber); letter-spacing:0.08em; }
+.next-step{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  margin-top:10px; padding-top:10px; border-top:1px solid var(--line); font-size:0.84rem;
+}
+.next-text{ min-width:0; overflow-wrap:anywhere; }
+.next-kind{ font-size:0.68rem; color:var(--text-dim); letter-spacing:0.06em; }
 
 /* ---------- VITALS sub-tabs and TRIALS (js/trials.js) ---------- */
 .sub-tabs{ display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:14px; }

@@ -36,7 +36,7 @@ test('what a backup and a reset leave out is said where it matters', () => {
 
 test('each switch shows its label and [ ON ] / [ OFF ] from aria-pressed', () => {
   const toggles = panel.match(/<button class="set-toggle"[^>]*>/g);
-  assert.equal(toggles.length, 3);
+  assert.equal(toggles.length, 4);
   toggles.forEach(t => {
     assert.match(t, /data-label="[^"]+"/);
     assert.match(t, /aria-pressed="(true|false)"/);

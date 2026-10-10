@@ -8,7 +8,6 @@
   'use strict';
 
   var el = ST.el, clamp = ST.clamp, genId = ST.genId;
-  var grantSkill = ST.grantSkill;
   var app = ST.app;
   var R = ST.render;
   var renderHeader = R.renderHeader, renderStatus = R.renderStatus, renderQuests = R.renderQuests,
@@ -596,9 +595,11 @@
       renderStatus();
       focusStatus('[data-action="bobble"][data-key="'+key+'"]');
     },
+    // A skill tapped: where its points came from, under it (tap again to close).
     'skill': function(btn, id, key){
-      grantSkill(key, parseInt(btn.getAttribute('data-dir')||'0', 10));
-      renderStatus(); scheduleSave();
+      app.skillOpen = app.skillOpen===key ? null : key;
+      renderStatus();
+      focusStatus('[data-action="skill"][data-key="'+key+'"]');
     },
     // Quests: every reward through state.js, once (completeSide/Daily/Bonus).
     'quest-complete': function(btn, id){
@@ -721,6 +722,7 @@
     'tilt-btn': function(){ if (ST.tilt) ST.tilt.toggle(); },
     'sound-btn': function(){ if (ST.sfx) ST.sfx.toggleSound(); },
     'power-btn': function(){ if (ST.sfx) ST.sfx.togglePowerScreen(); },
+    'checkin-first-btn': function(){ if (ST.vitals) ST.vitals.toggleLock(); },
     'sounds-btn': function(){ if (ST.sfxCustom) ST.sfxCustom.open(); },
     'weather-btn': function(){ if (ST.weather) ST.weather.tell(); },
     'settings-btn': openSettings,
@@ -741,6 +743,8 @@
     var tabBtn = e.target.closest('[data-tab]');
     if (tabBtn){
       var tab = tabBtn.getAttribute('data-tab');
+      // Check-in first (js/vitals.js): until it's logged, some tabs wait.
+      if (ST.vitals && ST.vitals.locked(tab)){ ST.vitals.refuse(); return; }
       R.switchTab(tab);
       if (tab==='map' && ST.map) ST.map.show();
       if (ST.vitals) ST.vitals.onTab(tab);

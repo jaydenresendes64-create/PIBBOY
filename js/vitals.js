@@ -2,8 +2,18 @@
  * VITALS — the owner's own design, brought over from their in-Claude
  * version (2026-10-09): the day's check-in (how you feel, 0 to 10; the
  * resting pulse; two counters), the last seven days with their averages,
- * and the urge decoder (name the real need, then a 20-minute timer). And
- * the chem-free streak's card at the top of STATUS (render.js asks for it).
+ * the urge decoder (name the real need, then a 20-minute timer) and the
+ * chem-free streak's card.
+ *
+ * The morning path (2026-10-10): the app opens here. The three cards come
+ * in the order that matters today (order()): the urge decoder first while
+ * its timer runs or after a high craving, the streak first the day before
+ * a milestone, else the check-in (then the streak, in sight under the
+ * field report, then the urge decoder). The sliders start from the last
+ * check-in. Once logged, the check-in folds into one line, a field report
+ * (fieldReport(), from the state) and the next step (nextStep(): a trial
+ * due, else the daily quest left longest). Until it's logged, QUESTS,
+ * ITEMS, MAP and LOG wait (Settings: Check-in first).
  *
  * The rules and rewards live in js/state.js (logVitals, claimCleanMilestones,
  * urgeWon, trainStat: through award(), recorded in the history); this file
@@ -57,7 +67,7 @@
     return m ? new Date(+m[1], +m[2]-1, +m[3]).toLocaleDateString('en-US', {month:'short', day:'numeric'}) : '';
   }
 
-  // ---------- the chem-free streak (top of STATUS) ----------
+  // ---------- the chem-free streak ----------
   function streakCardHtml(){
     var c = app.state.chems, day = ST.cleanDay();
     var html = '<div class="vital-card streak-card"><div class="vital-head">Chem-free streak</div>';
@@ -77,6 +87,8 @@
     } else {
       var done = day-1, next = ST.nextCleanMilestone(), best = num(c.best);
       html += '<div class="streak-big">DAY '+pad2(day)+'</div>';
+      var soon = milestoneTomorrow();
+      if (soon) html += '<p class="vital-sub streak-soon">Day '+day+'. Tomorrow: +'+soon.xp+' XP.</p>';
       if (next){
         var prev = 0;
         ST.CLEAN_MILESTONES.forEach(function(m){ if (m.days<next.days) prev = m.days; });
@@ -111,6 +123,7 @@
           }).join('')+
           '<button class="vital-btn quiet wide" data-vital="urge-start" data-key="NONE">None of these</button>'+
         '</div>'+
+        (ST.urgesToday()>0 ? '<p class="vital-sub">Ridden out today: '+ST.urgesToday()+' · SURVIVAL '+num(app.state.skills.SURVIVAL)+'</p>' : '')+
         '<p class="vital-fine">'+HELP_LINE+'</p>';
     } else if (left>0){
       html += '<p class="urge-tip">'+escapeHtml(TIPS[a.need] || TIPS.NONE)+'</p>'+
@@ -182,17 +195,99 @@
     var tab = el('tab-vitals');
     if (!tab || !app.state) return;
     var trials = view()==='trials';
-    tab.innerHTML = subTabsHtml(trials)+(trials ? ST.trials.html() : checkInHtml());
+    tab.innerHTML = subTabsHtml(trials)+(trials ? ST.trials.html() : checkInViewHtml());
     if (trials) ST.trials.drawn();
     syncTicker();
     syncAlarm();
     markTab();
   }
-  function checkInHtml(){
-    var e = ST.vitalsToday(false);
-    var html = urgeCardHtml()+'<div class="panel-title">Today’s check-in</div>';
+
+  // ---------- the morning ----------
+  var CRAVING_HIGH = 6, SLEEP_LOW = 3;
+  var BRIEF = ['energy', 'sleep', 'craving'];       // the levels in the one-line summaries
+  // A craving at 6 or more: today's check-in's, or else yesterday's.
+  function cravingHigh(){
+    var e = ST.vitalsToday(false), last = ST.lastCheckIn();
+    if (e && e.logged) return num(e.craving)>=CRAVING_HIGH;
+    return !!last && last.ago===1 && num(last.craving)>=CRAVING_HIGH;
+  }
+  // The next chem-free milestone when it's reached tomorrow, else null.
+  function milestoneTomorrow(){
+    var day = ST.cleanDay(), next = ST.nextCleanMilestone();
+    return day!==null && day>0 && next && next.days-ST.cleanFullDays()===1 ? next : null;
+  }
+  // The CHECK-IN view's three cards, the one that matters most today first:
+  // the urge decoder (a timer, or a high craving), the streak (a milestone
+  // tomorrow), else the check-in; the others after it in their usual order
+  // (check-in, streak, urge). They're always all there.
+  function order(){
+    var first = app.state.urges.active || cravingHigh() ? 'urge' : milestoneTomorrow() ? 'streak' : 'checkin';
+    return [first].concat(['checkin', 'streak', 'urge'].filter(function(b){ return b!==first; }));
+  }
+  // "INT 4 · TRAIN 150/300", as on STATUS ("INT 10 · MAX" at 10).
+  function trainText(stat){
+    var v = num(app.state.stats[stat]);
+    return stat+' '+v+' · '+(v>=10 ? 'MAX' : 'TRAIN '+num(app.state.statTrain[stat])+'/'+ST.TRAIN_PER_POINT);
+  }
+  function briefText(e){
+    return BRIEF.map(function(k){ return LABELS[k].toLowerCase()+' '+num(e[k]); }).join(' · ');
+  }
+  // The day in one line, from the state, once the check-in is logged.
+  function fieldReport(){
+    var s = app.state, e = ST.vitalsToday(false), out = [];
+    if (e && e.logged){
+      if (num(e.sleep)<=SLEEP_LOW) out.push('Sleep low.');
+      if (num(e.craving)>=CRAVING_HIGH) out.push('Craving high.');
+    }
+    out.push(trainText('INT')+'.');
+    var daily = s.quests.daily, left = daily.filter(function(d){ return !ST.dailyDoneToday(d); }).length;
+    if (daily.length) out.push(left ? left+' dail'+(left===1 ? 'y' : 'ies')+' left.' : 'Dailies done.');
+    var due = ST.trialsDue ? ST.trialsDue() : 0;
+    if (due) out.push(plural(due, 'trial')+' due.');
+    var day = ST.cleanDay();
+    if (day!==null){
+      var next = ST.nextCleanMilestone();
+      out.push(day<=0 ? 'Chem-free restarts tomorrow.' :
+        'Chem-free day '+day+(next ? ' ('+(next.days-ST.cleanFullDays())+' to '+next.days+')' : '')+'.');
+    }
+    return out.join(' ');
+  }
+  // What to do next: a trial due (the first on the list), else the daily
+  // quest left longest (not done today); null for none.
+  function nextStep(){
+    var t = ST.trialList ? ST.trialList().filter(function(x){ return ST.trialDue(x.id); })[0] : null;
+    if (t) return {kind:'trial', id:t.id, name:t.name};
+    var left = app.state.quests.daily.filter(function(d){ return !ST.dailyDoneToday(d); });
+    if (!left.length) return null;
+    function age(d){ var n = ST.daysSince(d.lastDate); return n===null ? Infinity : n; }
+    var d = left.reduce(function(a, b){ return age(b)>age(a) ? b : a; });
+    return {kind:'daily', id:d.id, name:d.name || d.questName};
+  }
+
+  // ---------- the CHECK-IN view ----------
+  function checkInViewHtml(){
+    var cards = {urge:urgeCardHtml, streak:streakCardHtml, checkin:checkInCardHtml};
+    return order().map(function(c){ return cards[c](); }).join('')+
+      '<div class="panel-title">Last 7 entries</div>'+tableHtml();
+  }
+  function checkInCardHtml(){
+    var e = ST.vitalsToday(false), last = ST.lastCheckIn();
+    var html = '<div class="panel-title">Today’s check-in</div>';
+    if (e && e.logged && !app.vitalsEdit){
+      var step = nextStep();
+      return html+'<div class="checkin-done">'+
+        '<div class="checkin-line">CHECK-IN · DONE ✓ · '+briefText(e)+'</div>'+
+        '<p class="field-report"><span class="field-tag">FIELD REPORT //</span> '+escapeHtml(fieldReport())+'</p>'+
+        (step ? '<div class="next-step"><span class="next-text">NEXT: '+escapeHtml(step.name)+
+            ' <span class="next-kind">'+(step.kind==='trial' ? 'trial due' : 'daily')+'</span></span>'+
+            '<button class="vital-btn hot" data-vital="go" data-key="'+step.kind+'" data-id="'+escapeHtml(step.id)+'">Go</button></div>' : '')+
+        '<div class="vital-btns"><button class="vital-btn quiet" data-vital="checkin-edit">Edit check-in</button></div>'+
+      '</div>';
+    }
+    if (last) html += '<p class="vital-sub yesterday">'+(last.ago===1 ? 'Yesterday' : 'Last check-in, '+escapeHtml(shortDay(last.date)))+
+      ' · '+briefText(last)+'</p>';
     ST.VITAL_KEYS.forEach(function(k){
-      var v = e ? num(e[k]) : 5;
+      var v = e ? num(e[k]) : last ? clamp(Math.round(num(last[k])), 0, 10) : 5;
       html += '<div class="vital-row">'+
         '<label for="vr-'+k+'">'+LABELS[k]+'</label>'+
         '<input type="range" class="vital-range" id="vr-'+k+'" data-key="'+k+'" min="0" max="10" step="1" value="'+v+'">'+
@@ -205,12 +300,11 @@
       countRowHtml('T', 'RADS // type T', e ? e.radT : 0)+
       '<div class="vital-btns">'+
         (e && e.logged
-          ? '<button class="vital-btn" disabled>Logged ✓</button><span class="vital-sub inline">Changes save on their own.</span>'
+          ? '<button class="vital-btn" data-vital="checkin-fold">Done ✓</button><span class="vital-sub inline">Changes save on their own.</span>'
           : '<button class="vital-btn hot" data-vital="vitals-log">Log check-in +'+ST.VITALS_XP+' XP</button>')+
       '</div>'+
-      '<p class="vital-fine">0 is none, 10 is maximum. Take the pulse before getting up, counted over 60 seconds. '+
-        'The check-in trains Intelligence.</p>'+
-      '<div class="panel-title">Last 7 entries</div>'+tableHtml();
+      '<p class="vital-sub train-line">Trains '+trainText('INT')+'</p>'+
+      '<p class="vital-fine">0 is none, 10 is maximum. Take the pulse before getting up, counted over 60 seconds.</p>';
     return html;
   }
   function shown(){
@@ -295,6 +389,12 @@
     return e && e.logged ? '' : 'due';
   }
   function markTab(){
+    document.querySelectorAll('.tab-btn[data-tab]').forEach(function(b){
+      var off = locked(b.getAttribute('data-tab'));
+      b.classList.toggle('locked', off);
+      if (off) b.setAttribute('aria-disabled', 'true');
+      else b.removeAttribute('aria-disabled');
+    });
     var key = document.querySelector('.tab-btn[data-tab="vitals"]');
     if (!key) return;
     var a = alertState();
@@ -302,10 +402,44 @@
     else { key.removeAttribute('data-alert'); key.removeAttribute('aria-label'); }
   }
 
+  // ---------- check-in first ----------
+  // Until the day's check-in is logged, QUESTS, ITEMS, MAP and LOG wait:
+  // their keys are dimmed and a tap says why (events.js asks locked()).
+  // STATUS and VITALS stay open, the urge decoder too. A setting of this
+  // device (Settings: Check-in first), on unless turned off; off when the
+  // device's storage can't be read (the choice couldn't be changed).
+  var LOCK_KEY = 'status_terminal_checkin_first';   // '0': off on this device
+  var LOCKED_TABS = ['quests', 'items', 'map', 'log'];
+  function lockOn(){ try{ return localStorage.getItem(LOCK_KEY)!=='0'; }catch(e){ return false; } }
+  function locked(tab){
+    if (LOCKED_TABS.indexOf(tab)===-1 || !app.state || !lockOn()) return false;
+    var e = ST.vitalsToday(false);
+    return !(e && e.logged);
+  }
+  function refuse(){
+    sound('error');
+    ST.render.showNotice('Check-in first: VITALS');
+  }
+  function showLock(){
+    var b = el('checkin-first-btn');
+    if (!b) return;
+    var on = lockOn();
+    b.textContent = 'Check-in first: '+(on ? 'on' : 'off');
+    b.setAttribute('aria-pressed', String(on));
+  }
+  function toggleLock(){
+    try{
+      if (lockOn()) localStorage.setItem(LOCK_KEY, '0');
+      else localStorage.removeItem(LOCK_KEY);
+    }catch(e){}
+    showLock();
+    markTab();
+  }
+
   // ---------- taps ----------
-  function redrawStatus(focus){
-    ST.render.renderStatus();
-    var btn = focus && el('tab-status').querySelector(focus);
+  function redraw(focus){
+    render();
+    var btn = focus && el('tab-vitals').querySelector(focus);
     if (btn) btn.focus();
   }
   // A reward's toasts: its XP and skills, a level-up, the stats it trained.
@@ -315,34 +449,29 @@
     (r.trained || []).forEach(function(stat){ ST.render.showTrained(stat); });
     ST.render.renderHeader();
   }
-  function openVitals(){
-    ST.render.switchTab('vitals');
-    if (ST.mascot) ST.mascot.onTab('vitals');
-    render();
-  }
   var ACTIONS = {
     'streak-edit': function(){
       app.streakEdit = !app.streakEdit;
       app.confirmLapse = false;
-      redrawStatus(app.streakEdit ? '#streak-date' : '[data-vital="streak-edit"]');
+      redraw(app.streakEdit ? '#streak-date' : '[data-vital="streak-edit"]');
     },
     'streak-set': function(){
       var input = el('streak-date');
       if (!input || !ST.setCleanStart(input.value)){ if (input) input.focus(); return; }
       app.streakEdit = false;
-      redrawStatus('[data-vital="goto-urge"]');
+      redraw('[data-vital="goto-urge"]');
       save(true);                 // the milestones it reached are paid just after (events.js)
     },
-    'lapse-ask': function(){ app.confirmLapse = true; redrawStatus('[data-vital="lapse-no"]'); },
-    'lapse-no': function(){ app.confirmLapse = false; redrawStatus('[data-vital="lapse-ask"]'); },
+    'lapse-ask': function(){ app.confirmLapse = true; redraw('[data-vital="lapse-no"]'); },
+    'lapse-no': function(){ app.confirmLapse = false; redraw('[data-vital="lapse-ask"]'); },
     'lapse-yes': function(){
       app.confirmLapse = false;
       if (ST.logLapse()) save(true);
-      redrawStatus('[data-vital="goto-urge"]');
+      redraw('[data-vital="goto-urge"]');
     },
+    // The streak card's "Urge? Decode it": the decoder, on the same screen.
     'goto-urge': function(){
-      app.vitalsView = 'checkin';
-      openVitals();
+      if (view()!=='checkin'){ app.vitalsView = 'checkin'; render(); }
       var card = el('urge-card');
       if (card && card.scrollIntoView) card.scrollIntoView({block:'start', behavior:ST.stayStill() ? 'auto' : 'smooth'});
     },
@@ -353,21 +482,22 @@
       var pressed = document.querySelector('.sub-tab[data-key="'+app.vitalsView+'"]');
       if (pressed) pressed.focus();
     },
+    // A timer running puts the decoder first (order()): the whole view is drawn again.
     'urge-start': function(btn, key){
       ST.startUrge(key);
-      redrawUrge();
+      redraw('[data-vital="urge-cancel"]');
+      var card = el('urge-card');
+      if (card && card.scrollIntoView) card.scrollIntoView({block:'start', behavior:'auto'});
       save(true);
-      var cancel = document.querySelector('[data-vital="urge-cancel"]');
-      if (cancel) cancel.focus();
     },
     'urge-again': function(){ if (ST.urgeAgain()){ redrawUrge(); save(true); } },
-    'urge-cancel': function(){ ST.cancelUrge(); redrawUrge(); save(); },
+    'urge-cancel': function(){ ST.cancelUrge(); render(); save(); },
     'urge-won': function(){
       var r = ST.urgeWon();
       if (!r) return;
       if (r.capped) ST.render.showNotice('Logged — today’s XP for urges is used up');
       else { sound('complete'); showReward(r); }
-      redrawUrge();
+      render();
       ST.render.renderStatus();     // the Lifetime count, the skill
       save(true);
     },
@@ -381,9 +511,26 @@
       if (!r) return;
       sound('complete');
       showReward(r);
-      render();
+      app.vitalsEdit = false;
+      redraw('[data-vital="go"], [data-vital="checkin-edit"]');    // folded: the report, the next step
       ST.render.renderStatus();
       save(true);
+    },
+    // The logged check-in, opened again to change it, and folded back.
+    'checkin-edit': function(){ app.vitalsEdit = true; redraw('.vital-range'); },
+    'checkin-fold': function(){ app.vitalsEdit = false; redraw('[data-vital="checkin-edit"]'); },
+    // The next step: the trial opened on TRIALS, or the QUESTS tab.
+    'go': function(btn, key){
+      if (key==='trial'){
+        app.vitalsView = 'trials';
+        app.trialOpen = btn.getAttribute('data-id');
+        app.trialConfirm = null;
+        redraw('[data-trial="start"], [data-trial="count"]');
+        return;
+      }
+      stopTicker();
+      ST.render.switchTab('quests');
+      if (ST.mascot) ST.mascot.onTab('quests');
     }
   };
   function onClick(e){
@@ -423,12 +570,15 @@
       if (urgeShown() && app.state.urges.active) redrawUrge();     // time went by
       else { syncAlarm(); markTab(); }                        // a round may have ended meanwhile
     });
+    showLock();
     syncAlarm();
     markTab();
   }
 
   ST.vitals = {
-    init: init, render: render, onTab: onTab, stop: stop, markTab: markTab, streakCardHtml: streakCardHtml,
+    init: init, render: render, onTab: onTab, stop: stop, markTab: markTab,
+    locked: locked, refuse: refuse, toggleLock: toggleLock,
+    order: order, fieldReport: fieldReport, nextStep: nextStep,
     clockText: clockText, boxDate: boxDate, alertState: alertState
   };
 })(window.StatusTerminal);

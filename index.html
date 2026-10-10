@@ -101,9 +101,9 @@
         <button class="tab-btn" data-tab="log">LOG</button>
       </nav>
 
-      <section class="tab-content" id="tab-status"></section>
+      <section class="tab-content" id="tab-status" style="display:none"></section>
       <!-- The day's check-in and the urge decoder (js/vitals.js), and TRIALS (js/trials.js). -->
-      <section class="tab-content" id="tab-vitals" style="display:none"></section>
+      <section class="tab-content" id="tab-vitals"></section>
       <section class="tab-content" id="tab-quests" style="display:none"></section>
       <section class="tab-content" id="tab-items" style="display:none"></section>
       <!-- Built the first time it's opened (js/map.js), with MapLibre (vendor/maplibre/). -->
@@ -129,6 +129,10 @@
       <p class="set-note">The screen's layers follow the phone's motion.</p>
       <button class="set-toggle" id="power-btn" data-label="Power-on screen" aria-pressed="true">Power-on: on</button>
       <p class="set-note">"Tap to power on", then the RobCo boot once a day.</p>
+
+      <div class="set-section">Morning</div>
+      <button class="set-toggle" id="checkin-first-btn" data-label="Check-in first" aria-pressed="true">Check-in first: on</button>
+      <p class="set-note">QUESTS, ITEMS, MAP and LOG open once the day's VITALS check-in is logged.</p>
 
       <div class="set-section">Sound</div>
       <button class="set-toggle" id="sound-btn" data-label="Sound" aria-pressed="true">Sound: on</button>

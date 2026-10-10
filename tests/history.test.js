@@ -26,9 +26,11 @@ test('every reward is recorded, with the XP it really gave and what it was', () 
   ST.completeMain(s.quests.mains[0]);                           // 1000 XP: a level-up
   assert.deepEqual(types(s), ['QUEST_COMPLETED', 'DAILY_DONE', 'BONUS_COMPLETED', 'PLACE_DISCOVERED', 'ITEM_SOLD',
     'JOURNAL_ENTRY', 'QUEST_COMPLETED', 'LEVEL_UP']);
-  const [side, , bonus, place, sale, , main, level] = s.history;
+  const [side, , bonus, place, sale, journal, main, level] = s.history;
   assert.deepEqual(app.plain(side), { t: new Date('2026-09-25T12:00:00').getTime(), type: 'QUEST_COMPLETED', xp: 150,
-    data: { kind: 'side', name: 'Paper Trail' } });
+    data: { kind: 'side', name: 'Paper Trail', skills: 'KNOWLEDGE:3' } });     // the skill points it gave
+  assert.equal(journal.data.skills, 'MUSIC:1');
+  assert.equal(main.data.skills, 'FINANCE:8,BUSINESS:2');
   assert.deepEqual(app.plain(bonus.data), { name: 'Find a job', quest: 'Caps on the Line' });
   assert.deepEqual([place.xp, place.data.name], [50, 'Montréal']);
   assert.deepEqual(app.plain(sale.data), { name: 'Mic', amount: 200 });
