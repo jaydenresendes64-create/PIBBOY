@@ -236,16 +236,19 @@ function screens(setup) {
 }
 const EVIL = '"><img src=x onerror=alert(1)>';
 
-test('the streak card: set the start, the day and the next milestone, after a lapse, asking first', () => {
-  assert.match(screens(() => {}).status, /Set the first chem-free day of this run\.[\s\S]*id="streak-date" max="2026-10-09" value="2026-10-09"/);
-  const running = screens(ST => { ST.setCleanStart('2026-09-24'); ST.claimCleanMilestones(); }).status;
+test('the streak card (on VITALS now): set the start, the day and the next milestone, after a lapse, asking first', () => {
+  const empty = screens(() => {});
+  assert.match(empty.vitals, /Set the first chem-free day of this run\.[\s\S]*id="streak-date" max="2026-10-09" value="2026-10-09"/);
+  assert.doesNotMatch(empty.status, /streak-card/);                      // moved off STATUS
+  assert.match(empty.status, /Chem-free days, all runs/);                // its total stays there
+  const running = screens(ST => { ST.setCleanStart('2026-09-24'); ST.claimCleanMilestones(); }).vitals;
   assert.match(running, /DAY 16<\/div>/);
   assert.match(running, /15 full days done\. Next: 30 days, \+600 XP, 15 to go\./);
   assert.match(running, /data-vital="lapse-ask"/);
-  assert.match(running, /Chem-free days, all runs/);
-  const asking = screens((ST, s, a) => { ST.setCleanStart('2026-09-24'); a.ST.app.confirmLapse = true; }).status;
+  assert.doesNotMatch(running, /Tomorrow:/);
+  const asking = screens((ST, s, a) => { ST.setCleanStart('2026-09-24'); a.ST.app.confirmLapse = true; }).vitals;
   assert.match(asking, /Log a lapse today\?[\s\S]*data-vital="lapse-yes"/);
-  const restart = screens(ST => { ST.setCleanStart('2026-09-24'); ST.logLapse(); }).status;
+  const restart = screens(ST => { ST.setCleanStart('2026-09-24'); ST.logLapse(); }).vitals;
   assert.match(restart, /RESTART \/\/ TOMORROW[\s\S]*The 15 chem-free days behind you still count\./);
 });
 
@@ -257,7 +260,7 @@ test('VITALS: the sliders, the check-in button, the urge decoder\'s steps and th
   assert.match(empty, /href="tel:18002652626"/);
   assert.match(empty, /No entries yet\./);
   const logged = screens(ST => { ST.setVital('mood', 8); ST.setPulse(61); ST.logVitals(); }).vitals;
-  assert.match(logged, /Logged ✓/);
+  assert.match(logged, /CHECK-IN · DONE ✓ · energy 5 · sleep 5 · craving 5/);
   assert.match(logged, /<td>Oct 9<\/td><td>5<\/td><td>8<\/td>/);
   assert.match(logged, /<tr class="avg"><td>AVG<\/td><td>5\.0<\/td><td>8\.0<\/td>/);
   const running = screens(ST => { ST.startUrge('TIRED'); }).vitals;

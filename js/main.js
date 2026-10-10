@@ -11,7 +11,7 @@
   function boot(){
     ST.storage.onSaveFailed(ST.render.showSaveWarning);
     ST.storage.onExternalChange(ST.events.adoptState);
-    if (ST.mascot) ST.mascot.init('status');     // decoration: the app runs without it
+    if (ST.mascot) ST.mascot.init('vitals');     // decoration: the app runs without it
     if (ST.crt) ST.crt.init();                    // decoration too
     if (ST.tilt) ST.tilt.init();
     if (ST.sfx) ST.sfx.init();                    // sounds: decoration as well
@@ -22,7 +22,8 @@
       ST.events.setup();
       if (ST.vitals) ST.vitals.init();            // VITALS and the chem-free streak's taps
       if (ST.trials) ST.trials.init();            // VITALS → TRIALS
-      ST.render.switchTab('status');
+      // The app opens on VITALS: the day's check-in, then what to do today.
+      ST.render.switchTab(ST.vitals ? 'vitals' : 'status');
       ST.render.renderAll();
       if (ST.holotapes) ST.holotapes.init();      // the LOG tab's recordings (on this device)
       // Caps quests' bars follow the wallet (at their target, their Complete button shows).

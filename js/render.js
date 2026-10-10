@@ -102,7 +102,6 @@
           '</div>')+
       '</div>';
     }
-    if (ST.vitals) html += ST.vitals.streakCardHtml();       // the chem-free streak (js/vitals.js)
     html += '<div class="panel-title">S.P.E.C.I.A.L.</div>';
     STAT_KEYS.forEach(function(k){ html += statRowHtml(k); });
     html += perksHtml();
@@ -745,8 +744,8 @@
   // has changed since the quests were drawn (the app stayed open, or came
   // back from the background), draw them again; not while something is being
   // typed there, the next check does it.
-  // The chem-free streak's day count (STATUS) and the day's check-in
-  // (VITALS) start afresh too.
+  // The chem-free streak's day count and the day's check-in (VITALS)
+  // start afresh too.
   function refreshIfNewDay(){
     if (!app.state || questsDay===todayStr()) return;
     var typing = document.activeElement;

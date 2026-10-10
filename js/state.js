@@ -31,7 +31,7 @@
  *     daily: [ { id, questName, name, xp, lastDate:'YYYY-M-D'|null,  // done today: dailyDoneToday()
  *                stat?: one of STAT_KEYS } ]        // the stat it trains, when it has one (completeDaily)
  *   },
- *   chems: {                                // the chem-free streak (STATUS tab)
+ *   chems: {                                // the chem-free streak (VITALS tab)
  *     cleanSince: 'YYYY-M-D'|null,          // the run's first chem-free day (day 1); tomorrow after a lapse
  *     best: number, totalClean: number,     // full days: the longest run before this one, and all of them
  *     claimed: [ days ],                    // the CLEAN_MILESTONES paid in this run
@@ -873,7 +873,8 @@
 
   // ---------- VITALS: the day's check-in ----------
   // One entry a day in state.vitals, made by the day's first change: six
-  // levels from 0 to 10 (5 until moved), the resting pulse, two counters.
+  // levels from 0 to 10 (until moved, the last check-in's, or 5 without
+  // one), the resting pulse, two counters.
   // The check-in itself is paid once a day (logVitals): VITALS_XP, which
   // trains Intelligence as much. What changes after it is kept, unpaid.
   function dayNumber(date){
@@ -885,8 +886,9 @@
     var s = app.state, today = todayStr();
     var e = s.vitals.filter(function(v){ return v.date===today; })[0] || null;
     if (!e && create){
+      var last = lastCheckIn();
       e = {date:today, logged:false};
-      VITAL_KEYS.forEach(function(k){ e[k] = 5; });
+      VITAL_KEYS.forEach(function(k){ e[k] = last ? clamp(Math.round(Number(last[k])||0), 0, 10) : 5; });
       e.pulse = null; e.radN = 0; e.radT = 0;
       s.vitals.push(e);
       if (s.vitals.length>VITALS_MAX) s.vitals = s.vitals.slice(-VITALS_MAX);
@@ -924,6 +926,17 @@
   // The latest `n` entries, newest first.
   function lastVitals(n){
     return app.state.vitals.slice().sort(byDate).reverse().slice(0, n);
+  }
+  // The latest check-in logged before today, with how many days ago
+  // (`ago`: 1 is yesterday); null for none.
+  function lastCheckIn(){
+    var today = todayStr();
+    var e = lastVitals(VITALS_MAX).filter(function(v){ return v.logged && v.date!==today; })[0];
+    if (!e) return null;
+    var copy = {};
+    Object.keys(e).forEach(function(k){ copy[k] = e[k]; });
+    copy.ago = daysSince(e.date);
+    return copy;
   }
 
   // ---------- the chem-free streak ----------
@@ -1724,6 +1737,7 @@
   ST.stepRads = stepRads;
   ST.logVitals = logVitals;
   ST.lastVitals = lastVitals;
+  ST.lastCheckIn = lastCheckIn;
   ST.cleanDay = cleanDay;
   ST.cleanFullDays = cleanFullDays;
   ST.cleanTotal = cleanTotal;
@@ -1773,6 +1787,7 @@
   ST.clamp = clamp;
   ST.genId = genId;
   ST.todayStr = todayStr;
+  ST.daysSince = daysSince;
   ST.todayDisplay = todayDisplay;
   ST.dateText = dateText;
   ST.backupDays = backupDays;

@@ -721,6 +721,7 @@
     'tilt-btn': function(){ if (ST.tilt) ST.tilt.toggle(); },
     'sound-btn': function(){ if (ST.sfx) ST.sfx.toggleSound(); },
     'power-btn': function(){ if (ST.sfx) ST.sfx.togglePowerScreen(); },
+    'checkin-first-btn': function(){ if (ST.vitals) ST.vitals.toggleLock(); },
     'sounds-btn': function(){ if (ST.sfxCustom) ST.sfxCustom.open(); },
     'weather-btn': function(){ if (ST.weather) ST.weather.tell(); },
     'settings-btn': openSettings,
@@ -741,6 +742,8 @@
     var tabBtn = e.target.closest('[data-tab]');
     if (tabBtn){
       var tab = tabBtn.getAttribute('data-tab');
+      // Check-in first (js/vitals.js): until it's logged, some tabs wait.
+      if (ST.vitals && ST.vitals.locked(tab)){ ST.vitals.refuse(); return; }
       R.switchTab(tab);
       if (tab==='map' && ST.map) ST.map.show();
       if (ST.vitals) ST.vitals.onTab(tab);

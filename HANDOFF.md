@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
-State as of the TRIALS PR (2026-10-10, after PR #17). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-248/248 tests pass locally. `sw.js` cache: `v24`.
+State as of the morning-path PR (2026-10-10, after PR #18). Live: https://jaydenresendes64-create.github.io/PIBBOY/
+255/255 tests pass locally. `sw.js` cache: `v24`.
 
 ## 1. What it is
 
@@ -26,7 +26,7 @@ Plain scripts (not ES modules, so `index.html` still opens from disk) sharing
 | `js/render.js` | Builds every tab's HTML (escapes everything), toasts/banners, `switchTab` |
 | `js/items3d.js` | ITEMS 3D wireframe models (Three.js, dynamic `import()`), one shared WebGLRenderer copied into small 2D canvases |
 | `js/mascot.js` | Mascot gesture scheduling (moves are CSS keyframes, per body part: see §3 Look & feel) |
-| `js/vitals.js` | VITALS tab with its CHECK-IN / TRIALS sub-tabs (`app.vitalsView`; check-in, urge decoder + its timer's clock, last 7 days) and STATUS's chem-free streak card; its buttons use `data-vital` (its own listeners), the rules are in state.js |
+| `js/vitals.js` | VITALS tab with its CHECK-IN / TRIALS sub-tabs (`app.vitalsView`; check-in, urge decoder + its timer's clock, chem-free streak card, last 7 days), the morning path (`order`, `fieldReport`, `nextStep`) and Check-in first (`locked`); its buttons use `data-vital` (its own listeners), the rules are in state.js |
 | `js/trials.js` | VITALS → TRIALS screen (`ST.trials.html()` drawn by vitals.js `render()`): cards, the open trial's panel (3-2-1, stopwatch/countdown clock, tap counter, save confirm, last results), the timer loop + wake lock; buttons use `data-trial` (its own listeners), the rules are in state.js |
 | `js/crt.js`, `js/tilt.js` | CRT flicker; 3D tilt (DeviceOrientation/mouse) incl. glass glare parallax |
 | `js/events.js` | All user actions → state change → re-render → debounced save |
@@ -105,6 +105,23 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   the urge ticker/announce only count on the CHECK-IN view (`urgeShown`). render.js `showRecord()`
   (NEW RECORD banner). Boot line `TRIALS ... N DUE THIS WEEK / ALL DONE THIS WEEK`.
   Tested in `tests/trials.test.js`; checked live with Playwright (timers, tap counter, confirm, reload).
+- **Morning path (2026-10-10, from a Grok prompt the owner brought, reviewed against the code):** the
+  app opens on VITALS (main.js; index.html shows #tab-vitals first). vitals.js `order()`: urge decoder
+  first if `urges.active` or a craving ≥ 6 (today's logged check-in, else yesterday's: `lastCheckIn().ago===1`),
+  streak first when the next milestone is tomorrow (`next.days - cleanFullDays() === 1`), else the
+  check-in; the three cards are always there, then "Last 7 entries". The streak card moved off STATUS
+  (Lifetime keeps the total). state.js `lastCheckIn()` (latest logged entry before today + `ago`);
+  `vitalsToday(true)` seeds the six levels from it (5 without one; pulse/counters start empty), and the
+  sliders show the same before the first move. Logged → folded (`app.vitalsEdit` reopens it, session
+  only): one line, `fieldReport()` (sleep ≤ 3, craving ≥ 6, INT training, dailies left, trials due,
+  chem-free day like the boot line) and `nextStep()` (first trial due, else the daily with the oldest
+  lastDate, `go` → TRIALS with that trial open, or QUESTS). Check-in first: `locked(tab)` for
+  quests/items/map/log until today's check-in is logged; events.js refuses the tab tap with a notice;
+  keys get `.locked` + aria-disabled in `markTab()`; device pref `status_terminal_checkin_first`
+  ('0' = off), Settings → Morning. No new data, no new XP path. Changed from Grok's text: training is
+  300 XP a point (not 100), SURVIVAL is a skill (shown read-only on the urge card after a ride-out),
+  fold happens on log (no separate "close morning" tap), UI stays in English, and the lock is a
+  setting. Tested in `tests/morning.test.js`.
 - QUESTS: several main quests (types **percent** slider, **streak** daily check-in, **caps** goal
   that follows the wallet; a percent or caps quest at 100% shows a **COMPLETE QUEST** button and only
   its tap pays, `mainReady()`), bonus objectives, side quests (XP + one skill +3)

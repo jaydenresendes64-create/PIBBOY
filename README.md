@@ -17,7 +17,7 @@ the latest first. Removing a book from the list keeps what it gave.
 **VITALS** (its own tab, from your in-Claude version): the day's **check-in**: energy, mood, hunger,
 tension, sleep and craving from 0 to 10, the resting pulse, and two counters (RADS // type N and T).
 **Log check-in** gives **+15 XP** once a day and trains Intelligence; what you change after it is
-kept. Below, the last 7 entries with their averages. At the top, the **urge decoder**: name the real
+kept. At the bottom, the last 7 entries with their averages. The **urge decoder**: name the real
 need (hungry, angry, lonely, tired, or none of these), read what to do first, and leave the room for a
 **20-minute timer** (it keeps running when the app is closed). At zero: **Rode it out** (**+40 XP
 and +1 SURVIVAL**, 3 times a day; logged every time) or **Still strong** (another round). The support
@@ -26,7 +26,20 @@ whatever tab is open (a sound and a notice). A small light on the **VITALS** tab
 tab, a timer running (pulsing) or over (steady), or today's check-in still to do (dim). The RobCo boot
 also shows the chem-free day and whether today's check-in is done.
 
-**Chem-free streak** (top of STATUS): set the first chem-free day of the run; the card shows the day,
+**The morning** (the app opens on **VITALS**): the screen says what to do today. Its three cards come
+in the order that matters today: the **urge decoder** first while its timer runs or after a craving of
+6 or more (today's check-in, or yesterday's), the **chem-free streak** first the day before a milestone
+("Day 7. Tomorrow: +150 XP."), else the **check-in**. The sliders start from your last check-in, shown
+above them ("Yesterday · energy 4 · sleep 3 · craving 7"), so a day like yesterday is one tap. Under
+the button, the Intelligence training (`INT 5 · TRAIN 15/300`). Once logged, the check-in folds into one
+line and a **FIELD REPORT** written from your day ("Sleep low. Craving high. INT 5 · TRAIN 30/300.
+2 dailies left. 1 trial due. Chem-free day 11 (4 to 14).") and the **NEXT** step: a trial that's due
+(**Go** opens it), else the daily quest left the longest (**Go** opens QUESTS). **Edit check-in**
+opens it again. **Check-in first**: until the day's check-in is logged, QUESTS, ITEMS, MAP and LOG wait
+(their keys are dimmed; a tap says "Check-in first"); STATUS, VITALS and the urge decoder stay open.
+Turn it off in Settings → Morning.
+
+**Chem-free streak** (VITALS): set the first chem-free day of the run; the card shows the day,
 the next milestone and the days to go. Milestones at **7, 14, 30, 60 and 90 days** (+150, +300, +600,
 +900, +1,500 XP), each paid once a run, by itself, the moment it's reached; correcting the start date
 never pays one twice. **Log a lapse** asks first: the run's days stay in your totals (and best run),
@@ -126,7 +139,7 @@ js/bulk.js          MAP: "Add several places" (paste a list, review it, reveal i
 js/routes.js        MAP: routes (road trips): stops, the road traced once (OSRM), its line and card
 js/radar.js         MAP: the scanner, a radar sweep whose blips are real undiscovered cities
 js/holotapes.js     LOG: holotapes, voice recordings kept on the device (their own IndexedDB)
-js/vitals.js        VITALS (check-in, urge decoder, last 7 days) and STATUS's chem-free streak card
+js/vitals.js        VITALS (check-in, urge decoder, chem-free streak, last 7 days), the morning path
 js/trials.js        VITALS: TRIALS (weekly physical tests, records, timers, tap counter)
 vendor/maplibre/    MapLibre GL JS 6.11.2, the map library (licence: vendor/maplibre/LICENSE.txt)
 vendor/three/       Three.js r186, only the parts ITEMS uses (licence: vendor/three/LICENSE)
@@ -180,7 +193,8 @@ in the app to bring it over.
 ## Settings
 
 The **⚙** in the topbar (beside the date) opens Settings, over the app: **Display** (3D tilt, the
-power-on screen and its RobCo boot), **Sound** (sound on/off, Custom sounds), **Data** (Export backup
+power-on screen and its RobCo boot), **Morning** (Check-in first: the tabs that wait for the day's
+check-in, on this device), **Sound** (sound on/off, Custom sounds), **Data** (Export backup
 = RadAway, with the last backup's date; Import backup; **Add from the old terminal**: from a backup of
 your in-Claude version, it adds only its VITALS check-ins, chem-free streak, urges, training and the
 daily / side quests not here yet, after saying what (adding the same file twice adds nothing); Reset
