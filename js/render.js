@@ -52,27 +52,55 @@
   }
 
   // ---------- the Vault Boy on the level bar ----------
-  // He walks on the XP bar (css/terminal.css .vaultboy) from level 5, and
-  // his outfit follows the level: images/vaultboy/lvl05, 10, 20, 30 and 50
-  // (kept from 50 on; none below 5). The picture changes only with the tier.
-  var WALKER_TIERS = [50, 30, 20, 10, 5];
-  function walkerSprite(level){
+  // He walks on the XP bar from level 1 (css/terminal.css .vaultboy), in
+  // amber parts that each move, like the old mascot; his outfit follows the
+  // level: images/vaultboy/parts-lvl05 (levels 1-9), 10, 20, 30 and 50 (kept
+  // from 50 on). The outfit changes only with the tier.
+  var WALKER_TIERS = [50, 30, 20, 10];
+  function walkerTier(level){
     level = Number(level) || 0;
     for (var i=0;i<WALKER_TIERS.length;i++){
-      var t = WALKER_TIERS[i];
-      if (level>=t) return 'images/vaultboy/lvl'+(t<10 ? '0' : '')+t+'.png';
+      if (level>=WALKER_TIERS[i]) return String(WALKER_TIERS[i]);
     }
-    return null;
+    return '05';
   }
-  var walkerOn;                 // the picture on show (undefined before the first call)
+  var walkerOn = null;          // the outfit on show
+  var walkerWatched = false;
   function syncWalker(){
-    var walk = el('vaultboy-walk'), img = el('vaultboy');
-    if (!walk || !img || !app.state) return;
-    var sprite = walkerSprite(app.state.level);
-    if (sprite===walkerOn) return;
-    walkerOn = sprite;
-    if (sprite) img.src = sprite;
-    walk.hidden = !sprite;
+    var walk = el('vaultboy-walk');
+    if (!walk || !app.state) return;
+    var tier = walkerTier(app.state.level);
+    if (tier!==walkerOn){
+      walkerOn = tier;
+      walk.setAttribute('data-tier', tier);
+      walk.hidden = false;
+    }
+    if (!walkerWatched){
+      walkerWatched = true;
+      window.addEventListener('resize', placeWalker);
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeWalker);   // the text's real width
+    }
+    if (window.requestAnimationFrame) window.requestAnimationFrame(placeWalker);
+  }
+  // He keeps to the stretch of the bar right of the name, the subtitle and
+  // the level (whatever is as high as he is), WALK_GAP from them, at most
+  // WALK_MAX long: --vb-from is where it starts, --vb-len how far he goes.
+  var WALK_GAP = 10, WALK_MAX = 150, FRAME_RATIO = 308/420;
+  function placeWalker(){
+    var walk = el('vaultboy-walk'), bar = document.querySelector('.level-block .xp-bar-outer');
+    if (!walk || walk.hidden || !bar || !bar.getBoundingClientRect) return;
+    var b = bar.getBoundingClientRect(), h = walk.offsetHeight, w = h*FRAME_RATIO;
+    if (!b.width || !h) return;
+    var top = b.top - h, from = 0;
+    document.querySelectorAll('.hero-name, .hero-sub, .level-row > *').forEach(function(node){
+      var range = document.createRange();
+      range.selectNodeContents(node);
+      var r = range.getBoundingClientRect();
+      if (r.width && r.bottom>top && r.top<b.top) from = Math.max(from, r.right - b.left + WALK_GAP);
+    });
+    from = Math.min(Math.max(from, b.width - w - WALK_MAX), b.width - w);
+    walk.style.setProperty('--vb-from', Math.round(from)+'px');
+    walk.style.setProperty('--vb-len', Math.max(0, Math.round(b.width - w - from))+'px');
   }
 
   function statRowHtml(key){
@@ -1021,7 +1049,8 @@
     clearTyped: clearTyped,
     playCheck: playCheck,
     switchTab: switchTab,
-    walkerSprite: walkerSprite,
-    syncWalker: syncWalker
+    walkerTier: walkerTier,
+    syncWalker: syncWalker,
+    placeWalker: placeWalker
   };
 })(window.StatusTerminal);

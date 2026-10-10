@@ -493,50 +493,113 @@ button{ cursor:pointer; }
 }
 .xp-text{ margin-top:5px; font-size:0.78rem; color:var(--text-dim); letter-spacing:0.04em; }
 
-/* The Vault Boy on the level bar (js/render.js syncWalker picks his picture
-   by level; none below 5). Placed right after the bar, so where he'd sit in
-   the flow is the bar's bottom edge: lifted by the bar's height and 98% of
-   his frame, his feet (at 98% of the frame) stand on the bar's top edge.
-   He walks its whole length and back (6 s each way), turning round on the
-   way back; the turn is on an inner layer so the walk keeps its direction.
-   Frame 140px high (110px under 360px), the pictures' 770:1050. Taps go
-   through him; under the rad meter, over the bar. Still and centred with
-   Reduce Motion. The old corner mascot (#mascot) no longer shows. */
+/* The Vault Boy on the level bar, from level 1, his outfit following the
+   level (js/render.js syncWalker sets data-tier). Like the old corner
+   mascot: amber, cut into parts that each turn around their own joint
+   (images/vaultboy/parts-lvlXX.png, made by tools/vaultboy-parts.py; the
+   joints there match the transform-origins here), breathing, blinking.
+   He walks only on the stretch of the bar right of the name, subtitle and
+   level, so he never covers them: render.js measures it and sets --vb-from
+   (where it starts) and --vb-len (how far he goes). Placed right after the
+   bar, so where he'd sit in the flow is the bar's bottom edge: lifted by
+   the bar's height and 98.8% of his frame, his feet stand on the bar's top
+   edge. Frame 100px high (84px under 360px). Taps go through him; under the
+   rad meter, over the bar. Still, in the middle of his stretch, with Reduce
+   Motion. The old corner mascot (#mascot) no longer shows. */
 .mascot{ display:none; }
 .vaultboy{
-  --vb-h:140px; --vb-w:calc(var(--vb-h) * 770 / 1050);
+  --vb-h:100px; --vb-w:calc(var(--vb-h) * 308 / 420);
   position:absolute; left:0; right:0; height:var(--vb-h);
-  margin-top:calc(-14px - var(--vb-h) * 0.98);
-  overflow:hidden; pointer-events:none;
-  user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
+  margin-top:calc(-14px - var(--vb-h) * 0.988);
+  pointer-events:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
 }
 .vaultboy[hidden]{ display:none; }
 @media (max-width:359px){
-  .vaultboy{ --vb-h:110px; }
+  .vaultboy{ --vb-h:84px; }
 }
-.vaultboy-step{
+.vb-track{ position:absolute; top:0; left:var(--vb-from, 0px); width:var(--vb-w); height:var(--vb-h); }
+/* The whole figure turns and squashes around his feet. */
+.vb-move, .vb-body, .vb-breathe{ position:absolute; inset:0; transform-origin:55% 98.8%; }
+.vb-breathe{ animation:mascotBreathe 4.2s ease-in-out infinite; }
+.vb{
   position:absolute; inset:0;
-  animation:vaultboyWalk 6s ease-in-out infinite alternate;
+  background:url(../images/vaultboy/parts-lvl05.png) no-repeat; background-size:800% 100%;
 }
-.vaultboy-flip{
-  position:absolute; left:0; bottom:0; width:var(--vb-w); height:var(--vb-h);
-  transform-origin:50% 98%;
-  animation:vaultboyTurn 12s step-end infinite;
+.vaultboy[data-tier="10"] .vb{ background-image:url(../images/vaultboy/parts-lvl10.png); }
+.vaultboy[data-tier="20"] .vb{ background-image:url(../images/vaultboy/parts-lvl20.png); }
+.vaultboy[data-tier="30"] .vb{ background-image:url(../images/vaultboy/parts-lvl30.png); }
+.vaultboy[data-tier="50"] .vb{ background-image:url(../images/vaultboy/parts-lvl50.png); }
+.vb-leg-back{ background-position:0 0; transform-origin:69.81% 65.95%; }
+.vb-shin-back{ background-position:14.2857% 0; transform-origin:68.51% 77.62%; }
+.vb-leg-front{ background-position:28.5714% 0; transform-origin:51.95% 65.95%; }
+.vb-shin-front{ background-position:42.8571% 0; transform-origin:47.08% 77.62%; }
+.vb-arm{ background-position:57.1429% 0; transform-origin:47.4% 38.57%; }
+.vb-torso{ background-position:71.4286% 0; }
+.vb-head{ background-position:85.7143% 0; transform-origin:58.44% 33.81%; }
+/* The head with its eyes shut (the same head behind sunglasses). */
+.vb-blink{ background-position:100% 0; opacity:0; animation:mascotBlink 5.3s steps(1,end) infinite; }
+/* The Vault Boy's walk on the level bar, made by tools/vaultboy-moves.py:
+   change it there, not here. One loop, every element the same length so they
+   stay together (they all start when he shows). */
+.vb-track{ animation:vbTrack 11.5s linear infinite; }
+.vb-move{ animation:vbMove 11.5s linear infinite; }
+.vb-leg-front{ animation:vbLegF 11.5s linear infinite; }
+.vb-shin-front{ animation:vbShinF 11.5s linear infinite; }
+.vb-leg-back{ animation:vbLegB 11.5s linear infinite; }
+.vb-shin-back{ animation:vbShinB 11.5s linear infinite; }
+.vb-arm{ animation:vbArm 11.5s linear infinite; }
+.vb-head{ animation:vbHead 11.5s linear infinite; }
+.vb-body{ animation:vbBody 11.5s linear infinite; }
+@keyframes vbTrack{ 0%{ transform:translateX(calc(var(--vb-len, 0px) * 0)); animation-timing-function:linear; } 1.04%{ transform:translateX(calc(var(--vb-len, 0px) * 0)); animation-timing-function:linear; } 15.65%{ transform:translateX(calc(var(--vb-len, 0px) * 1)); animation-timing-function:cubic-bezier(.2,.7,.3,1); } 47.3%{ transform:translateX(calc(var(--vb-len, 0px) * 1)); animation-timing-function:linear; } 61.91%{ transform:translateX(calc(var(--vb-len, 0px) * 0)); animation-timing-function:cubic-bezier(.2,.7,.3,1); } 100%{ transform:translateX(calc(var(--vb-len, 0px) * 0)); animation-timing-function:cubic-bezier(.45,0,.55,1); } }
+@keyframes vbMove{
+  0%{ transform:translate(0,0) scale(-1,1) rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); }
+  0.7%{ transform:translate(0,0) scale(-1,0.98) rotate(1.5deg); animation-timing-function:cubic-bezier(.45,0,.55,1); }
+  1.04%{ transform:translate(0,0) scale(-1,1) rotate(-1deg); animation-timing-function:linear; }
+  15.65%{ transform:translate(0,0) scale(-1,1) rotate(-1deg); animation-timing-function:cubic-bezier(.2,.7,.3,1); }
+  16.35%{ transform:translate(0,0) scale(-1,0.97) rotate(1deg); animation-timing-function:cubic-bezier(.45,0,.55,1); }
+  17.22%{ transform:translate(0,0) scale(-1,1.01) rotate(-0.3deg); animation-timing-function:cubic-bezier(.45,0,.55,1); }
+  17.91%{ transform:translate(0,0) scale(-1,1) rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); }
+  31.65%{ transform:translate(0,0) scale(-1,1) rotate(0deg); animation-timing-function:cubic-bezier(.2,.7,.3,1); }
+  32.52%{ transform:translate(0,0) scale(-1,0.97) rotate(0deg); animation-timing-function:cubic-bezier(.2,.7,.3,1); }
+  33.74%{ transform:translate(0,-2.5px) scale(-1,1.02) rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); }
+  34.96%{ transform:translate(0,0) scale(-1,0.99) rotate(0deg); animation-timing-function:cubic-bezier(.2,.7,.3,1); }
+  36.35%{ transform:translate(0,-2.5px) scale(-1,1.02) rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); }
+  37.91%{ transform:translate(0,0) scale(-1,0.99) rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); }
+  39.13%{ transform:translate(0,0) scale(-1,1) rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); }
+  44.26%{ transform:translate(0,0) scale(-1,1) rotate(0deg); animation-timing-function:cubic-bezier(.55,0,.85,.35); }
+  45.01%{ transform:translate(0,-2px) scale(-0.15,0.95) rotate(0deg); animation-timing-function:linear; }
+  45.04%{ transform:translate(0,-2px) scale(0.15,0.95) rotate(0deg); animation-timing-function:cubic-bezier(.2,.7,.3,1); }
+  45.83%{ transform:translate(0,0) scale(1,1) rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); }
+  46.26%{ transform:translate(0,0) scale(1,1) rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); }
+  46.96%{ transform:translate(0,0) scale(1,0.98) rotate(1.5deg); animation-timing-function:cubic-bezier(.45,0,.55,1); }
+  47.3%{ transform:translate(0,0) scale(1,1) rotate(-1deg); animation-timing-function:linear; }
+  61.91%{ transform:translate(0,0) scale(1,1) rotate(-1deg); animation-timing-function:cubic-bezier(.2,.7,.3,1); }
+  62.61%{ transform:translate(0,0) scale(1,0.97) rotate(1deg); animation-timing-function:cubic-bezier(.45,0,.55,1); }
+  63.48%{ transform:translate(0,0) scale(1,1.01) rotate(-0.3deg); animation-timing-function:cubic-bezier(.45,0,.55,1); }
+  64.17%{ transform:translate(0,0) scale(1,1) rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); }
+  77.91%{ transform:translate(0,0) scale(1,1) rotate(0deg); animation-timing-function:cubic-bezier(.2,.7,.3,1); }
+  78.78%{ transform:translate(0,0) scale(1,0.97) rotate(0deg); animation-timing-function:cubic-bezier(.2,.7,.3,1); }
+  80%{ transform:translate(0,-2.5px) scale(1,1.02) rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); }
+  81.22%{ transform:translate(0,0) scale(1,0.99) rotate(0deg); animation-timing-function:cubic-bezier(.2,.7,.3,1); }
+  82.61%{ transform:translate(0,-2.5px) scale(1,1.02) rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); }
+  84.17%{ transform:translate(0,0) scale(1,0.99) rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); }
+  85.39%{ transform:translate(0,0) scale(1,1) rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); }
+  90.52%{ transform:translate(0,0) scale(1,1) rotate(0deg); animation-timing-function:cubic-bezier(.55,0,.85,.35); }
+  91.27%{ transform:translate(0,-2px) scale(0.15,0.95) rotate(0deg); animation-timing-function:linear; }
+  91.3%{ transform:translate(0,-2px) scale(-0.15,0.95) rotate(0deg); animation-timing-function:cubic-bezier(.2,.7,.3,1); }
+  92.09%{ transform:translate(0,0) scale(-1,1) rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); }
+  100%{ transform:translate(0,0) scale(-1,1) rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); }
 }
-.vaultboy-img{ display:block; width:100%; height:100%; -webkit-user-drag:none; }
-@keyframes vaultboyWalk{
-  from{ transform:translateX(0); }
-  to{ transform:translateX(calc(100% - var(--vb-w))); }
-}
-/* Facing the way he walks: as is going right, mirrored coming back. */
-@keyframes vaultboyTurn{
-  0%{ transform:none; }
-  50%{ transform:scaleX(-1); }
-  100%{ transform:scaleX(-1); }
-}
+@keyframes vbLegF{ 0%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 1.04%{ transform:rotate(14deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 4.7%{ transform:rotate(-10deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 8.35%{ transform:rotate(14deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 12%{ transform:rotate(-10deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 15.65%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 46.26%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 47.3%{ transform:rotate(14deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 50.96%{ transform:rotate(-10deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 54.61%{ transform:rotate(14deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 58.26%{ transform:rotate(-10deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 61.91%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 100%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } }
+@keyframes vbShinF{ 0%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 1.04%{ transform:rotate(-4deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 2.87%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 4.7%{ transform:rotate(-14deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 6.52%{ transform:rotate(-38deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 8.35%{ transform:rotate(-4deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 10.17%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 12%{ transform:rotate(-14deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 13.83%{ transform:rotate(-38deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 15.65%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 46.26%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 47.3%{ transform:rotate(-4deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 49.13%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 50.96%{ transform:rotate(-14deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 52.78%{ transform:rotate(-38deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 54.61%{ transform:rotate(-4deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 56.43%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 58.26%{ transform:rotate(-14deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 60.09%{ transform:rotate(-38deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 61.91%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 100%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } }
+@keyframes vbLegB{ 0%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 1.04%{ transform:rotate(-10deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 4.7%{ transform:rotate(14deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 8.35%{ transform:rotate(-10deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 12%{ transform:rotate(14deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 15.65%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 46.26%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 47.3%{ transform:rotate(-10deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 50.96%{ transform:rotate(14deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 54.61%{ transform:rotate(-10deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 58.26%{ transform:rotate(14deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 61.91%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 100%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } }
+@keyframes vbShinB{ 0%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 1.04%{ transform:rotate(-14deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 2.87%{ transform:rotate(-38deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 4.7%{ transform:rotate(-4deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 6.52%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 8.35%{ transform:rotate(-14deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 10.17%{ transform:rotate(-38deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 12%{ transform:rotate(-4deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 13.83%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 46.26%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 47.3%{ transform:rotate(-14deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 49.13%{ transform:rotate(-38deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 50.96%{ transform:rotate(-4deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 52.78%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 54.61%{ transform:rotate(-14deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 56.43%{ transform:rotate(-38deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 58.26%{ transform:rotate(-4deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 60.09%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 100%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } }
+@keyframes vbArm{ 0%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 1.3%{ transform:rotate(-6deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 4.96%{ transform:rotate(6deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 8.61%{ transform:rotate(-6deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 12.26%{ transform:rotate(6deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 16.7%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 31.65%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 32.52%{ transform:rotate(-4deg); animation-timing-function:cubic-bezier(.34,1.56,.64,1); } 33.74%{ transform:rotate(15deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 34.96%{ transform:rotate(5deg); animation-timing-function:cubic-bezier(.34,1.56,.64,1); } 36.35%{ transform:rotate(15deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 38.26%{ transform:rotate(-2deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 39.65%{ transform:rotate(1deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 41.22%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 46.26%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 47.57%{ transform:rotate(-6deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 51.22%{ transform:rotate(6deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 54.87%{ transform:rotate(-6deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 58.52%{ transform:rotate(6deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 62.96%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 77.91%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 78.78%{ transform:rotate(-4deg); animation-timing-function:cubic-bezier(.34,1.56,.64,1); } 80%{ transform:rotate(15deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 81.22%{ transform:rotate(5deg); animation-timing-function:cubic-bezier(.34,1.56,.64,1); } 82.61%{ transform:rotate(15deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 84.52%{ transform:rotate(-2deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 85.91%{ transform:rotate(1deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 87.48%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 100%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } }
+@keyframes vbHead{ 0%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 1.48%{ transform:rotate(3deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 5.13%{ transform:rotate(-3deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 8.78%{ transform:rotate(3deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 12.43%{ transform:rotate(-3deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 16.35%{ transform:rotate(-3deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 17.83%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 20.96%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 22.7%{ transform:rotate(-8deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 24.43%{ transform:rotate(-8deg); animation-timing-function:cubic-bezier(.2,.7,.3,1); } 26.17%{ transform:rotate(7deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 27.65%{ transform:rotate(7deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 29.04%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 31.65%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 33.74%{ transform:rotate(2deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 36.35%{ transform:rotate(-2deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 38.61%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 46.26%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 47.74%{ transform:rotate(3deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 51.39%{ transform:rotate(-3deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 55.04%{ transform:rotate(3deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 58.7%{ transform:rotate(-3deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 62.61%{ transform:rotate(-3deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 64.09%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 67.22%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 68.96%{ transform:rotate(-8deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 70.7%{ transform:rotate(-8deg); animation-timing-function:cubic-bezier(.2,.7,.3,1); } 72.43%{ transform:rotate(7deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 73.91%{ transform:rotate(7deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 75.3%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 77.91%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 80%{ transform:rotate(2deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 82.61%{ transform:rotate(-2deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 84.87%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } 100%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.45,0,.55,1); } }
+@keyframes vbBody{ 0%{ transform:translateY(0px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 0.7%{ transform:translateY(1px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 1.04%{ transform:translateY(1px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 2.87%{ transform:translateY(-1.5px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 4.7%{ transform:translateY(1px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 6.52%{ transform:translateY(-1.5px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 8.35%{ transform:translateY(1px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 10.17%{ transform:translateY(-1.5px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 12%{ transform:translateY(1px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 13.83%{ transform:translateY(-1.5px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 15.65%{ transform:translateY(1.5px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 16.7%{ transform:translateY(-0.6px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 17.57%{ transform:translateY(0px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 46.26%{ transform:translateY(0px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 46.96%{ transform:translateY(1px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 47.3%{ transform:translateY(1px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 49.13%{ transform:translateY(-1.5px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 50.96%{ transform:translateY(1px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 52.78%{ transform:translateY(-1.5px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 54.61%{ transform:translateY(1px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 56.43%{ transform:translateY(-1.5px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 58.26%{ transform:translateY(1px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 60.09%{ transform:translateY(-1.5px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 61.91%{ transform:translateY(1.5px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 62.96%{ transform:translateY(-0.6px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 63.83%{ transform:translateY(0px); animation-timing-function:cubic-bezier(.45,0,.55,1); } 100%{ transform:translateY(0px); animation-timing-function:cubic-bezier(.45,0,.55,1); } }
+/* End of the Vault Boy's walk made by tools/vaultboy-moves.py. */
 @media (prefers-reduced-motion:reduce){
-  .vaultboy-step{ animation:none; transform:translateX(calc(50% - var(--vb-w) / 2)); }
-  .vaultboy-flip{ animation:none; transform:none; }
+  .vb-track{ transform:translateX(calc(var(--vb-len, 0px) / 2)); }
 }
 /* The XP line, with the rad meter on its right (js/render.js renderBackup). */
 .xp-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:5px; }

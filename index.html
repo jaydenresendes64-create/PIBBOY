@@ -81,10 +81,13 @@
           <span class="level-num" id="hdr-level">07</span>
         </div>
         <div class="xp-bar-outer"><div class="xp-bar-fill" id="hdr-xp-fill"></div></div>
-        <!-- The Vault Boy walking on the level bar, from level 5; his outfit follows the level
-             (js/render.js syncWalker). Taps go through him. -->
+        <!-- The Vault Boy walking on the level bar, right of the name and level (never over them);
+             his outfit follows the level (js/render.js syncWalker). In amber parts that each move,
+             like the old mascot (tools/vaultboy-parts.py). Taps go through him. -->
         <div class="vaultboy" id="vaultboy-walk" aria-hidden="true" hidden>
-          <div class="vaultboy-step"><div class="vaultboy-flip"><img id="vaultboy" class="vaultboy-img" alt="" aria-hidden="true" draggable="false"></div></div>
+          <div class="vb-track"><div class="vb-move"><div class="vb-body"><div class="vb-breathe">
+            <span class="vb vb-leg-back"><span class="vb vb-shin-back"></span></span><span class="vb vb-leg-front"><span class="vb vb-shin-front"></span></span><span class="vb vb-arm"></span><span class="vb vb-torso"></span><span class="vb vb-head"><span class="vb vb-blink"></span></span>
+          </div></div></div></div>
         </div>
         <div class="xp-row">
           <div class="xp-text" id="hdr-xp-text"></div>

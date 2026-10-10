@@ -36,7 +36,7 @@
 'use strict';
 
 var CACHE_PREFIX = 'status-terminal-';
-var CACHE = CACHE_PREFIX + 'v25';
+var CACHE = CACHE_PREFIX + 'v26';
 var TILE_CACHE = CACHE_PREFIX + 'vector-tiles';     // kept across versions
 var TILE_HOST = 'tiles.openfreemap.org';
 var TILE_MAX = 800;                                 // about 50 MB at most
@@ -54,7 +54,7 @@ var APP_SHELL = [
   'vendor/three/three.pibboy.min.js',
   'data/map-style.json', 'data/places.txt',
   'images/mascot-parts.png',
-  'images/vaultboy/lvl05.png', 'images/vaultboy/lvl10.png', 'images/vaultboy/lvl20.png', 'images/vaultboy/lvl30.png', 'images/vaultboy/lvl50.png',
+  'images/vaultboy/parts-lvl05.png', 'images/vaultboy/parts-lvl10.png', 'images/vaultboy/parts-lvl20.png', 'images/vaultboy/parts-lvl30.png', 'images/vaultboy/parts-lvl50.png',
   'fonts/vt323.woff2', 'fonts/ibm-plex-mono.woff2',
   'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png'

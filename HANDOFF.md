@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
-State as of the Vault Boy walker PR (2026-10-10, after PR #19). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-262/262 tests pass locally. `sw.js` cache: `v25`.
+State as of the amber Vault Boy rig PR (2026-10-10, after PR #20). Live: https://jaydenresendes64-create.github.io/PIBBOY/
+264/264 tests pass locally. `sw.js` cache: `v26`.
 
 ## 1. What it is
 
@@ -155,16 +155,28 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   glare, physical tab keys, recessed panels, faint "PIBBOY 3000" plate, animated mascot (the
   owner's own cartoon since 2026-09-27; stepped Vault-Boy-style gestures per tab; MAP = "scout"),
   tab swing transition, 3D tilt (opt-in).
-  **Vault Boy walker (2026-10-10, owner's spec + 5 PNGs of their cartoon):** `#vaultboy-walk` right
-  after `.xp-bar-outer` in `.level-block`; `.vaultboy` (absolute, `margin-top: -14px - 98% of the frame`
-  from its static place under the bar, so the feet at 98% of the frame sit on the bar's top edge),
-  `.vaultboy-step` walks the bar (6 s ease-in-out alternate, translateX to `100% - frame width`),
-  `.vaultboy-flip` mirrors on the way back (12 s step-end, so the walk keeps its direction). Frame
-  140px (110px under 360px), 770:1050. Reduced Motion: still, centred. render.js `walkerSprite(level)`
-  / `syncWalker()` (end of `renderHeader()`): none < 5, lvl05 / 10 / 20 / 30 / 50 (50+ forever), src
-  changed only on a new tier. The PNGs were scaled from 770×1050 to 308×420 (3× the 140px frame,
-  ~105 KB each instead of ~500 KB). The old corner mascot is `display:none` (`.mascot`), its markup,
-  js/mascot.js and the rig kept; tests in `tests/vaultboy.test.js`.
+  **Vault Boy on the level bar (2026-10-10):** PR #20 put the owner's 5 colour PNGs (outfits by level)
+  on the XP bar as one sliding picture; the owner found it "franchement nul": they wanted the old
+  mascot's animations, touch and colour, on the bar, ~100px, from level 1, never over the text. Now:
+  `tools/vaultboy-parts.py` turns each colour source (`images/vaultboy/lvlXX.png`, 308×420, scaled
+  from 770×1050) amber with the old mascot's palette (one tone curve from lvl05's brightness spread to
+  images/mascot.png's, then its colour for each brightness), clears background left inside the outline
+  (HOLES: the arm's crook at 50) and cuts it into the old rig's 8 cells (`parts-lvlXX.png`, ~100 KB):
+  same pose, so one set of JOINTS for all; where the legs start differs (LEGS_TOP: under the hand,
+  the bag at 20, the jacket flaps at 50); blink = the head unchanged behind sunglasses (10, 20).
+  `tools/vaultboy-moves.py` writes one 11.5 s loop between its markers in the CSS (vbTrack along
+  `--vb-len`, vbMove facing/squash/card spin, vbBody bob, a keyframe per part): wind-up, 4 strides
+  (knees bend when passing), brake, look around, thumbs-up, card spin, back, the same; breathing and
+  blink reuse the old `mascotBreathe` / `mascotBlink`. Markup: `#vaultboy-walk > .vb-track > .vb-move >
+  .vb-body > .vb-breathe > .vb` parts, right after `.xp-bar-outer`; feet on the bar's top edge
+  (`margin-top: -14px - 98.8%` of the 100px frame, 84px under 360px). render.js: `walkerTier(level)`
+  (05 for 1-9, then 10/20/30/50), `syncWalker()` (end of `renderHeader()`) sets `data-tier` only on a
+  new tier, `placeWalker()` (rAF after each header render, on resize and when fonts are ready)
+  measures the text as high as him (`.hero-name`, `.hero-sub`, `.level-row > *`, by Range) and sets
+  `--vb-from` (10px right of it) and `--vb-len` (to the bar's end, at most 150px). Reduced Motion:
+  still in the middle of his stretch. The old corner mascot stays `display:none`; tests in
+  `tests/vaultboy.test.js` (tiers, data-tier, placement with a fake layout, sheets, joints vs the
+  tool, the loop, reduced motion).
   **Mascot rig (2026-09-28, owner: "animate him like the Pip-Boy in Fallout 4"):** the picture is cut
   by `tools/mascot-parts.py` into `images/mascot-parts.png` (8 picture-sized cells: back leg, its
   lower leg, front leg, its lower leg, thumb arm, body, head, head with eyes shut). `index.html` stacks
