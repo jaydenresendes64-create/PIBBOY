@@ -856,6 +856,13 @@
     sound('perk');
     toast('levelup-banner quest-banner', 'TRAINED: ', 3200).appendChild(statName);
   }
+  // A TRIALS record beaten (js/trials.js): "NEW RECORD: Push-ups 32 reps".
+  function showRecord(name, value){
+    var what = document.createElement('span');
+    what.textContent = name+' '+value;
+    sound('perk');
+    toast('levelup-banner quest-banner', 'NEW RECORD: ', 3200).appendChild(what);
+  }
   // A chem-free milestone reached (its XP comes in its own toast).
   function showMilestone(days){
     sound('quest', 0.25);
@@ -952,6 +959,7 @@
     showBookRead: showBookRead,
     showTrained: showTrained,
     showMilestone: showMilestone,
+    showRecord: showRecord,
     showDiscovered: showDiscovered,
     showSaveWarning: showSaveWarning,
     showConflictWarning: showConflictWarning,

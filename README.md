@@ -32,9 +32,23 @@ the next milestone and the days to go. Milestones at **7, 14, 30, 60 and 90 days
 never pays one twice. **Log a lapse** asks first: the run's days stay in your totals (and best run),
 no XP is lost, and the count starts again tomorrow. **Urge? Decode it** opens the urge decoder.
 
+**TRIALS** (VITALS tab, second button at the top): physical tests to repeat about **once a week**, to
+see yourself get stronger. Built in: **Push-ups** (most in one set, trains STR), **Plank** (longest
+hold, END), **Squats** (most in 60 seconds, AGI) and **1 km** (fastest, walking or running, END).
+**Start** opens the trial: a 3-2-1, then a stopwatch (plank, 1 km) or a 60-second countdown (squats);
+for reps, a big button to tap at each one (or touch it with your chin for push-ups). You can also
+type the result yourself (seconds as `1:30`). Saving asks first: a **new record** gives **+50 XP**
+(a NEW RECORD banner), any other result **+15 XP**, once a trial a day; the XP trains the trial's
+stat. Each card shows the record, the last results as bars, the next goal, and **DUE** when the
+last try is 7 days old or more. **+ New trial** adds your own (name, kind, stat), **×** hides a
+built-in one (Show brings it back) or deletes yours, and a result can be removed (its XP stays).
+The tab key's light pulses while a trial's timer runs, and the RobCo boot says how many are due.
+Warm up first; stop if you feel chest pain, dizziness or short of breath.
+
 **Training** S.P.E.C.I.A.L.: a daily quest can train a stat (pick it when adding: "Trains STR"...). Its
 XP adds up under that stat in STATUS (`TRAIN 120/300`), and every **300 XP** is **+1 point** (a
-TRAINED banner), up to 10. The VITALS check-in trains Intelligence the same way. Level-up points still
+TRAINED banner), up to 10. The VITALS check-in trains Intelligence the same way, and TRIALS train
+their own stat. Level-up points still
 work as before.
 
 **Perks** (STATUS tab): each level-up gives a perk point as well as its S.P.E.C.I.A.L. point. Open the
@@ -113,6 +127,7 @@ js/routes.js        MAP: routes (road trips): stops, the road traced once (OSRM)
 js/radar.js         MAP: the scanner, a radar sweep whose blips are real undiscovered cities
 js/holotapes.js     LOG: holotapes, voice recordings kept on the device (their own IndexedDB)
 js/vitals.js        VITALS (check-in, urge decoder, last 7 days) and STATUS's chem-free streak card
+js/trials.js        VITALS: TRIALS (weekly physical tests, records, timers, tap counter)
 vendor/maplibre/    MapLibre GL JS 6.11.2, the map library (licence: vendor/maplibre/LICENSE.txt)
 vendor/three/       Three.js r186, only the parts ITEMS uses (licence: vendor/three/LICENSE)
 js/events.js        user actions
@@ -384,7 +399,7 @@ next to a commit means a test failed.
 - **History:** everything that happens is recorded as an event, in order: quests, dailies, bonus
   objectives, check-ins, journal entries, sales, places discovered, routes, bobbleheads, level-ups,
   perks, S.P.E.C.I.A.L. points (spent or trained), backups, holotapes, VITALS check-ins, chem-free
-  milestones, urges ridden out (with the XP each gave, perks included). The
+  milestones, urges ridden out, TRIALS (with the XP each gave, perks included). The
   latest 2,000 are kept, in the save and in backups. Nothing shows it yet: it's the base for a weekly
   summary, quests that progress by themselves, and statistics. A save from before it starts empty.
 

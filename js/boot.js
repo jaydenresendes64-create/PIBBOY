@@ -56,6 +56,10 @@
       var checkIn = ST.vitalsToday(false);
       out.push(dots('VITALS', 14)+(checkIn && checkIn.logged ? 'CHECKED IN TODAY' : 'CHECK-IN DUE'));
     }
+    if (ST.trialsDue){
+      var due = ST.trialsDue();
+      out.push(dots('TRIALS', 14)+(due ? due+' DUE THIS WEEK' : 'ALL DONE THIS WEEK'));
+    }
     if ((state.unspentSpecialPoints||0)>0) out.push(dots('S.P.E.C.I.A.L.', 14)+state.unspentSpecialPoints+' POINT'+(state.unspentSpecialPoints>1 ? 'S' : '')+' TO ASSIGN');
     if ((state.unspentPerkPoints||0)>0) out.push(dots('PERKS', 14)+state.unspentPerkPoints+' TO CHOOSE (PERK CHART)');
     var days = ST.backupDays(), rads = ST.rads();
