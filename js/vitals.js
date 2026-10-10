@@ -166,9 +166,29 @@
       '<td>'+average(rows.map(function(r){ return num(r.radT); }))+'</td></tr>';
     return html+'</tbody></table></div>';
   }
+  // VITALS has two views, like a Pip-Boy tab's sub-tabs: CHECK-IN (the urge
+  // decoder, the day's check-in, the last 7 days) and TRIALS (js/trials.js).
+  function view(){ return app.vitalsView==='trials' && ST.trials ? 'trials' : 'checkin'; }
+  function subTabsHtml(trials){
+    if (!ST.trials) return '';
+    var due = ST.trialsDue();
+    return '<div class="sub-tabs">'+
+      '<button class="sub-tab'+(trials ? '' : ' active')+'" data-vital="view" data-key="checkin" aria-pressed="'+!trials+'">CHECK-IN</button>'+
+      '<button class="sub-tab'+(trials ? ' active' : '')+'" data-vital="view" data-key="trials" aria-pressed="'+trials+'">TRIALS'+
+        (due ? '<span class="sub-count">'+due+' due</span>' : '')+'</button>'+
+    '</div>';
+  }
   function render(){
     var tab = el('tab-vitals');
     if (!tab || !app.state) return;
+    var trials = view()==='trials';
+    tab.innerHTML = subTabsHtml(trials)+(trials ? ST.trials.html() : checkInHtml());
+    if (trials) ST.trials.drawn();
+    syncTicker();
+    syncAlarm();
+    markTab();
+  }
+  function checkInHtml(){
     var e = ST.vitalsToday(false);
     var html = urgeCardHtml()+'<div class="panel-title">Today’s check-in</div>';
     ST.VITAL_KEYS.forEach(function(k){
@@ -191,15 +211,14 @@
       '<p class="vital-fine">0 is none, 10 is maximum. Take the pulse before getting up, counted over 60 seconds. '+
         'The check-in trains Intelligence.</p>'+
       '<div class="panel-title">Last 7 entries</div>'+tableHtml();
-    tab.innerHTML = html;
-    syncTicker();
-    syncAlarm();
-    markTab();
+    return html;
   }
   function shown(){
     var tab = el('tab-vitals');
     return !!tab && tab.style.display!=='none';
   }
+  // The urge card on screen: VITALS open on CHECK-IN.
+  function urgeShown(){ return shown() && view()==='checkin'; }
   // Only the urge card, so a pulse being typed stays as it is.
   function redrawUrge(){
     var card = el('urge-card');
@@ -217,7 +236,7 @@
   function stopTicker(){ if (ticker!==null){ clearInterval(ticker); ticker = null; } }
   function syncTicker(){
     var running = app.state && app.state.urges.active && ST.urgeLeft()>0;
-    if (running && shown() && document.visibilityState!=='hidden'){ if (ticker===null) ticker = setInterval(tick, 1000); }
+    if (running && urgeShown() && document.visibilityState!=='hidden'){ if (ticker===null) ticker = setInterval(tick, 1000); }
     else stopTicker();
   }
   function tick(){
@@ -247,7 +266,7 @@
     var a = app.state && app.state.urges.active;
     if (!a) return;
     if (ST.urgeLeft()>0){ syncAlarm(); return; }
-    if (shown()) redrawUrge();    // which announces it
+    if (urgeShown()) redrawUrge();    // which announces it
     else { markTab(); announce(); }
   }
   function announce(){
@@ -255,7 +274,7 @@
     if (announced===round) return;
     announced = round;
     sound('quest');
-    if (!shown()) ST.render.showNotice('Urge timer: twenty minutes down. Did it pass? (VITALS)');
+    if (!urgeShown()) ST.render.showNotice('Urge timer: twenty minutes down. Did it pass? (VITALS)');
   }
   // Everything that ticks, stopped (the app in the background).
   function stop(){
@@ -265,11 +284,13 @@
   }
 
   // ---------- the VITALS tab key ----------
-  var ALERTS = {urge:'VITALS: urge timer running', over:'VITALS: urge timer over, did it pass?', due:'VITALS: check-in due today'};
+  var ALERTS = {urge:'VITALS: urge timer running', over:'VITALS: urge timer over, did it pass?',
+    trial:'VITALS: a trial\u2019s timer is running', due:'VITALS: check-in due today'};
   function alertState(){
     var s = app.state;
     if (!s) return '';
     if (s.urges.active) return ST.urgeLeft()>0 ? 'urge' : 'over';
+    if (s.trials && s.trials.active) return 'trial';
     var e = ST.vitalsToday(false);
     return e && e.logged ? '' : 'due';
   }
@@ -320,9 +341,17 @@
       redrawStatus('[data-vital="goto-urge"]');
     },
     'goto-urge': function(){
+      app.vitalsView = 'checkin';
       openVitals();
       var card = el('urge-card');
       if (card && card.scrollIntoView) card.scrollIntoView({block:'start', behavior:ST.stayStill() ? 'auto' : 'smooth'});
+    },
+    // CHECK-IN or TRIALS.
+    'view': function(btn, key){
+      app.vitalsView = key==='trials' ? 'trials' : 'checkin';
+      render();
+      var pressed = document.querySelector('.sub-tab[data-key="'+app.vitalsView+'"]');
+      if (pressed) pressed.focus();
     },
     'urge-start': function(btn, key){
       ST.startUrge(key);
@@ -391,7 +420,7 @@
     document.addEventListener('visibilitychange', function(){
       if (document.visibilityState==='hidden'){ stop(); return; }
       if (!app.state) return;
-      if (shown() && app.state.urges.active) redrawUrge();     // time went by
+      if (urgeShown() && app.state.urges.active) redrawUrge();     // time went by
       else { syncAlarm(); markTab(); }                        // a round may have ended meanwhile
     });
     syncAlarm();

@@ -45,6 +45,13 @@
  *     active: { start: ms, need: one of URGE_NEEDS, rounds: number }|null,   // the timer running
  *     log: [ { date:'YYYY-M-D', need, rounds } ]   // the urges ridden out, the latest URGES_MAX
  *   },
+ *   trials: {                               // VITALS → TRIALS: tests to repeat about once a week
+ *     custom: [ { id, name, kind: TRIAL_KINDS key, stat: one of STAT_KEYS } ],   // the player's own
+ *     hidden: [ id ],                       // built-in TRIALS put away
+ *     log: [ { id: trial id, date:'YYYY-M-D', value: number,   // the results, oldest first (the
+ *              xp: number, t: ms } ],       // latest TRIALS_LOG_MAX): reps, or seconds; xp: what it paid
+ *     active: { id, start: ms }|null        // a trial's timer (it counts from `start`, a few seconds
+ *   },                                      // after the tap: the 3-2-1)
  *   inventory: [ { id, name, category: one of CATS,     // WEAPONS is gone: see migrate()
  *                  price?: number>=0 } ],    // asking price in CAD, optional, shown in THINGS TO SELL (SELL)
  *                                           // only; kept when the item moves to another category
@@ -103,7 +110,8 @@
  * money in the wallet and a journal line), discoverPlace (CITY_XP or
  * REGION_XP, once per place), rewardRoute, readBook (BOOK_XP and its skill),
  * findBobbleheads, logVitals (the day's check-in), claimCleanMilestones
- * (the chem-free streak), urgeWon (an urge ridden out). Milestones
+ * (the chem-free streak), urgeWon (an urge ridden out), logTrial (a
+ * TRIALS result). Milestones
  * without XP are recorded too (level-ups, perks, S.P.E.C.I.A.L. points,
  * backups, holotapes). Nothing else touches state.skills / state.xp;
  * events.js and vitals.js only add the toasts.
@@ -118,15 +126,15 @@
  * unspentSpecialPoint; the player taps a stat in the STATUS tab's level-up
  * banner and confirms "Yes", which calls spendSpecialPoint(key) (grantStat,
  * and the point spent). And training (the owner's choice, 2026-10-09): a
- * daily quest tagged with a stat, and the VITALS check-in (Intelligence),
- * add their XP to that stat's training; every TRAIN_PER_POINT is one point
- * (trainStat). No other reward (quest, bonus objective, journal proposal) and no button
+ * daily quest tagged with a stat, the VITALS check-in (Intelligence) and
+ * TRIALS results (their trial's stat) add their XP to that stat's training;
+ * every TRAIN_PER_POINT is one point (trainStat). No other reward (quest, bonus objective, journal proposal) and no button
  * changes `stats`, and a journal proposal is XP + SkillGains only.
  *
  * SCRIPTS — every file attaches to one namespace, window.StatusTerminal, and
  * index.html loads them in dependency order: state → storage → ai → places →
  * weather → boot → render → mascot → crt → tilt → fog → map → bulk → routes → radar →
- * holotapes → vitals → events → main (map.js loads
+ * holotapes → vitals → trials → events → main (map.js loads
  * MapLibre, vendor/maplibre/, the first time MAP opens: the one module, needing
  * http(s) like the map's lists). They are plain scripts rather than ES modules so the app
  * still runs when index.html is opened straight from disk (file://), where
@@ -168,6 +176,26 @@
   var URGE_MS = 20*60*1000;           // one round of the urge timer
   var URGE_XP = 40, URGE_XP_PER_DAY = 3, URGE_SKILL = 'SURVIVAL', URGES_MAX = 300;
   var TRAIN_PER_POINT = 300;          // training XP for one S.P.E.C.I.A.L. point
+  // TRIALS (see "trials" above). A kind says how a trial is measured: the
+  // most reps in one set (a tap counter helps), the most reps in a set time,
+  // the longest hold, the fastest time (lower is better). Values are reps,
+  // or whole seconds.
+  var TRIAL_KINDS = {
+    reps:    {unit:'reps', better:'more', timer:'counter', label:'Most reps in one set'},
+    timed:   {unit:'reps', better:'more', timer:'countdown', seconds:60, label:'Most reps in 60 seconds'},
+    hold:    {unit:'seconds', better:'more', timer:'stopwatch', label:'Longest hold'},
+    fastest: {unit:'seconds', better:'less', timer:'stopwatch', label:'Fastest time'}
+  };
+  var TRIALS = [
+    {id:'pushups', name:'Push-ups', what:'Most in one set, good form', kind:'reps', stat:'STR'},
+    {id:'plank', name:'Plank', what:'Longest hold, back straight', kind:'hold', stat:'END'},
+    {id:'squats', name:'Squats', what:'Most in 60 seconds, full depth', kind:'timed', stat:'AGI'},
+    {id:'km', name:'1 km', what:'Fastest, walking or running', kind:'fastest', stat:'END'}
+  ];
+  var TRIAL_RECORD_XP = 50, TRIAL_XP = 15;    // one paid result a trial a day: a new record, or not
+  var TRIAL_DUE_DAYS = 7, TRIAL_COUNTDOWN_MS = 3000;
+  var TRIALS_LOG_MAX = 1000, TRIALS_CUSTOM_MAX = 12, TRIAL_NAME_MAX = 40;
+  var TRIAL_VALUE_MAX = {reps:9999, seconds:86400};
   // Every country a place can be in (GeoNames' country list, as in data/places.txt).
   var COUNTRY_CODES = ('AD AE AF AG AI AL AM AN AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR '+
     'BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CS CU CV CW CX CY CZ DE DJ DK DM DO DZ '+
@@ -227,7 +255,8 @@
     statTrain:{STR:0,END:0,CHA:0,INT:0,AGI:0},
     chems:{ cleanSince:null, best:0, totalClean:0, claimed:[], lapses:[] },
     vitals:[],
-    urges:{ active:null, log:[] }
+    urges:{ active:null, log:[] },
+    trials:{ custom:[], hidden:[], log:[], active:null }
   };
 
   // Shared runtime state. `state` is the persisted document described above;
@@ -248,7 +277,14 @@
     confirmPerk: null,          // id of the perk whose rank awaits "Yes"
     addOpen: null,              // the add form unfolded: 'main', 'side', 'daily' (QUESTS) or 'book' (ITEMS)
     streakEdit: false,          // the chem-free streak's start date is being set (STATUS)
-    confirmLapse: false         // "Log a lapse?" awaits "Yes, log it"
+    confirmLapse: false,        // "Log a lapse?" awaits "Yes, log it"
+    vitalsView: 'checkin',      // VITALS shows 'checkin' or 'trials'
+    trialOpen: null,            // id of the trial whose panel (timer, result) is open
+    trialCount: null,           // {id, n}: the tap counter of that trial's set
+    trialConfirm: null,         // {id, value}: the result whose saving awaits "Yes, save"
+    trialRemove: null,          // {id, t}: the result whose removal awaits "Yes, remove"
+    trialHide: null,            // id of the trial whose hiding (or removal) awaits "Yes"
+    trialAddOpen: false         // the "+ New trial" form is unfolded
   };
 
   function el(id){ return document.getElementById(id); }
@@ -412,9 +448,10 @@
   // the owner's in-Claude version, whose backups already have them, with
   // dates written 'YYYY-MM-DD': sanitizeImported reads those). A save from
   // before them has none yet: no check-in, no streak started, no training.
+  // TRIALS came after them: no result yet, and every built-in trial shown.
   function migrateVitals(doc){
     if (!Array.isArray(doc.vitals)) doc.vitals = [];
-    ['chems','urges','statTrain'].forEach(function(part){
+    ['chems','urges','statTrain','trials'].forEach(function(part){
       if (!doc[part] || typeof doc[part]!=='object' || Array.isArray(doc[part])) doc[part] = {};
     });
   }
@@ -615,7 +652,7 @@
   var EVENT_TYPES = ['QUEST_COMPLETED', 'BONUS_COMPLETED', 'DAILY_DONE', 'STREAK_CHECKIN', 'JOURNAL_ENTRY',
     'ITEM_SOLD', 'PLACE_DISCOVERED', 'ROUTE_ADDED', 'BOBBLEHEAD_FOUND', 'LEVEL_UP', 'PERK_TAKEN',
     'SPECIAL_RAISED', 'BACKUP_MADE', 'HOLOTAPE_RECORDED', 'BOOK_READ',
-    'VITALS_CHECKIN', 'CLEAN_MILESTONE', 'URGE_RESISTED', 'SPECIAL_TRAINED'];
+    'VITALS_CHECKIN', 'CLEAN_MILESTONE', 'URGE_RESISTED', 'SPECIAL_TRAINED', 'TRIAL_DONE'];
   function record(type, data, xp){
     var s = app.state;
     if (!Array.isArray(s.history)) s.history = [];
@@ -984,6 +1021,165 @@
     return award('URGE_RESISTED', {need:a.need, rounds:a.rounds||1}, URGE_XP, [{skill:URGE_SKILL, amount:1}]);
   }
 
+  // ---------- TRIALS: tests to repeat about once a week ----------
+  // The built-in TRIALS (some may be hidden) and the player's own, each with
+  // its kind (TRIAL_KINDS). A result is logged with the day; the best one is
+  // the record. One result a trial a day is paid (the first): a new record
+  // TRIAL_RECORD_XP, else TRIAL_XP, and that XP trains the trial's stat.
+  // More results the same day are kept (a record too), unpaid. Removing a
+  // result (a typo) keeps what it paid, like a book.
+  function trialById(id){
+    var t = TRIALS.filter(function(x){ return x.id===id; })[0] ||
+      app.state.trials.custom.filter(function(x){ return x.id===id; })[0];
+    if (!t) return null;
+    var k = TRIAL_KINDS[t.kind] || TRIAL_KINDS.reps;
+    return {id:t.id, name:t.name, what:t.what || k.label, kind:has(TRIAL_KINDS, t.kind) ? t.kind : 'reps', stat:t.stat,
+      unit:k.unit, better:k.better, timer:k.timer, seconds:k.seconds || 0, custom:!t.what};
+  }
+  // The trials shown: the built-in ones not hidden, then the player's own.
+  function trialList(){
+    var hidden = app.state.trials.hidden;
+    return TRIALS.filter(function(t){ return hidden.indexOf(t.id)===-1; }).concat(app.state.trials.custom)
+      .map(function(t){ return trialById(t.id); });
+  }
+  function trialResults(id){
+    return app.state.trials.log.filter(function(r){ return r.id===id; });
+  }
+  function beats(trial, a, b){ return trial.better==='less' ? a<b : a>b; }
+  // The record: the best value logged, or null.
+  function trialBest(id){
+    var t = trialById(id), best = null;
+    if (!t) return null;
+    trialResults(id).forEach(function(r){ if (best===null || beats(t, r.value, best)) best = r.value; });
+    return best;
+  }
+  function trialPaidToday(id){
+    var today = todayStr();
+    return trialResults(id).some(function(r){ return r.date===today && r.xp>0; });
+  }
+  // What a result would be, before it's saved: {value, record, xp}, or null
+  // when it isn't a result (see trialValue).
+  function trialPreview(id, value){
+    var t = trialById(id);
+    value = trialValue(t, value);
+    if (value===null) return null;
+    var best = trialBest(id), record = best===null || beats(t, value, best);
+    return {value:value, record:record, xp:trialPaidToday(id) ? 0 : record ? TRIAL_RECORD_XP : TRIAL_XP};
+  }
+  // A result as stored: whole reps or seconds, from 1 to the kind's most;
+  // null for anything else.
+  function trialValue(t, value){
+    var v = Math.round(Number(value));
+    if (!t || !isFinite(v) || v<1) return null;
+    return Math.min(v, TRIAL_VALUE_MAX[t.unit]);
+  }
+  // Saves a result: {entry, record, reward} (reward null when today's was
+  // paid already; else award()'s result with `trained`), or null.
+  function logTrial(id, value){
+    var t = trialById(id), preview = trialPreview(id, value);
+    if (!preview) return null;
+    var s = app.state, entry = {id:t.id, date:todayStr(), value:preview.value, xp:0, t:Date.now()};
+    s.trials.log.push(entry);
+    if (s.trials.log.length>TRIALS_LOG_MAX) s.trials.log = s.trials.log.slice(-TRIALS_LOG_MAX);
+    var reward = null;
+    if (preview.xp){
+      reward = award('TRIAL_DONE', {trial:t.name, value:preview.value, record:preview.record ? 1 : 0}, preview.xp);
+      entry.xp = reward.xp;
+      reward.trained = trainStat(t.stat, reward.xp);
+    }
+    return {entry:entry, record:preview.record, reward:reward};
+  }
+  // A result removed (logged by mistake): what it paid stays.
+  function removeTrialResult(id, t){
+    var log = app.state.trials.log, i;
+    for (i=log.length-1;i>=0;i--){
+      if (log[i].id===id && log[i].t===Number(t)){ log.splice(i, 1); return true; }
+    }
+    return false;
+  }
+  // Due: no result in the last TRIAL_DUE_DAYS days (or never tried).
+  function trialDue(id){
+    var last = trialResults(id).slice(-1)[0];
+    var d = last ? daysSince(last.date) : null;
+    return d===null || d>=TRIAL_DUE_DAYS;
+  }
+  function trialsDue(){
+    return trialList().filter(function(t){ return trialDue(t.id); }).length;
+  }
+  // The next goal: a little past the record (5% more reps, 5 seconds or 5%
+  // longer, 3% or 5 seconds faster). null before the first result.
+  function trialGoal(id){
+    var t = trialById(id), best = trialBest(id);
+    if (!t || best===null) return null;
+    if (t.better==='less') return Math.max(1, best - Math.max(5, Math.round(best*0.03)));
+    return Math.min(TRIAL_VALUE_MAX[t.unit], best + Math.max(t.unit==='seconds' ? 5 : 1, Math.round(best*0.05)));
+  }
+  // The player's own trial: a name, a kind, a stat. Returns it, or null (no
+  // name, the list full).
+  function addTrial(name, kind, stat){
+    var list = app.state.trials.custom;
+    name = String(name===undefined || name===null ? '' : name).trim().slice(0, TRIAL_NAME_MAX);
+    if (!name || list.length>=TRIALS_CUSTOM_MAX) return null;
+    var t = {id:genId(), name:name, kind:has(TRIAL_KINDS, kind) ? kind : 'reps', stat:STAT_KEYS.indexOf(stat)!==-1 ? stat : 'END'};
+    list.push(t);
+    return trialById(t.id);
+  }
+  // A built-in trial is hidden (its results kept, for when it's shown again);
+  // the player's own is removed with its results (their XP stays).
+  function removeTrial(id){
+    var tr = app.state.trials;
+    if (TRIALS.some(function(t){ return t.id===id; })){
+      if (tr.hidden.indexOf(id)===-1) tr.hidden.push(id);
+    } else {
+      var before = tr.custom.length;
+      tr.custom = tr.custom.filter(function(t){ return t.id!==id; });
+      if (tr.custom.length===before) return false;
+      tr.log = tr.log.filter(function(r){ return r.id!==id; });
+    }
+    if (tr.active && tr.active.id===id) tr.active = null;
+    return true;
+  }
+  function showTrial(id){
+    var tr = app.state.trials;
+    tr.hidden = tr.hidden.filter(function(h){ return h!==id; });
+  }
+  // A trial's timer: it counts from TRIAL_COUNTDOWN_MS after the tap (the
+  // 3-2-1). One at a time.
+  function startTrial(id){
+    if (!trialById(id)) return null;
+    return (app.state.trials.active = {id:id, start:Date.now()+TRIAL_COUNTDOWN_MS});
+  }
+  // Ms since the timer's start: negative during the 3-2-1; null when none runs.
+  function trialElapsed(){
+    var a = app.state.trials.active;
+    return a ? Date.now()-a.start : null;
+  }
+  // Stops it: the whole seconds it ran (0 when stopped during the 3-2-1).
+  function stopTrial(){
+    var ms = trialElapsed();
+    app.state.trials.active = null;
+    return ms===null ? null : Math.max(0, Math.round(ms/1000));
+  }
+  // Typed results: reps as a number; a time as m:ss (or h:mm:ss), or seconds.
+  function parseTrialValue(id, text){
+    var t = trialById(id);
+    text = String(text===undefined || text===null ? '' : text).trim();
+    if (!t || !text) return null;
+    if (t.unit==='seconds' && /^\d+(:\d{1,2}){1,2}$/.test(text)){
+      var parts = text.split(':').map(Number);
+      if (parts.slice(1).some(function(p){ return p>59; })) return null;
+      return trialValue(t, parts.reduce(function(sum, p){ return sum*60+p; }, 0));
+    }
+    return /^\d+([.,]\d+)?$/.test(text) ? trialValue(t, Number(text.replace(',', '.'))) : null;
+  }
+  // A value as shown: "32" (reps), "1:30" or "1:02:05" (a time).
+  function trialValueText(id, value){
+    var t = trialById(id), v = Math.round(Number(value)) || 0;
+    if (!t || t.unit!=='seconds') return String(v);
+    var h = Math.floor(v/3600), m = Math.floor(v%3600/60), sec = v%60;
+    return (h ? h+':'+(m<10 ? '0' : '') : '')+m+':'+(sec<10 ? '0' : '')+sec;
+  }
+
   // ---------- the old terminal's data ----------
   // The owner's in-Claude version (one page, with its own data) has VITALS,
   // the streak, urges and training too. Its backup can be added to this
@@ -1340,6 +1536,34 @@
         return {date:normalizeDate(u.date), need:urgeNeed(u.need), rounds:rounds(u.rounds)};
       }).filter(function(u){ return u.date; }).slice(-URGES_MAX)
     };
+    sanitizeTrials(s);
+  }
+  // TRIALS: the player's own (a known kind and stat, a name), the built-in
+  // ones hidden, and the results of a trial that exists, each within its
+  // kind's limits.
+  function sanitizeTrials(s){
+    var tr = s.trials, builtIn = TRIALS.map(function(t){ return t.id; }), seen = {};
+    builtIn.forEach(function(id){ seen[id] = true; });
+    var custom = records(tr.custom, function(){}).map(function(t){
+      return {id:safeId(t.id), name:text(t.name, TRIAL_NAME_MAX).trim() || 'Trial',
+        kind:typeof t.kind==='string' && has(TRIAL_KINDS, t.kind) ? t.kind : 'reps', stat:STAT_KEYS.indexOf(t.stat)!==-1 ? t.stat : 'END'};
+    }).filter(function(t){
+      if (seen[t.id]) return false;
+      seen[t.id] = true;
+      return true;
+    }).slice(0, TRIALS_CUSTOM_MAX);
+    var units = {};
+    TRIALS.concat(custom).forEach(function(t){ units[t.id] = TRIAL_KINDS[t.kind].unit; });
+    var a = tr.active, start = a && typeof a==='object' ? num(a.start, 0) : 0;
+    s.trials = {
+      custom: custom,
+      hidden: builtIn.filter(function(id){ return Array.isArray(tr.hidden) && tr.hidden.indexOf(id)!==-1; }),
+      log: records(tr.log, function(){}).filter(function(r){ return typeof r.id==='string' && has(units, r.id); }).map(function(r){
+        return {id:r.id, date:normalizeDate(r.date), value:clamp(Math.round(num(r.value, 0)), 0, TRIAL_VALUE_MAX[units[r.id]]),
+          xp:Math.max(0, Math.round(num(r.xp, 0))), t:Math.max(0, num(r.t, 0))};
+      }).filter(function(r){ return r.date && r.value>=1; }).slice(-TRIALS_LOG_MAX),
+      active: start>0 && typeof a.id==='string' && has(units, a.id) ? {id:a.id, start:start} : null
+    };
   }
 
   // The map's places. A place with no usable position (coordinates out of
@@ -1515,6 +1739,32 @@
   ST.urgesToday = urgesToday;
   ST.urgeWon = urgeWon;
   ST.mergeOld = mergeOld;
+  ST.TRIALS = TRIALS;
+  ST.TRIAL_KINDS = TRIAL_KINDS;
+  ST.TRIAL_RECORD_XP = TRIAL_RECORD_XP;
+  ST.TRIAL_XP = TRIAL_XP;
+  ST.TRIAL_DUE_DAYS = TRIAL_DUE_DAYS;
+  ST.TRIAL_NAME_MAX = TRIAL_NAME_MAX;
+  ST.TRIALS_CUSTOM_MAX = TRIALS_CUSTOM_MAX;
+  ST.trialById = trialById;
+  ST.trialList = trialList;
+  ST.trialResults = trialResults;
+  ST.trialBest = trialBest;
+  ST.trialPaidToday = trialPaidToday;
+  ST.trialPreview = trialPreview;
+  ST.logTrial = logTrial;
+  ST.removeTrialResult = removeTrialResult;
+  ST.trialDue = trialDue;
+  ST.trialsDue = trialsDue;
+  ST.trialGoal = trialGoal;
+  ST.addTrial = addTrial;
+  ST.removeTrial = removeTrial;
+  ST.showTrial = showTrial;
+  ST.startTrial = startTrial;
+  ST.trialElapsed = trialElapsed;
+  ST.stopTrial = stopTrial;
+  ST.parseTrialValue = parseTrialValue;
+  ST.trialValueText = trialValueText;
   ST.COUNTRY_CODES = COUNTRY_CODES;
   ST.REGION_CODE = REGION_CODE;
   ST.app = app;

@@ -21,6 +21,7 @@
       ST.app.state = saved || ST.defaultState();
       ST.events.setup();
       if (ST.vitals) ST.vitals.init();            // VITALS and the chem-free streak's taps
+      if (ST.trials) ST.trials.init();            // VITALS → TRIALS
       ST.render.switchTab('status');
       ST.render.renderAll();
       if (ST.holotapes) ST.holotapes.init();      // the LOG tab's recordings (on this device)

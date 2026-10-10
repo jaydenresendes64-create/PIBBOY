@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
-State as of the `books` PR (2026-09-26, after PR #14). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-238/238 tests pass locally. `sw.js` cache: `v23`.
+State as of the TRIALS PR (2026-10-10, after PR #17). Live: https://jaydenresendes64-create.github.io/PIBBOY/
+248/248 tests pass locally. `sw.js` cache: `v24`.
 
 ## 1. What it is
 
@@ -26,7 +26,8 @@ Plain scripts (not ES modules, so `index.html` still opens from disk) sharing
 | `js/render.js` | Builds every tab's HTML (escapes everything), toasts/banners, `switchTab` |
 | `js/items3d.js` | ITEMS 3D wireframe models (Three.js, dynamic `import()`), one shared WebGLRenderer copied into small 2D canvases |
 | `js/mascot.js` | Mascot gesture scheduling (moves are CSS keyframes, per body part: see §3 Look & feel) |
-| `js/vitals.js` | VITALS tab (check-in, urge decoder + its timer's clock, last 7 days) and STATUS's chem-free streak card; its buttons use `data-vital` (its own listeners), the rules are in state.js |
+| `js/vitals.js` | VITALS tab with its CHECK-IN / TRIALS sub-tabs (`app.vitalsView`; check-in, urge decoder + its timer's clock, last 7 days) and STATUS's chem-free streak card; its buttons use `data-vital` (its own listeners), the rules are in state.js |
+| `js/trials.js` | VITALS → TRIALS screen (`ST.trials.html()` drawn by vitals.js `render()`): cards, the open trial's panel (3-2-1, stopwatch/countdown clock, tap counter, save confirm, last results), the timer loop + wake lock; buttons use `data-trial` (its own listeners), the rules are in state.js |
 | `js/crt.js`, `js/tilt.js` | CRT flicker; 3D tilt (DeviceOrientation/mouse) incl. glass glare parallax |
 | `js/events.js` | All user actions → state change → re-render → debounced save |
 | `js/main.js` | Boot: load → setup events → render → `syncCaps()` → SW registration |
@@ -90,6 +91,20 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   gets a light (`data-alert` = urge / over / due, vitals.js `markTab`, CSS `.tab-btn[data-alert]::after`);
   the end of an urge round is announced once a round from any tab (vitals.js `syncAlarm`: a timeout
   to the end while the app is visible, a sound, a notice when VITALS isn't open).
+- **TRIALS (2026-10-10, owner: "on commence par Trials"):** weekly physical tests with personal
+  records, a sub-tab of VITALS. state.js: `TRIAL_KINDS` (reps = most in one set, timed = most in 60 s,
+  hold = longest, fastest = least seconds), built-in `TRIALS` (pushups STR, plank END, squats AGI, km
+  END), `trials` = { custom (≤12, own id/name/kind/stat), hidden (built-in ids), log (≤1000 {id, date,
+  value, xp, t}), active ({id, start} of a running timer, start = tap + 3 s for the 3-2-1, survives a
+  reload) }. `logTrial()` always logs; it pays once a trial a day (`trialPaidToday`): a record (`beats`
+  the best, by the kind's `better`) award('TRIAL_DONE', 50), otherwise 15, and `trainStat()` with the
+  reward's XP. `removeTrialResult()` keeps the XP (like books). `trialDue()` = never tried or last ≥ 7
+  days; `trialGoal()` = best ±5% (at least 1 rep / 5 s). `parseTrialValue()` takes m:ss / h:mm:ss or
+  plain numbers. Sanitize drops unknown trials and results < 1, caps values (9999 reps, 1 day).
+  vitals.js: `subTabsHtml()` (TRIALS shows "N due"), the tab key's light gets `trial` (timer running),
+  the urge ticker/announce only count on the CHECK-IN view (`urgeShown`). render.js `showRecord()`
+  (NEW RECORD banner). Boot line `TRIALS ... N DUE THIS WEEK / ALL DONE THIS WEEK`.
+  Tested in `tests/trials.test.js`; checked live with Playwright (timers, tap counter, confirm, reload).
 - QUESTS: several main quests (types **percent** slider, **streak** daily check-in, **caps** goal
   that follows the wallet; a percent or caps quest at 100% shows a **COMPLETE QUEST** button and only
   its tap pays, `mainReady()`), bonus objectives, side quests (XP + one skill +3)
@@ -174,7 +189,7 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 7. Plain scripts rather than ES modules so the app still runs from `file://`.
 8. S.P.E.C.I.A.L. keeps its 5 stats: **no LUK** (the owner doesn't believe in luck); PER only if the
    owner asks (maybe later). Stats go up by level-up points and, since 2026-10-09 (the owner's own
-   design), by training: stat-tagged dailies and the VITALS check-in, 300 XP a point. Skills come from Analyze, the −/+ buttons and quests' `skillGains`:
+   design), by training: stat-tagged dailies, the VITALS check-in and TRIALS, 300 XP a point. Skills come from Analyze, the −/+ buttons and quests' `skillGains`:
    main quests, and **side quests** (+3 of one skill, `SIDE_SKILL_GAIN`, paid once by
    `completeSide()`; s1–s4 got theirs by migration). **Daily quests give XP only** (owner's choice
    2026-09-24: +1/day would max skills in months).

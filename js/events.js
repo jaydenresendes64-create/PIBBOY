@@ -384,6 +384,9 @@
     app.confirmPerk = null;
     app.confirmLapse = false;
     app.streakEdit = false;
+    app.trialConfirm = null;
+    app.trialRemove = null;
+    app.trialHide = null;
   }
   // A whole new state (a backup, a reset): drawn, caps quests brought up to
   // date with its wallet, and saved; the settings close on it.
