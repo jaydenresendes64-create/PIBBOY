@@ -270,18 +270,14 @@ function held(name) {
 }
 const heldAt = (kf, t) => kf.filter(k => k.at <= t + 1e-9).pop();
 
-test('level 5 walks with its walking parts: in the walker, hidden until he walks, the standing parts hidden while he does', () => {
-  const data = JSON.parse(read('tools/vaultboy-walk.json'))['05'];
-  assert.deepEqual(data.parts, ['armF', 'bootF', 'legF', 'bootN', 'legN', 'torso', 'armN']);
-  assert.deepEqual(pngSize('images/vaultboy/walk-lvl05.png'), [data.width * 7, 420]);
+test('level 5 walks with its drawings: in the walker, hidden until he walks, the parts hidden while he does', () => {
+  const walkData = JSON.parse(read('tools/vaultboy-walk.json'))['05'];
+  assert.equal(walkData.frames, 8);
+  assert.deepEqual(pngSize('images/vaultboy/walk-lvl05.png'), [walkData.width * 8, 420]);
   assert.match(read('sw.js'), /'images\/vaultboy\/walk-lvl05\.png'/);
   const html = read('index.html');
-  assert.match(html, /<div class="vb-body"><div class="vb-breathe">[\s\S]*?<\/div><span class="vw-rig"><span class="vw-body"><span class="vw vw-pic vw-armF"><\/span><span class="vw vw-legF"><span class="vw vw-pic vw-bootF"><\/span><span class="vw vw-pic vw-legF-pic"><\/span><\/span><span class="vw vw-legN"><span class="vw vw-pic vw-bootN"><\/span><span class="vw vw-pic vw-legN-pic"><\/span><\/span><span class="vw vw-pic vw-torso"><\/span><span class="vw vw-pic vw-armN"><\/span><\/span><\/span><\/div><\/div><\/div>/);
-  assert.match(rule('.vw-rig'), /display:none;[\s\S]*opacity:0;/);    // shown only by its animation: not with Reduce Motion
-  ['armF', 'bootF', 'legF-pic', 'bootN', 'legN-pic', 'torso', 'armN'].forEach((cls, i) => {
-    const pos = rule('.vw-' + cls).match(/background-position:([\d.]+)%? 0;/);
-    assert.ok(pos && Math.abs(pos[1] - i / 6 * 100) < 0.001, cls + ' shows cell ' + i);
-  });
+  assert.match(html, /<div class="vb-body"><div class="vb-breathe">[\s\S]*?<\/div><span class="vb-walk"><\/span><\/div><\/div><\/div>/);   // inside .vb-move: it turns with him
+  assert.match(rule('.vb-walk'), /opacity:0;/);                   // shown only by its animation: not with Reduce Motion
   const t = '.vaultboy[data-tier="05"]';
   assert.match(rule(t + ' .vb-track'), /animation-name:vbTrack05;/);
   assert.match(rule(t + ' .vb-move'), /animation-name:vbMoveDrawn;/);
@@ -289,71 +285,43 @@ test('level 5 walks with its walking parts: in the walker, hidden until he walks
   assert.match(rule(t + ' .vb-head'), /animation-name:vbHeadDrawn;/);
   assert.match(rule(t + ' .vb-body'), /animation:none;/);
   assert.match(rule(t + ' .vb-breathe'), /animation:mascotBreathe 4\.2s ease-in-out infinite, vbParts05 11s linear infinite;/);
-  assert.match(rule(t + ' .vw-rig'), /display:block;[\s\S]*animation:vbWalk05 11s linear infinite;/);
-  assert.match(rule(t + ' .vw-pic'), /background-image:url\(\.\.\/images\/vaultboy\/walk-lvl05\.png\);/);
-  [['legN', 'hipN'], ['legF', 'hipF'], ['bootN', 'ankleN'], ['bootF', 'ankleF'], ['armN', 'shoulderN'], ['armF', 'shoulderF']].forEach(([part, joint]) => {
-    const r = rule(t + ' .vw-' + part), o = r.match(/transform-origin:([\d.]+)% ([\d.]+)%;/);
-    assert.ok(o && Math.abs(o[1] - data.joints[joint][0] / data.width * 100) < 0.01 && Math.abs(o[2] - data.joints[joint][1] / 420 * 100) < 0.01, part + ' turns at ' + joint);
-    assert.match(r, new RegExp('animation:vb' + part[0].toUpperCase() + part.slice(1) + '05 11s linear infinite;'));
-  });
+  const walk = rule(t + ' .vb-walk');
+  assert.match(walk, /background-image:url\(\.\.\/images\/vaultboy\/walk-lvl05\.png\); animation:vbWalk05 11s linear infinite;/);
+  assert.ok(Math.abs(parseFloat(walk.match(/width:([\d.]+)%/)[1]) - walkData.width / 308 * 100) < 0.01, 'his frame as wide as the drawings');
   assert.match(css, /\.vaultboy\[data-tier="05"\] \.vb-leg-front, [^{]*\.vb-shin-back\{ animation:none; \}/);
-  ['10', '20', '30', '50', '00'].forEach(other => assert.doesNotMatch(css, new RegExp('\\.vaultboy\\[data-tier="' + other + '"\\] \\.vw-'), 'no walking parts yet for ' + other));
+  ['10', '20', '30', '50', '00'].forEach(other => assert.doesNotMatch(css, new RegExp('\\.vaultboy\\[data-tier="' + other + '"\\] \\.vb-walk'), 'no drawings yet for ' + other));
 });
 
-test('the walking parts\' walk, replayed as the page plays it: a boot always on the gauge and still, none sinking, never a step back, shown exactly when the standing parts aren\'t', () => {
-  const data = JSON.parse(read('tools/vaultboy-walk.json'))['05'];
-  const J = data.joints, H = 420, W = data.width;
-  const kf = n => keyframes(n), at = (k, t) => valueAt(k, t);
-  const track = kf('vbTrack05'), body = kf('vbBody05'), move = kf('vbMoveDrawn');
-  const leg = { N: kf('vbLegN05'), F: kf('vbLegF05') }, boot = { N: kf('vbBootN05'), F: kf('vbBootF05') };
+test('the drawn walk: the drawings in order, one at a time, the parts exactly when they aren\'t; he moves on at each drawing, never back, as far as --vb-span', () => {
+  const walkData = JSON.parse(read('tools/vaultboy-walk.json'))['05'];
   const shows = held('vbWalk05'), parts = held('vbParts05');
-  const mo = rule('.vb-move, .vb-body, .vb-breathe').match(/transform-origin:([\d.]+)% ([\d.]+)%;/);
-  const O = [mo[1] / 100 * 308 * (100 / 100), mo[2] / 100 * H];
-  // each boot's toe, as drawn (tools/vaultboy-moves.py drawn_walk): the ankle less its reach turned heel-up by tau
-  const rot = (p, c, deg) => turned(p, c, deg);
-  const toe = {}, lane = {};
-  for (const f of ['N', 'F']) {
-    const r = rot([data.foot[f].toe, -data.foot[f].up], [0, 0], -data.tau[f]);
-    toe[f] = [J['ankle' + f][0] - r[0], J['ankle' + f][1] - r[1]]; lane[f] = toe[f][1];
-  }
+  const track = held('vbTrack05').map(k => ({ at: k.at, x: +k.css.match(/\* (-?[\d.]+)\)\);$/)[1] }));
   const span = +rule('.vaultboy[data-tier="05"]').match(/--vb-span:([\d.]+);/)[1];
-  const px = v => v / H * 100;                                    // on the 100px frame
-  const seen = [];
+  let walks = 0, seen = [], lastFrame = null, out = true, most = 0, least = span;
   for (let ms = 0; ms <= 11000; ms++) {
-    const t = ms / 11000;
-    const shown = /opacity:1;/.test(heldAt(shows, t).css);
-    assert.equal(/opacity:1;/.test(heldAt(parts, t).css), !shown, 'the walking parts or the standing ones, never both (' + ms + 'ms)');
-    const [x] = at(track, t), [dy] = at(body, t), [, ty, sx, sy, r0] = at(move, t);
-    const out = { shown, x, hop: ty !== 0 };
-    for (const f of ['N', 'F']) {
-      const [turn, axis, k] = at(leg[f], t), [b] = at(boot[f], t);
-      let p = rot(toe[f], J['ankle' + f], b);                         // the boot about its ankle
-      p = rot(p, J['hip' + f], -axis);                                 // the leg: along itself shortened, then turned
-      p = [p[0], J['hip' + f][1] + (p[1] - J['hip' + f][1]) * k];
-      p = rot(p, J['hip' + f], axis); p = rot(p, J['hip' + f], turn);
-      p = [p[0], p[1] + dy * H];                                       // the body
-      const q = rot([p[0] - O[0], p[1] - O[1]], [0, 0], r0);          // .vb-move
-      out[f] = { x: px(x * H + O[0] + sx * q[0]), up: px(lane[f] - (O[1] + sy * q[1])) };
+    const t = ms / 11000, s = heldAt(shows, t).css, p = heldAt(parts, t).css, x = heldAt(track, t).x;
+    const shown = /opacity:1;/.test(s);
+    assert.equal(/opacity:1;/.test(p), !shown, 'the parts or the drawings, never both or neither (' + ms + 'ms)');
+    if (shown) {
+      const pos = s.match(/background-position:(\S+) 0;/)[1];
+      const frame = pos === '0' ? 0 : Math.round(parseFloat(pos) / 100 * 7);
+      if (lastFrame === null) { walks++; seen = []; }
+      if (frame !== lastFrame) {
+        if (lastFrame !== null) assert.equal(frame, (lastFrame + 1) % 8, 'the drawings in order (' + ms + 'ms)');
+        seen.push(frame);
+      }
+      lastFrame = frame;
+      if (out) { assert.ok(x >= most - 1e-9, 'never a step back (' + ms + 'ms)'); most = x; }
+      else { assert.ok(x <= least + 1e-9, 'never a step back (' + ms + 'ms)'); least = x; }
+    } else if (lastFrame !== null) {
+      assert.deepEqual(seen, [0, 1, 2, 3, 4, 5, 6, 7, 0], 'two steps and the landing');
+      lastFrame = null;
+      out = !out;
     }
-    seen.push(out);
   }
-  let walking = 0, most = 0, least = span, outward = true, was = false;
-  seen.forEach((b, ms) => {
-    if (b.shown && !was) walking++;
-    if (!b.shown && was) outward = !outward;
-    was = b.shown;
-    if (!b.shown || b.hop) return;
-    ['N', 'F'].forEach(f => assert.ok(b[f].up > -0.1, 'the ' + f + ' toe sinks ' + (-b[f].up).toFixed(2) + 'px into the gauge at ' + ms + 'ms'));
-    const later = seen[ms + 10];
-    if (later && later.shown) {
-      const off = ['N', 'F'].map(f => Math.max(Math.abs(b[f].up), Math.abs(later[f].x - b[f].x)));
-      assert.ok(Math.min(...off) < 0.25, 'no boot stands still on the gauge at ' + ms + 'ms (' + off.map(v => v.toFixed(2)) + 'px)');
-    }
-    if (outward) { assert.ok(b.x >= most - 1e-6, 'never a step back (' + ms + 'ms)'); most = b.x; }
-    else { assert.ok(b.x <= least + 1e-6, 'never a step back (' + ms + 'ms)'); least = b.x; }
-  });
-  assert.equal(walking, 2, 'there and back');
-  assert.equal(at(track, 0)[0], 0); assert.equal(at(track, 1)[0], 0);
-  assert.ok(Math.abs(Math.max(...seen.map(b => b.x)) - span) < 1e-6 || true);
-  assert.ok(span * 100 < 69, 'his walk fits a 390px-wide screen');
+  assert.equal(walks, 2, 'there and back');
+  assert.equal(heldAt(track, 0).x, 0); assert.equal(heldAt(track, 1).x, 0);
+  assert.ok(Math.abs(Math.max(...track.map(k => k.x)) - span) < 1e-9);
+  assert.ok(Math.abs(span - walkData.position[8] / 420) < 0.001, 'two steps of the drawings, as measured');
+  assert.ok(span * 100 < 69, 'his drawn walk fits a 390px-wide screen');
 });
