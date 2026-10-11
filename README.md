@@ -168,8 +168,8 @@ images/vaultboy/    the Vault Boy walking on the level gauge: the original one (
                     levels 1-4, then one outfit per tier (5, 10, 20, 30, 50): lvlXX.png in colour (the
                     sources, not loaded by the app) and
                     parts-lvlXX.png, the same in amber cut into parts that each move (js/render.js syncWalker);
-                    walk-lvl05.png, the level 5 outfit's walk as 8 amber drawings, shown in turn while he
-                    walks (walk-lvl05-source.webp: the sheet of poses they come from, not loaded)
+                    walk-lvl05.png, the level 5 outfit's walking parts, cut from a side-view drawing so he
+                    walks turned the way he goes (walk-lvl05-source.webp: the sheet of poses it comes from)
 images/mascot.png   the old corner mascot's picture (288x408), the source of his parts (hidden since 2026-10-10)
 images/mascot-parts.png  the mascot cut into parts that each move (legs, knees, thumb arm, body, head, blink)
 data/map-style.json MAP: the map's own amber Pip-Boy style (colours, line widths, labels, by zoom)
@@ -180,7 +180,7 @@ tools/              build-map-data.js, which makes data/ (see "Map data"); build
                     images/mascot.png into images/mascot-parts.png (Python with Pillow and numpy);
                     mascot-moves.py, which writes the mascot's moves into css/terminal.css (Python);
                     vaultboy-parts.py (amber + parts for the five outfits), vaultboy-walk.py (an outfit's
-                    drawn walk from a sheet of poses) and vaultboy-moves.py (his walk on the level gauge,
+                    walking parts from a side-view drawing) and vaultboy-moves.py (his walk on the level gauge,
                     worked out from where his boots go), the same for the Vault Boy
 fonts/              the two terminal fonts, VT323 and IBM Plex Mono (licence: fonts/OFL.txt)
 api/analyze.js      optional serverless AI function (not used on GitHub Pages, see below)
