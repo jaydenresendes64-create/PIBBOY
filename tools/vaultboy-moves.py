@@ -32,6 +32,7 @@ node --test. It replaces the part of css/terminal.css between
 "/* The Vault Boy's walk on the level bar" and
 "/* End of the Vault Boy's walk made by tools/vaultboy-moves.py. */".
 """
+import json
 import math
 import os
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
@@ -48,6 +49,11 @@ SPAN = 69                   # page pixels he goes each way (frame 100px high): a
 LIFT = 3.8                  # page pixels: how high the swinging boot goes
 BOB = (0.95, 0.36)          # page pixels his body is lower than standing: both boots down, one boot under him
 HOVER = 0.002               # at most this share of his height between the boot with the weight and the gauge
+DRAWN_STEPS = 2             # each way, for an outfit with a drawn walk: its steps are longer (2 fit a 390px-wide screen)
+FRAME = STEP / 4            # seconds a drawing shows: 4 a step, the parts' pace
+DRAWN_FRAMES = 4 * DRAWN_STEPS + 1   # the steps' drawings, and the first one again: he lands
+WALK_DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'vaultboy-walk.json')
+WALKS = json.load(open(WALK_DATA)) if os.path.exists(WALK_DATA) else {}   # tools/vaultboy-walk.py: the outfits with one
 RATE = 250                  # samples a second (STEP and 0.12 s fall on it)
 RIGHT, LEFT = -1, 1         # scale x to face that way
 LEAN = -1                   # degrees: he leans into the walk
@@ -90,11 +96,8 @@ def reach(rig, side, foot):
     leg = math.degrees(thigh - drawn(hip, knee))
     return leg, math.degrees(shin - drawn(knee, sole)) - leg
 
-ch = {k: [] for k, _ in PARTS}           # the arm, the head (the legs: each rig's own, in legs)
-legs = {name: {k: [] for k in LEGS} for name, _ in RIGS}
-mover = []                  # (t, {sx, sy, ty, rot}, ease)
-steps = []                  # (t, the boot that takes the weight then: 'F' or 'B')
-walks = []                  # (from, to): while he walks
+# One timeline at a time (timeline()): the keys it collects.
+ch = legs = mover = steps = walks = None   # the arm and head; each rig's legs; .vb-move; who has the weight; (from, to, facing) of each walk
 def key(part, t, v, ease=IO): ch[part].append((t, v, ease))
 def at(t, ease=IO, **state): mover.append((t, state, ease))
 
@@ -166,12 +169,24 @@ def simplified(samples, tol):
 def smooth(u):
     return u * u * (3 - 2 * u)
 
-def walk(start, face):
+def walk(start, face, drawn=False):
     """A wind-up, STEPS steps from `start` (the back boot first), the stop:
     each rig's legs (strides()); the arm swings against the legs and the head
     bobs a beat late. Steps start on the RATE grid, so both ways are worked
-    out alike."""
+    out alike. drawn: an outfit with a drawn walk (tools/vaultboy-walk.py),
+    DRAWN_STEPS steps of drawings shown in turn, the parts hidden (drawn_css())."""
     start = round(start * RATE) / RATE
+    if drawn:
+        end = start + DRAWN_FRAMES * FRAME
+        at(start, IO, sx=face, sy=1, ty=0, rot=0)
+        at(end, OUT, sx=face, sy=1, rot=0)
+        key('Arm', start, 0); key('Arm', end + 0.12, 0)
+        key('Head', start, 0); key('Head', end + 0.08, -2); key('Head', end + 0.25, 0)
+        at(end + 0.08, IO, sx=face, sy=0.97, rot=1)                # brakes, the parts back: leans back, squashes
+        at(end + 0.18, IO, sx=face, sy=1.01, rot=-0.3)
+        at(end + 0.26, IO, sx=face, sy=1, rot=0)
+        walks.append((start, end, face))
+        return end + 0.26
     at(start, IO, sx=face, sy=1, ty=0, rot=0)
     at(start + 0.08, IO, sx=face, sy=0.98, rot=1.5)               # wind-up: leans back, dips
     c0 = start + 0.12
@@ -192,7 +207,7 @@ def walk(start, face):
     at(end + 0.08, IO, sx=face, sy=0.97, rot=1)                    # brakes: leans back, squashes
     at(end + 0.18, IO, sx=face, sy=1.01, rot=-0.3)
     at(end + 0.26, IO, sx=face, sy=1, rot=0)
-    walks.append((start, end))                                     # then both boots are down: he stays there
+    walks.append((start, end, face))                               # then both boots are down: he stays there
     return end + 0.26
 
 def strides(rig, into, start, contacts):
@@ -292,16 +307,25 @@ def turn(t0, t1, sx_from, sx_to):
     return t1
 
 # ---------- the loop: from the left end, facing right ----------
-t = walk(0, RIGHT)                             # to the right end
-t = look(t + 0.35)
-t = thumbs(t + 0.3, RIGHT)
-t = turn(t + 0.35, t + 0.53, RIGHT, LEFT)
-t = walk(t + 0.05, LEFT)                       # back to the left end
-t = look(t + 0.35)
-t = thumbs(t + 0.3, LEFT)
-t = turn(t + 0.35, t + 0.53, LEFT, RIGHT)
-assert t < LOOP - 0.2, 'the loop is too short: %.2f s' % t
-at(LOOP, IO, sx=RIGHT, sy=1, ty=0, rot=0)
+def timeline(drawn=False):
+    """The whole loop's keys, for the parts' walk or a drawn one: the same
+    moves at the same moments, a drawn walk being shorter, he waits longer
+    between them."""
+    global ch, legs, mover, steps, walks
+    ch, legs = {k: [] for k, _ in PARTS}, {name: {k: [] for k in LEGS} for name, _ in RIGS}
+    mover, steps, walks = [], [], []
+    wait = (0.12 + STEPS * STEP - DRAWN_FRAMES * FRAME) / 2 if drawn else 0
+    t = walk(0, RIGHT, drawn)                                       # to the right end
+    t = look(t + 0.35 + wait)
+    t = thumbs(t + 0.3 + wait, RIGHT)
+    t = turn(t + 0.35, t + 0.53, RIGHT, LEFT)
+    t = walk(t + 0.05, LEFT, drawn)                                 # back to the left end
+    t = look(t + 0.35 + wait)
+    t = thumbs(t + 0.3 + wait, LEFT)
+    t = turn(t + 0.35, t + 0.53, LEFT, RIGHT)
+    assert t < LOOP - 0.2, 'the loop is too short: %.2f s' % t
+    at(LOOP, IO, sx=RIGHT, sy=1, ty=0, rot=0)
+    return t
 
 # ---------- reading the keyframes back, as CSS plays them ----------
 def planted(name, rig):
@@ -330,7 +354,7 @@ def planted(name, rig):
         down = min(lift.values())
         seen = lambda f: ox + m['sx'] * ((feet[f][0] - ox) * c - (feet[f][1] + down - oy) * s)
         now = [st for st in order if st[0] <= t + 1e-9]
-        if now and any(w0 <= t <= w1 for w0, w1 in walks):
+        if now and any(w0 <= t <= w1 for w0, w1, _ in walks):
             if now[-1] != stance:
                 stance = now[-1]
                 plant = track + seen(stance[1])                    # where that boot stands
@@ -349,13 +373,13 @@ def num(v, places=3):
     v = round(v, places)
     return ('%.*f' % (places, v)).rstrip('0').rstrip('.') if v != int(v) else str(int(v))
 
-def mover_css():
+def mover_css(name='vbMove'):
     ks = mover_keys()
     assert ks[0][0] == 0 and ks[0][1][0] == ks[-1][1][0], 'the loop starts and ends the same'
     rows = ['  %s{ transform:translate(0,%s) scale(%s,%s) rotate(%sdeg); animation-timing-function:%s; }'
             % (pct(t), '%spx' % num(s['ty']) if s['ty'] else '0', num(s['sx']), num(s['sy']), num(s['rot']), e)
             for t, (s, e) in ks]
-    return '@keyframes vbMove{\n' + '\n'.join(rows) + '\n}'
+    return '@keyframes %s{\n' % name + '\n'.join(rows) + '\n}'
 
 def part_css(part, name=''):
     if part in LEGS:
@@ -367,11 +391,60 @@ def part_css(part, name=''):
     ease = lambda e: '' if e == LIN else ' animation-timing-function:%s;' % e          # the animation is linear
     return '@keyframes vb%s%s{ %s }' % (part, name, ' '.join('%s{ transform:%s;%s }' % (pct(t), value(v), ease(e)) for t, v, e in ks))
 
+def held_css(name, rows):
+    """Keyframes whose values hold until the next one (a flip book); of two at
+    the same moment, the later."""
+    last = {}
+    for t, css in rows:
+        last[pct(t)] = (t, css)
+    return '@keyframes %s{ %s }' % (name, ' '.join('%s{ %s animation-timing-function:steps(1, end); }' % (k, css) for k, (t, css) in sorted(last.items(), key=lambda kv: kv[1][0])))
+
+def drawn_css(tier, data):
+    """An outfit with a drawn walk (images/vaultboy/walk-lvlXX.png, 8 drawings
+    of 308x420 side by side): while he walks, the drawings in turn (.vb-walk)
+    and the parts hidden (.vb-breathe); where he is moves on at each drawing,
+    as far as tools/vaultboy-walk.py measured; the rest of the loop as for the
+    parts, from the drawn timeline (vbMoveDrawn, vbArmDrawn, vbHeadDrawn)."""
+    n, pos = data['frames'], data['position']
+    cycle, H = pos[n], float(RIGS[0][1]['H'])
+    track, show, parts_ = [(0, 0.0)], [(0, (0, 0))], [(0, 1)]
+    base = 0.0
+    for start, end, face in walks:
+        sign = 1 if face == RIGHT else -1
+        for j in range(DRAWN_FRAMES):
+            track.append((start + j * FRAME, base + sign * ((j // n) * cycle + pos[j % n]) / H))
+            show.append((start + j * FRAME, (1, j % n)))
+        show.append((end, (0, 0)))
+        parts_ += [(start, 0), (end, 1)]
+        base += sign * DRAWN_STEPS * cycle / 2 / H
+    assert abs(base) < 1e-9, 'he comes back to where he started'
+    track.append((LOOP, 0.0)); show.append((LOOP, (0, 0))); parts_.append((LOOP, 1))
+    span = max(v for _, v in track)
+    t = '.vaultboy[data-tier="%s"]' % tier
+    legs_ = ', '.join('%s .%s' % (t, cls) for part, cls in PARTS if part in LEGS)
+    return [
+        '%s .vb-track{ animation-name:vbTrack%s; }' % (t, tier),
+        '%s .vb-move{ animation-name:vbMoveDrawn; }' % t,
+        '%s .vb-body{ animation:none; }' % t,
+        '%s .vb-arm{ animation-name:vbArmDrawn; }' % t,
+        '%s .vb-head{ animation-name:vbHeadDrawn; }' % t,
+        '%s{ animation:none; }' % legs_,
+        '%s .vb-breathe{ animation:mascotBreathe 4.2s ease-in-out infinite, vbParts%s %s linear infinite; }' % (t, tier, length),
+        '%s .vb-walk{ left:%s%%; right:auto; width:%s%%; background-image:url(../images/vaultboy/walk-lvl%s.png); animation:vbWalk%s %s linear infinite; }'
+        % (t, num(100.0 * data['left'] / 308, 3), num(100.0 * data['width'] / 308, 3), tier, tier, length),
+        '%s{ --vb-span:%s; }' % (t, num(span, 4)),
+        held_css('vbTrack' + tier, [(at_, 'transform:translateX(calc(var(--vb-h) * var(--vb-swing, 1) * %s));' % num(v, 4)) for at_, v in track]),
+        held_css('vbWalk' + tier, [(at_, 'opacity:%d; background-position:%s 0;' % (o, '%s%%' % num(100.0 * k / (n - 1), 4) if k else '0'))
+                                   for at_, (o, k) in show]),
+        held_css('vbParts' + tier, [(at_, 'opacity:%d;' % o) for at_, o in parts_]),
+    ]
+
 def lengths_css(name, samples, tol, fmt):
     rows = ['%s{ transform:%s; }' % (pct(t), fmt(num(v, 4))) for t, v in simplified(samples, tol)]
     return '@keyframes %s{ %s }' % (name, ' '.join(rows))
 
 length = num(LOOP) + 's'
+t = timeline()
 out = ['''/* The Vault Boy's walk on the level bar, made by tools/vaultboy-moves.py:
    change it there, not here. One loop, every element the same length so they
    stay together (they all start when he shows). Where he is along the gauge
@@ -401,6 +474,14 @@ for suffix, rig in RIGS:
 out.append('.vaultboy{ --vb-span:%s; }' % num(spans[''], 4))
 out.append('.vaultboy[data-tier="00"]{ --vb-span:%s; }' % num(spans['Old'], 4))
 out += [mover_css()] + [part_css(p) for p, _ in PARTS] + [part_css(p, 'Old') for p in LEGS]
+if WALKS:
+    out.append('''/* The outfits with a drawn walk (tools/vaultboy-walk.py): the same moves
+   at the same moments, but while he walks, his drawings in turn instead of
+   the parts (DRAWN_STEPS steps, longer than the parts' steps). */''')
+    timeline(drawn=True)
+    for tier in sorted(WALKS):
+        out += drawn_css(tier, WALKS[tier])
+    out += [mover_css('vbMoveDrawn'), part_css('Arm', 'Drawn'), part_css('Head', 'Drawn')]
 out.append("/* End of the Vault Boy's walk made by tools/vaultboy-moves.py. */")
 
 text = open(CSS).read()
