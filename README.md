@@ -164,8 +164,9 @@ js/events.js        user actions
 js/main.js          startup
 sw.js               service worker: offline use (network first for the app, so updates show right away)
 manifest.webmanifest name, colours and icons (icons/) for installing on a phone
-images/vaultboy/    the Vault Boy walking on the level bar, one outfit per tier (lvl05 from level 1, then
-                    10, 20, 30, 50): lvlXX.png in colour (the sources, not loaded by the app) and
+images/vaultboy/    the Vault Boy walking on the level bar: the original one (images/mascot-parts.png) for
+                    levels 1-4, then one outfit per tier (5, 10, 20, 30, 50): lvlXX.png in colour (the
+                    sources, not loaded by the app) and
                     parts-lvlXX.png, the same in amber cut into parts that each move (js/render.js syncWalker)
 images/mascot.png   the old corner mascot's picture (288x408), the source of his parts (hidden since 2026-10-10)
 images/mascot-parts.png  the mascot cut into parts that each move (legs, knees, thumb arm, body, head, blink)

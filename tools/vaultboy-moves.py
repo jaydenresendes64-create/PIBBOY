@@ -1,7 +1,7 @@
 """
 Writes the Vault Boy's walk on the level bar into css/terminal.css: one loop
 that never stops, in the cartoon style of the old mascot's moves
-(tools/mascot-moves.py): a wind-up, four strides with the knees bending and
+(tools/mascot-moves.py): a wind-up, five quick strides with the knees bending and
 the body bobbing, a brake, a look around, a thumbs-up, a spin like a flat
 card to turn round, the same back, another look and thumbs-up, a spin.
 
@@ -25,8 +25,8 @@ IO, OUT, IN, BACK, LIN = ('cubic-bezier(.45,0,.55,1)', 'cubic-bezier(.2,.7,.3,1)
                           'cubic-bezier(.55,0,.85,.35)', 'cubic-bezier(.34,1.56,.64,1)', 'linear')
 PARTS = [('LegF', 'vb-leg-front'), ('ShinF', 'vb-shin-front'), ('LegB', 'vb-leg-back'), ('ShinB', 'vb-shin-back'),
          ('Arm', 'vb-arm'), ('Head', 'vb-head'), ('Body', 'vb-body')]
-LOOP = 11.5                 # seconds
-STRIDES, STRIDE = 4, 0.42   # each way
+LOOP = 11                   # seconds
+STRIDES, STRIDE = 5, 0.3    # each way: quick steps, like the old mascot's (0.25 s)
 RIGHT, LEFT = -1, 1         # scale x to face that way
 
 C1 = dict(LegF=14, ShinF=-4, LegB=-10, ShinB=-14)

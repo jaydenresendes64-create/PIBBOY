@@ -53,16 +53,18 @@
 
   // ---------- the Vault Boy on the level bar ----------
   // He walks on the XP bar from level 1 (css/terminal.css .vaultboy), in
-  // amber parts that each move, like the old mascot; his outfit follows the
-  // level: images/vaultboy/parts-lvl05 (levels 1-9), 10, 20, 30 and 50 (kept
-  // from 50 on). The outfit changes only with the tier.
-  var WALKER_TIERS = [50, 30, 20, 10];
+  // amber parts that each move. Levels 1-4: the original Vault Boy (the old
+  // corner mascot's parts, '00'); then his outfit follows the level:
+  // images/vaultboy/parts-lvl05, 10, 20, 30 and 50 (kept from 50 on). The
+  // outfit changes only with the tier.
+  var WALKER_TIERS = [50, 30, 20, 10, 5];
   function walkerTier(level){
     level = Number(level) || 0;
     for (var i=0;i<WALKER_TIERS.length;i++){
-      if (level>=WALKER_TIERS[i]) return String(WALKER_TIERS[i]);
+      var t = WALKER_TIERS[i];
+      if (level>=t) return (t<10 ? '0' : '')+t;
     }
-    return '05';
+    return '00';
   }
   var walkerOn = null;          // the outfit on show
   var walkerWatched = false;
@@ -89,7 +91,8 @@
   function placeWalker(){
     var walk = el('vaultboy-walk'), bar = document.querySelector('.level-block .xp-bar-outer');
     if (!walk || walk.hidden || !bar || !bar.getBoundingClientRect) return;
-    var b = bar.getBoundingClientRect(), h = walk.offsetHeight, w = h*FRAME_RATIO;
+    var track = walk.querySelector && walk.querySelector('.vb-track');
+    var b = bar.getBoundingClientRect(), h = walk.offsetHeight, w = (track && track.offsetWidth) || h*FRAME_RATIO;
     if (!b.width || !h) return;
     var top = b.top - h, from = 0;
     document.querySelectorAll('.hero-name, .hero-sub, .level-row > *').forEach(function(node){

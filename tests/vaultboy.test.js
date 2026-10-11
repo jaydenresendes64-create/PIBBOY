@@ -1,5 +1,6 @@
 // The Vault Boy walking on the level bar: from level 1, his outfit follows
-// the level (lvl05 for 1-9, then 10 / 20 / 30 / 50, kept from 50 on); amber
+// the level (the original one for 1-4, then 05 / 10 / 20 / 30 / 50, kept
+// from 50 on); amber
 // parts that each move, like the old mascot (tools/vaultboy-parts.py), and a
 // walk loop (tools/vaultboy-moves.py); he keeps right of the name, subtitle
 // and level, so he never covers them.
@@ -18,10 +19,11 @@ const PARTS = ['vb-leg-back', 'vb-shin-back', 'vb-leg-front', 'vb-shin-front', '
 const css = read('css/terminal.css');
 const rule = sel => (css.match(new RegExp(sel.replace(/[.[\]="-]/g, m => '\\' + m) + '\\{([^}]*)\\}')) || [null, ''])[1];
 
-test('the outfit for each level: lvl05 from level 1, a new one at 10, 20, 30 and 50, never past 50', () => {
+test('the outfit for each level: the original Vault Boy for 1-4, a new outfit at 5, 10, 20, 30 and 50, never past 50', () => {
   const R = loadApp({ files: FILES.render }).ST.render;
   const tier = n => R.walkerTier(n);
-  assert.deepEqual([1, 2, 4, 5, 9].map(tier), Array(5).fill('05'));
+  assert.deepEqual([0, 1, 2, 4].map(tier), Array(4).fill('00'));
+  assert.deepEqual([5, 7, 9].map(tier), Array(3).fill('05'));
   assert.deepEqual([10, 15, 19].map(tier), Array(3).fill('10'));
   assert.deepEqual([20, 25, 29].map(tier), Array(3).fill('20'));
   assert.deepEqual([30, 35, 40, 49].map(tier), Array(4).fill('30'));
@@ -38,11 +40,13 @@ test('renderHeader shows him from level 1 and changes the outfit only with the t
   walk.setAttribute = (k, v) => set.push(k + '=' + v);
   const at = level => { ST.app.state.level = level; ST.render.renderHeader(); return walk.hidden; };
   assert.equal(at(1), false);
-  assert.deepEqual(set, ['data-tier=05']);
-  at(2); at(9);
-  assert.deepEqual(set, ['data-tier=05']);                       // the same tier: untouched
-  [15, 25, 35, 55, 80].forEach(at);
-  assert.deepEqual(set, ['data-tier=05', 'data-tier=10', 'data-tier=20', 'data-tier=30', 'data-tier=50']);
+  assert.deepEqual(set, ['data-tier=00']);
+  at(2); at(4);
+  assert.deepEqual(set, ['data-tier=00']);                       // the same tier: untouched
+  at(5);                                                         // level 5: the first new outfit
+  assert.deepEqual(set, ['data-tier=00', 'data-tier=05']);
+  [9, 15, 25, 35, 55, 80].forEach(at);
+  assert.deepEqual(set, ['data-tier=00', 'data-tier=05', 'data-tier=10', 'data-tier=20', 'data-tier=30', 'data-tier=50']);
 });
 
 test('his stretch of the bar starts right of the text as high as he is, at most 150px long', () => {
@@ -104,7 +108,8 @@ test('size, place, taps, the walk loop and Reduce Motion; the old mascot hidden'
   assert.match(walker, /--vb-h:100px;/);
   assert.match(walker, /position:absolute;/);
   assert.match(walker, /pointer-events:none;/);
-  assert.match(walker, /margin-top:calc\(-14px - var\(--vb-h\) \* 0\.988\);/);   // feet on the bar's top edge
+  assert.match(walker, /--vb-feet:0\.988;/);
+  assert.match(walker, /margin-top:calc\(-14px - var\(--vb-h\) \* var\(--vb-feet\)\);/);   // feet on the bar's top edge
   assert.match(css, /@media \(max-width:359px\)\{\s*\.vaultboy\{ --vb-h:84px; \}/);
   assert.match(css, /\.mascot\{ display:none; \}/);
   // every element of the walk: one loop of the same length
@@ -115,4 +120,16 @@ test('size, place, taps, the walk loop and Reduce Motion; the old mascot hidden'
   assert.match(css, /@keyframes vbTrack\{[^\n]*var\(--vb-len, 0px\) \* 1\)/);
   assert.match(css, /@keyframes vbMove\{[\s\S]*?scale\(0\.15,0\.95\)[\s\S]*?scale\(-0\.15,0\.95\)/);   // the card spin
   assert.match(css, /@media \(prefers-reduced-motion:reduce\)\{\s*\.vb-track\{ transform:translateX\(calc\(var\(--vb-len, 0px\) \/ 2\)\); \}/);
+});
+
+test('levels 1-4: the original Vault Boy, with the old mascot\'s own parts, joints and feet, as tall as the outfits', () => {
+  assert.match(css, /\.vaultboy\[data-tier="00"\] \.vb\{ background-image:url\(\.\.\/images\/mascot-parts\.png\); \}/);
+  assert.match(css, /\.vaultboy\[data-tier="00"\]\{ --vb-h:117px; --vb-ratio:0\.70588; --vb-feet:0\.973; \}/);
+  assert.match(css, /\.vaultboy\[data-tier="00"\] \.vb-move, \.vaultboy\[data-tier="00"\] \.vb-body, \.vaultboy\[data-tier="00"\] \.vb-breathe\{ transform-origin:52% 97%; \}/);
+  ['leg-back', 'shin-back', 'leg-front', 'shin-front', 'arm', 'head'].forEach(part => {
+    const old = rule('.mp-' + part).match(/transform-origin:([\d.]+% [\d.]+%);/)[1];
+    assert.match(css, new RegExp('\\.vaultboy\\[data-tier="00"\\] \\.vb-' + part + '\\{ transform-origin:' + old.replace(/\./g, '\\.') + '; \\}'), part + ' turns where the old mascot\'s did');
+  });
+  // the same visible height: the old figure fills 340/408 of its frame, the new ones 406/420 of theirs
+  assert.ok(Math.abs(117 * 340 / 408 - 100 * 406 / 420) < 1.5);
 });
