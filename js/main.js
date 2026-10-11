@@ -62,6 +62,7 @@
   }
   function newDay(){
     ST.render.refreshIfNewDay();
+    if (ST.vitals) ST.vitals.refreshIfNewDay();   // VITALS' day starts at 4:00
     if (ST.app.state) ST.events.checkBobbleheads();
   }
 

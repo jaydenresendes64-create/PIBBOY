@@ -39,7 +39,8 @@
  *     claimed: [ days ],                    // the CLEAN_MILESTONES paid in this run
  *     lapses: [ 'YYYY-M-D' ]                // the latest LAPSES_MAX
  *   },
- *   vitals: [ { date:'YYYY-M-D', logged: boolean,   // VITALS: one entry a day (the latest VITALS_MAX);
+ *   vitals: [ { date:'YYYY-M-D', logged: boolean,   // VITALS: one entry a day (the latest VITALS_MAX), a day
+ *                                           // from 4:00 to 4:00, dated the day it starts (vitalsDayStr);
  *               energy, mood, hunger, tension, sleep, craving: number(0-10),   // logged: the day's
  *               pulse: number(PULSE_MIN-PULSE_MAX)|null,   // check-in was paid (logVitals)
  *               radN, radT: number(0-RAD_COUNT_MAX) } ],
@@ -172,6 +173,7 @@
   var VITAL_KEYS = ['energy','mood','hunger','tension','sleep','craving'];
   var VITALS_XP = 15;                 // the day's check-in, once a day; it trains Intelligence as much
   var VITALS_MAX = 400, PULSE_MIN = 30, PULSE_MAX = 220, RAD_COUNT_MAX = 99;
+  var VITALS_DAY_START = 4;           // VITALS' day starts at 4:00 local time (vitalsDayStr)
   var CLEAN_MILESTONES = [{days:7, xp:150}, {days:14, xp:300}, {days:30, xp:600}, {days:60, xp:900}, {days:90, xp:1500}];
   var LAPSES_MAX = 200;
   var URGE_NEEDS = ['HUNGRY','ANGRY','LONELY','TIRED','NONE'];
@@ -920,13 +922,23 @@
   // one), the resting pulse, two counters.
   // The check-in itself is paid once a day (logVitals): VITALS_XP, which
   // trains Intelligence as much. What changes after it is kept, unpaid.
+  // VITALS' day runs from VITALS_DAY_START (4:00) to 4:00, not midnight to
+  // midnight: late at night, a counter tapped or the check-in still belongs
+  // to the evening's day, so the next morning's check-in stays the
+  // morning's. Its date is the day it started (vitalsDayStr()). The rest of
+  // the app (dailies, the streak, trials) keeps midnight.
+  function vitalsDayStr(){
+    var d = new Date();
+    if (d.getHours()<VITALS_DAY_START) d.setDate(d.getDate()-1);
+    return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+  }
   function dayNumber(date){
     var m = DATE.exec(date || '');
     return m ? Date.UTC(+m[1], +m[2]-1, +m[3])/864e5 : NaN;
   }
   function byDate(a, b){ return dayNumber(a.date)-dayNumber(b.date); }
   function vitalsToday(create){
-    var s = app.state, today = todayStr();
+    var s = app.state, today = vitalsDayStr();
     var e = s.vitals.filter(function(v){ return v.date===today; })[0] || null;
     if (!e && create){
       var last = lastCheckIn();
@@ -970,15 +982,15 @@
   function lastVitals(n){
     return app.state.vitals.slice().sort(byDate).reverse().slice(0, n);
   }
-  // The latest check-in logged before today, with how many days ago
-  // (`ago`: 1 is yesterday); null for none.
+  // The latest check-in logged before today's VITALS day, with how many
+  // days before it (`ago`: 1 is yesterday); null for none.
   function lastCheckIn(){
-    var today = todayStr();
-    var e = lastVitals(VITALS_MAX).filter(function(v){ return v.logged && v.date!==today; })[0];
+    var today = dayNumber(vitalsDayStr());
+    var e = lastVitals(VITALS_MAX).filter(function(v){ return v.logged && dayNumber(v.date)<today; })[0];
     if (!e) return null;
     var copy = {};
     Object.keys(e).forEach(function(k){ copy[k] = e[k]; });
-    copy.ago = daysSince(e.date);
+    copy.ago = Math.round(today - dayNumber(e.date));
     return copy;
   }
 
@@ -1775,6 +1787,8 @@
   ST.TRAIN_PER_POINT = TRAIN_PER_POINT;
   ST.trainStat = trainStat;
   ST.vitalsToday = vitalsToday;
+  ST.vitalsDayStr = vitalsDayStr;
+  ST.VITALS_DAY_START = VITALS_DAY_START;
   ST.setVital = setVital;
   ST.setPulse = setPulse;
   ST.stepRads = stepRads;

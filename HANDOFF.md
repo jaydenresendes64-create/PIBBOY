@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of the amber Vault Boy rig PR (2026-10-10, after PR #20). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-267/267 tests pass locally. `sw.js` cache: `v26`.
+272/272 tests pass locally. `sw.js` cache: `v26`.
 
 ## 1. What it is
 
@@ -135,6 +135,15 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   since folding had hidden them behind "Edit check-in" (2026-10-10).
   Rewards are saved before the screen is drawn (vitals-log, urge-won, trials save-yes), like
   events.js `afterCheck()`: a drawing error can't lose them (ChatGPT audit, 2026-10-10; tested).
+  VITALS day 4:00 → 4:00 (2026-10-11, audit recommendation 2): state.js `vitalsDayStr()` (local
+  hour < `VITALS_DAY_START` = 4 → the day before; wall clock, so DST nights are right) is used by
+  `vitalsToday()` and `lastCheckIn()` (`ago` counted from it; entries dated after it ignored), so
+  everything on top (setVital/setPulse/stepRads/logVitals, the lock, the order, the "Yesterday"
+  line, the boot line, the tab light) follows. Dates stored as before, no migration. vitals.js
+  remembers the day it drew (`shownDay`): `refreshIfNewDay()` (main.js `newDay`, every minute and
+  on return) redraws at 4:00, and a Log tap on a form drawn before 4:00 redraws with a notice
+  instead of logging unseen values. Dailies, streak, urges' daily cap, trials keep midnight
+  (`todayStr`). Tests in `tests/vitalsday.test.js`; checked live with a fake clock (Toronto).
 - **Skill sources (2026-10-10, a Grok render.js the owner sent):** STATUS skills are buttons
   (`data-action="skill"` toggles `app.skillOpen`, events.js); open: Earned / Coming from state.js
   `skillSources(key)` (mains/side by their skillGains and done/completed, books, and history events with

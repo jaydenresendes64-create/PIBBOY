@@ -40,6 +40,10 @@ line and a **FIELD REPORT** written from your day ("Sleep low. Craving high. INT
 (their keys are dimmed; a tap says "Check-in first"); STATUS, VITALS and the urge decoder stay open.
 Turn it off in Settings → Morning.
 
+**VITALS' day starts at 4:00**, not midnight: up late, the counters still go to the evening's day,
+nothing locks, and the next morning's check-in stays yours to do in the morning. At 4:00 the screen
+moves to the new day by itself. Dailies, the streak and trials keep midnight.
+
 **Chem-free streak** (VITALS): set the first chem-free day of the run; the card shows the day,
 the next milestone and the days to go. Milestones at **7, 14, 30, 60 and 90 days** (+150, +300, +600,
 +900, +1,500 XP), each paid once a run, by itself, the moment it's reached; correcting the start date
