@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of the amber Vault Boy rig PR (2026-10-10, after PR #20). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-272/272 tests pass locally. `sw.js` cache: `v26`.
+273/273 tests pass locally. `sw.js` cache: `v26`.
 
 ## 1. What it is
 
@@ -184,17 +184,22 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   (HOLES: the arm's crook at 50) and cuts it into the old rig's 8 cells (`parts-lvlXX.png`, ~100 KB):
   same pose, so one set of JOINTS for all; where the legs start differs (LEGS_TOP: under the hand,
   the bag at 20, the jacket flaps at 50); blink = the head unchanged behind sunglasses (10, 20).
-  `tools/vaultboy-moves.py` writes one 11.5 s loop between its markers in the CSS (vbTrack along
-  `--vb-len`, vbMove facing/squash/card spin, vbBody bob, a keyframe per part): wind-up, 4 strides
+  `tools/vaultboy-moves.py` writes one 11 s loop between its markers in the CSS (vbTrack along
+  `--vb-len`, vbMove facing/squash/card spin, vbBody bob, a keyframe per part): wind-up, 5 quick strides
+  of 0.3 s (2026-10-11: were 4 of 0.42 s, a glide next to the old mascot's 0.25 s steps)
   (knees bend when passing), brake, look around, thumbs-up, card spin, back, the same; breathing and
   blink reuse the old `mascotBreathe` / `mascotBlink`. Markup: `#vaultboy-walk > .vb-track > .vb-move >
   .vb-body > .vb-breathe > .vb` parts, right after `.xp-bar-outer`; feet on the bar's top edge
   (`margin-top: -14px - 98.8%` of the 100px frame, 84px under 360px). render.js: `walkerTier(level)`
-  (05 for 1-9, then 10/20/30/50), `syncWalker()` (end of `renderHeader()`) sets `data-tier` only on a
+  ('00' for 1-4, then 05/10/20/30/50), `syncWalker()` (end of `renderHeader()`) sets `data-tier` only on a
   new tier, `placeWalker()` (rAF after each header render, on resize and when fonts are ready)
   measures the text as high as him (`.hero-name`, `.hero-sub`, `.level-row > *`, by Range) and sets
   `--vb-from` (10px right of it) and `--vb-len` (to the bar's end, at most 150px). Reduced Motion:
-  still in the middle of his stretch. The old corner mascot stays `display:none`; tests in
+  still in the middle of his stretch. Levels 1-4 (2026-10-11, owner reached level 5 and saw no
+  change, since lvl05 showed from level 1): tier '00' is the original Vault Boy on the bar, the old
+  mascot's `images/mascot-parts.png` with the `.mp-*` joints copied onto `.vaultboy[data-tier="00"]
+  .vb-*`, his own frame (`--vb-ratio` 144:204, `--vb-feet` 0.973) 117px high so he stands as tall
+  as the outfits (98px under 360px); placeWalker reads the track's real width. The old corner mascot stays `display:none`; tests in
   `tests/vaultboy.test.js` (tiers, data-tier, placement with a fake layout, sheets, joints vs the
   tool, the loop, reduced motion).
   **Mascot rig (2026-09-28, owner: "animate him like the Pip-Boy in Fallout 4"):** the picture is cut
