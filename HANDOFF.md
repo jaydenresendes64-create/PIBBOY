@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
-State as of the 3D gauge / real walk PR (2026-10-11, after PR #25). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-276/276 tests pass locally. `sw.js` cache: `v26`.
+State as of the drawn walk PR (2026-10-11, after PR #26). Live: https://jaydenresendes64-create.github.io/PIBBOY/
+278/278 tests pass locally. `sw.js` cache: `v27`.
 
 ## 1. What it is
 
@@ -208,6 +208,32 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   découpage déborder sur le fond"):** both cutting tools now follow the neckline precisely, drop thin
   collar/shoulder slivers from the head cell (`without_slivers`) and fill under the head only between
   the shoulders with the drawing's dark shade (`shadow_under`); the head turns at most ±5°.
+  **A drawn walk (same day):** cut-out parts from one front-facing, thumbs-up drawing have hard limits
+  (no ankle, so a planted boot pivots up to 43°; the cut shows at a 73° knee; the body faces us while
+  walking sideways; only the thumb arm moves). The owner chose drawn poses: a brief (claude.ai
+  artifact "Fiche marche Vault Boy") and a black-and-white pose guide (8 stick figures, 2×4) went to
+  Gemini ("Nano Banana") with lvl05.png; its sheet is `images/vaultboy/walk-lvl05-source.webp` (2×4
+  cells of 500×558, facing right; same head and size in all 8, but the near leg in front in all 8 and
+  the arms never swing; the top row's hips sit higher). `tools/vaultboy-walk.py` builds the cycle
+  from the bottom row (contact, down, passing, up) plus the same 4 with the two legs' blues exchanged
+  (`CYCLES`: a minus sign), evens a greyer jacket, makes the white transparent, turns it to face left,
+  applies the outfits' amber (`amber()` imported from vaultboy-parts.py), scales it to lvl05's height
+  (×0.804) with the boots on 411 and the belt over lvl05's, and writes `images/vaultboy/walk-lvl05.png`
+  (8 frames of 319×420: the back fist needs 11px more than 308; 256 colours, 70 KB). It measures the
+  boot that stays on the ground between drawings (`PLANTED`, toes of the boots ≤13px above the lowest)
+  into `tools/vaultboy-walk.json`; Gemini's spacing is uneven (its "down" = "contact", its "up" = the
+  next contact: −6, +76, +45, +2 px of 420), so where he is at each drawing is halfway (`PLANT` 0.5)
+  between an even pace and the boot held exactly (the boot slips ≤17.5 px of 420, ~4px on screen).
+  `tools/vaultboy-moves.py` now builds two timelines (`timeline(drawn)`): the parts' one, and a drawn
+  one with the same moves at the same moments but `DRAWN_STEPS` = 2 steps (a drawn step is ~28px on
+  screen; 2 fit the 69px room of a 390px screen; `--vb-span` 0.559), 9 drawings of 70 ms (the parts'
+  pace), longer waits between moves. For tier 05 (`drawn_css()`): `.vb-walk` (a span after
+  `.vb-breathe`, inside `.vb-move` so it turns with him; `opacity:0` unless animated, so hidden with
+  Reduce Motion) shows the drawings (vbWalk05: opacity + background-position, held keyframes), the
+  parts are hidden meanwhile (vbParts05 on `.vb-breathe`), the track moves at each drawing (vbTrack05,
+  held), the legs and body don't animate, the move/arm/head use vbMoveDrawn/vbArmDrawn/vbHeadDrawn.
+  Other tiers keep the parts' walk until they get drawings: same process (send Gemini the tier's
+  lvlXX.png with the brief and pose guide), then add the tier to `CYCLES` and run both tools.
   Markup: `#vaultboy-walk > .vb-track > .vb-move > .vb-body > .vb-breathe > .vb` parts, right after
   `.xp-gauge`; boots on the gauge's top (`margin-top: -14px - --vb-lane - --vb-feet` of the 100px
   frame, `--vb-feet` = the front sole, 411/420; 84px under 360px). render.js: `walkerTier(level)`
@@ -221,7 +247,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   mascot's `images/mascot-parts.png` with the `.mp-*` joints copied onto `.vaultboy[data-tier="00"]
   .vb-*`, his own frame (`--vb-ratio` 144:204, `--vb-feet` 0.9632) 117px high so he stands as tall
   as the outfits (98px under 360px); placeWalker reads the track's real width. The old corner mascot stays `display:none`; tests in
-  `tests/vaultboy.test.js` (tiers, data-tier, placement with a fake layout, sheets, joints vs the
+  `tests/vaultboy.test.js` (the drawn walk: markup, tier-05 rules, drawings in order, parts or drawings
+  never both, never a step back; tiers, data-tier, placement with a fake layout, sheets, joints vs the
   tool, the loop, reduced motion, the gauge; and a replay of the CSS walk in JS, every millisecond,
   for both rigs: a boot always on its lane and still within 0.25px, none sinking over 0.1px, never a
   step back, the swinging boot lifting, the distance = `--vb-span`).
