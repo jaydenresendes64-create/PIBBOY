@@ -77,6 +77,21 @@ def amber(rgba):
     out[..., :3] = PALETTE[np.interp(Y(rgba), np.arange(256), CURVE).round().clip(0, 255).astype(int)]
     return out
 
+def without_slivers(mask, r, below, ys):
+    """The mask without its thin bits (narrower than 2r+1 pixels) below y =
+    `below`: erosion then dilation. Slivers of the shoulder line caught at
+    the edge of the head stay with the body, so a turning head never drags
+    a hard cut edge over the background."""
+    def spread(m, keep):
+        out = m.copy()
+        for dy in range(-r, r + 1):
+            for dx in range(-r, r + 1):
+                shifted = np.roll(np.roll(m, dy, 0), dx, 1)
+                out = (out & shifted) if keep else (out | shifted)
+        return out
+    thick = spread(spread(mask, True), False)
+    return mask & (thick | (ys < below))
+
 def clear_holes(rgba, seeds, K):
     """The near-white pixels joined to each seed become see-through; the
     greyish ones around them (the soft edge) partly."""
@@ -109,9 +124,15 @@ def cut(tier):
     opaque = im[:, :, 3] > 0
     solid = im[:, :, 3] == 255
 
-    # The head: above the collar; the line dips under the beard.
-    pts = [(0, 138), (140, 138), (147, 141), (160, 146), (175, 151), (190, 151), (200, 147), (210, 140), (216, 133), (308, 133)]
-    head = opaque & (xs >= 118) & (xs < 262) & (ys < np.interp(xs, *zip(*pts)))
+    # The head: above the collar; the line follows the beard's outline down
+    # to where the shoulders start on each side (x 150 and 208), dips under
+    # the beard, and leaves the shoulders' first pixels and the collar to the
+    # body, so nothing of them turns with the head.
+    pts = [(0, 136), (140, 136), (146, 139), (150, 141), (160, 146), (175, 151), (190, 151), (196, 148), (200, 145),
+           (205, 136), (208, 130), (212, 129), (216, 131), (308, 131)]
+    neck = lambda x: np.interp(x, *zip(*pts))
+    head = opaque & (xs >= 118) & (xs < 262) & (ys < neck(xs))
+    head = without_slivers(head, max(1, int(round(2 * K))), 112, ys)
     # The thumb arm: left of the body's edge (x = 141); under the armpit
     # (y >= 182) the columns at the edge are the body's own outline.
     ARM_EDGE = 141
@@ -178,21 +199,15 @@ def cut(tier):
         cell[cap, 3] = (255 * np.clip((r - dist) * K + 0.5, 0, 1)[cap]).round().astype(np.int32)
         return r
 
-    def fill_under(cell, region):
+    def shadow_under(cell, region):
+        """Under the bottom of the head, between the shoulders: a plain dark
+        shadow, hidden at rest; when the head turns a little, that's what a
+        sliver of it shows (never a patch above the shoulders)."""
+        dark = im[body][:, :3]
+        dark = np.median(dark[dark.sum(1) < dark.sum(1).min() + 60], axis=0)
         todo = region & (cell[:, :, 3] == 0)
-        for _ in range(int(60 * K)):
-            if not todo.any():
-                break
-            have = cell[:, :, 3] > 0
-            total = np.zeros((H, W, 4)); count = np.zeros((H, W))
-            for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                shifted = np.roll(np.roll(cell, dy, 0), dx, 1)
-                ok = np.roll(np.roll(have, dy, 0), dx, 1)
-                total[ok] += shifted[ok]; count[ok] += 1
-            grow = todo & (count > 0)
-            cell[grow] = (total[grow] / count[grow][:, None]).round().astype(np.int32)
-            cell[grow, 3] = 255
-            todo &= ~grow
+        cell[todo, :3] = dark.round().astype(np.int32)
+        cell[todo, 3] = 255
 
     arm_cell = layer(arm)
     extend_right(arm_cell, ARM_EDGE + 18, body & solid)
@@ -202,7 +217,7 @@ def cut(tier):
     radii = (knee_cap(front_cell, 'vb-shin-front', front_shin, solid), knee_cap(back_cell, 'vb-shin-back', back_shin, solid))
     front_shin_cell, back_shin_cell = layer(front_shin), layer(back_shin)
     body_cell = layer(body)
-    fill_under(body_cell, head & solid & (ys >= 122) & (xs >= 140) & (xs < 222))
+    shadow_under(body_cell, head & solid & (ys >= neck(xs) - 6) & (xs >= 146) & (xs < 210))
     head_cell = layer(head)
 
     # ---------- the blink: the same head, eyes shut ----------

@@ -46,6 +46,7 @@
     el('hdr-level').textContent = (state.level<10?'0':'')+state.level;
     var pct = clamp((state.xp/state.xpToNext)*100,0,100);
     el('hdr-xp-fill').style.width = pct+'%';
+    el('hdr-xp-top').style.width = pct+'%';      // the same fill, on the gauge's top
     el('hdr-xp-text').textContent = commas(state.xp)+' / '+commas(state.xpToNext)+' XP';
     renderBackup();             // the rad meter beside it (first XP without a backup: rads)
     syncWalker();
@@ -75,6 +76,10 @@
     if (tier!==walkerOn){
       walkerOn = tier;
       walk.setAttribute('data-tier', tier);
+      // Hidden for a moment so all his animations start again together (the
+      // original Vault Boy's walk is worked out for his own legs).
+      walk.hidden = true;
+      void walk.offsetWidth;
       walk.hidden = false;
     }
     if (!walkerWatched){
@@ -84,10 +89,13 @@
     }
     if (window.requestAnimationFrame) window.requestAnimationFrame(placeWalker);
   }
-  // He keeps to the stretch of the bar right of the name, the subtitle and
-  // the level (whatever is as high as he is), WALK_GAP from them, at most
-  // WALK_MAX long: --vb-from is where it starts, --vb-len how far he goes.
-  var WALK_GAP = 10, WALK_MAX = 150, FRAME_RATIO = 308/420;
+  // He keeps to the stretch of the gauge right of the name, the subtitle and
+  // the level (whatever is as high as he is), WALK_GAP from them. His steps
+  // carry him --vb-span frame heights (css, from tools/vaultboy-moves.py):
+  // where the stretch is shorter, --vb-swing shortens his steps so his boots
+  // still don't slide; where it's longer, his walk sits in its middle.
+  // --vb-from: where his walk starts; --vb-len: how far it goes.
+  var WALK_GAP = 10, WALK_MAX = 150, FRAME_RATIO = 308/420, WALK_SPAN = 0.68;
   function placeWalker(){
     var walk = el('vaultboy-walk'), bar = document.querySelector('.level-block .xp-bar-outer');
     if (!walk || walk.hidden || !bar || !bar.getBoundingClientRect) return;
@@ -102,8 +110,12 @@
       if (r.width && r.bottom>top && r.top<b.top) from = Math.max(from, r.right - b.left + WALK_GAP);
     });
     from = Math.min(Math.max(from, b.width - w - WALK_MAX), b.width - w);
-    walk.style.setProperty('--vb-from', Math.round(from)+'px');
-    walk.style.setProperty('--vb-len', Math.max(0, Math.round(b.width - w - from))+'px');
+    var room = Math.max(0, b.width - w - from);
+    var span = window.getComputedStyle ? parseFloat(window.getComputedStyle(walk).getPropertyValue('--vb-span')) : NaN;
+    var stride = h*(span>0 ? span : WALK_SPAN), swing = Math.min(1, room/stride), len = stride*swing;
+    walk.style.setProperty('--vb-swing', swing.toFixed(3));
+    walk.style.setProperty('--vb-from', Math.round(from + (room - len)/2)+'px');
+    walk.style.setProperty('--vb-len', Math.round(len)+'px');
   }
 
   function statRowHtml(key){

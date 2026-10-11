@@ -164,7 +164,7 @@ js/events.js        user actions
 js/main.js          startup
 sw.js               service worker: offline use (network first for the app, so updates show right away)
 manifest.webmanifest name, colours and icons (icons/) for installing on a phone
-images/vaultboy/    the Vault Boy walking on the level bar: the original one (images/mascot-parts.png) for
+images/vaultboy/    the Vault Boy walking on the level gauge: the original one (images/mascot-parts.png) for
                     levels 1-4, then one outfit per tier (5, 10, 20, 30, 50): lvlXX.png in colour (the
                     sources, not loaded by the app) and
                     parts-lvlXX.png, the same in amber cut into parts that each move (js/render.js syncWalker)
@@ -178,7 +178,7 @@ tools/              build-map-data.js, which makes data/ (see "Map data"); build
                     images/mascot.png into images/mascot-parts.png (Python with Pillow and numpy);
                     mascot-moves.py, which writes the mascot's moves into css/terminal.css (Python);
                     vaultboy-parts.py (amber + parts for the five outfits) and vaultboy-moves.py (his
-                    walk on the level bar), the same for the Vault Boy
+                    walk on the level gauge, worked out from where his boots go), the same for the Vault Boy
 fonts/              the two terminal fonts, VT323 and IBM Plex Mono (licence: fonts/OFL.txt)
 api/analyze.js      optional serverless AI function (not used on GitHub Pages, see below)
 tests/              automated tests (see "Run the tests")

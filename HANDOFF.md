@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
-State as of the amber Vault Boy rig PR (2026-10-10, after PR #20). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-273/273 tests pass locally. `sw.js` cache: `v26`.
+State as of the 3D gauge / real walk PR (2026-10-11, after PR #25). Live: https://jaydenresendes64-create.github.io/PIBBOY/
+276/276 tests pass locally. `sw.js` cache: `v26`.
 
 ## 1. What it is
 
@@ -184,24 +184,47 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   (HOLES: the arm's crook at 50) and cuts it into the old rig's 8 cells (`parts-lvlXX.png`, ~100 KB):
   same pose, so one set of JOINTS for all; where the legs start differs (LEGS_TOP: under the hand,
   the bag at 20, the jacket flaps at 50); blink = the head unchanged behind sunglasses (10, 20).
-  `tools/vaultboy-moves.py` writes one 11 s loop between its markers in the CSS (vbTrack along
-  `--vb-len`, vbMove facing/squash/card spin, vbBody bob, a keyframe per part): wind-up, 5 quick strides
-  of 0.3 s (2026-10-11: were 4 of 0.42 s, a glide next to the old mascot's 0.25 s steps)
-  (knees bend when passing), brake, look around, thumbs-up, card spin, back, the same; breathing and
-  blink reuse the old `mascotBreathe` / `mascotBlink`. Markup: `#vaultboy-walk > .vb-track > .vb-move >
-  .vb-body > .vb-breathe > .vb` parts, right after `.xp-bar-outer`; feet on the bar's top edge
-  (`margin-top: -14px - 98.8%` of the 100px frame, 84px under 360px). render.js: `walkerTier(level)`
+  `tools/vaultboy-moves.py` writes one 11 s loop between its markers in the CSS: wind-up, 6 quick
+  steps of 0.28 s, brake, look around, thumbs-up, card spin, back, the same; breathing and blink reuse
+  the old `mascotBreathe` / `mascotBlink`. **A real walk (2026-10-11, owner: "un Vault Boy qui marche
+  réellement sur une jauge de niveau en 3D … pieds qui restent en contact avec la surface. Pas de
+  glissade"):** the earlier versions keyed leg angles by hand and slid the picture along; measured,
+  the boots slid, sank up to 1.8px into the gauge, and the legs made unequal steps (a limp: 0.21 vs
+  0.09 frame heights), because the outfits' legs are drawn at different angles. Now the tool works
+  out where each boot goes (one planted, the other swinging forward in an arc 3.8px up, equal steps,
+  even speed, a small bob), then each rig's leg angles from it by inverse kinematics (`reach()`;
+  separate keyframes vbLegF… / vbLegFOld… for the outfits and the original), then reads its own
+  keyframes back (`planted()`: each leg turned at knee and hip, the body down by y, .vb-move's lean
+  and squash) to make vbTrack (x: the boot with the weight stays put) and vbBody (y: the lower boot on
+  its lane), and asserts the boot with the weight is never more than 0.2% of his height above the
+  gauge (actual: 0.02% / 0.01%). `--vb-span` (0.68 / 0.58 frame heights: 68px) is how far he goes;
+  placeWalker shortens his steps with `--vb-swing` (legs and track scale together) only when the
+  free stretch is shorter (under ~390px wide; there the boots can be up to ~1px off). The CSS is
+  ~280 KB (37 KB gzipped), mostly the leg keyframes. **The 3D gauge:** `.xp-gauge` wraps `.xp-top`
+  (a plane `perspective(240px) rotateX(65deg)` above the bar, ~10px deep, its far edge shorter so the
+  ends slope like bevels, showing the fill too: `#hdr-xp-top`) and `.xp-bar-outer` (the front face,
+  lit top edge, shadow); his front boot stands `--vb-lane` (3px) back on the top, the back boot
+  higher (drawn further back), a soft shadow under him. **The head cut (same day, owner: "on voit le
+  découpage déborder sur le fond"):** both cutting tools now follow the neckline precisely, drop thin
+  collar/shoulder slivers from the head cell (`without_slivers`) and fill under the head only between
+  the shoulders with the drawing's dark shade (`shadow_under`); the head turns at most ±5°.
+  Markup: `#vaultboy-walk > .vb-track > .vb-move > .vb-body > .vb-breathe > .vb` parts, right after
+  `.xp-gauge`; boots on the gauge's top (`margin-top: -14px - --vb-lane - --vb-feet` of the 100px
+  frame, `--vb-feet` = the front sole, 411/420; 84px under 360px). render.js: `walkerTier(level)`
   ('00' for 1-4, then 05/10/20/30/50), `syncWalker()` (end of `renderHeader()`) sets `data-tier` only on a
   new tier, `placeWalker()` (rAF after each header render, on resize and when fonts are ready)
   measures the text as high as him (`.hero-name`, `.hero-sub`, `.level-row > *`, by Range) and sets
-  `--vb-from` (10px right of it) and `--vb-len` (to the bar's end, at most 150px). Reduced Motion:
+  `--vb-from`, `--vb-len` and `--vb-swing` (his walk in the middle of the stretch 10px right of the
+  text, at most 150px). Reduced Motion:
   still in the middle of his stretch. Levels 1-4 (2026-10-11, owner reached level 5 and saw no
   change, since lvl05 showed from level 1): tier '00' is the original Vault Boy on the bar, the old
   mascot's `images/mascot-parts.png` with the `.mp-*` joints copied onto `.vaultboy[data-tier="00"]
-  .vb-*`, his own frame (`--vb-ratio` 144:204, `--vb-feet` 0.973) 117px high so he stands as tall
+  .vb-*`, his own frame (`--vb-ratio` 144:204, `--vb-feet` 0.9632) 117px high so he stands as tall
   as the outfits (98px under 360px); placeWalker reads the track's real width. The old corner mascot stays `display:none`; tests in
   `tests/vaultboy.test.js` (tiers, data-tier, placement with a fake layout, sheets, joints vs the
-  tool, the loop, reduced motion).
+  tool, the loop, reduced motion, the gauge; and a replay of the CSS walk in JS, every millisecond,
+  for both rigs: a boot always on its lane and still within 0.25px, none sinking over 0.1px, never a
+  step back, the swinging boot lifting, the distance = `--vb-span`).
   **Mascot rig (2026-09-28, owner: "animate him like the Pip-Boy in Fallout 4"):** the picture is cut
   by `tools/mascot-parts.py` into `images/mascot-parts.png` (8 picture-sized cells: back leg, its
   lower leg, front leg, its lower leg, thumb arm, body, head, head with eyes shut). `index.html` stacks
