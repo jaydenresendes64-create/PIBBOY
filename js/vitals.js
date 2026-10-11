@@ -198,9 +198,11 @@
         (due ? '<span class="sub-count">'+due+' due</span>' : '')+'</button>'+
     '</div>';
   }
+  var shownDay = null;          // the VITALS day on screen (it starts at 4:00, ST.vitalsDayStr)
   function render(){
     var tab = el('tab-vitals');
     if (!tab || !app.state) return;
+    shownDay = ST.vitalsDayStr();
     var trials = view()==='trials';
     tab.innerHTML = subTabsHtml(trials)+(trials ? ST.trials.html() : checkInViewHtml());
     if (trials) ST.trials.drawn();
@@ -516,6 +518,13 @@
       save();
     },
     'vitals-log': function(){
+      // A new VITALS day began (4:00) since the form was drawn: show the new
+      // day's form first, rather than log values the screen didn't show.
+      if (newVitalsDay()){
+        render();
+        ST.render.showNotice('A new day started at 4:00. Check the values, then log.');
+        return;
+      }
       var r = ST.logVitals();
       if (!r) return;
       save(true);
@@ -564,6 +573,17 @@
     save();
   }
 
+  // A new VITALS day since the screen was drawn (4:00): drawn again, unless
+  // something on it is being typed (the next check does it). main.js asks
+  // every minute and when the app comes back.
+  function newVitalsDay(){ return shownDay!==null && shownDay!==ST.vitalsDayStr(); }
+  function refreshIfNewDay(){
+    if (!app.state || !newVitalsDay()) return;
+    var typing = document.activeElement;
+    if (typing && /^(INPUT|SELECT|TEXTAREA)$/.test(typing.tagName) && typing.closest && typing.closest('#tab-vitals')) return;
+    render();
+  }
+
   // The tab opened (events.js): drawn fresh, a day may have passed.
   function onTab(name){
     if (name==='vitals') render();
@@ -585,7 +605,7 @@
   }
 
   ST.vitals = {
-    init: init, render: render, onTab: onTab, stop: stop, markTab: markTab,
+    init: init, render: render, onTab: onTab, stop: stop, markTab: markTab, refreshIfNewDay: refreshIfNewDay,
     locked: locked, refuse: refuse, toggleLock: toggleLock,
     order: order, fieldReport: fieldReport, nextStep: nextStep,
     clockText: clockText, boxDate: boxDate, alertState: alertState
