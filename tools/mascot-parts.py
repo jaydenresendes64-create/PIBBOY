@@ -14,10 +14,11 @@ and bends again at the knee.
 
 Every cell lines up with the picture, so the CSS stacks them as full-size
 layers; laid on top of each other at rest they give back the picture exactly.
-A part that turns tucks under the one in front of it: the arm and the legs
-carry a little more of themselves under the body, the body a little shadow
-under the chin, and each upper leg a round knee under its lower leg, so
-turning or bending never shows a hole.
+A part that turns tucks under the one in front of it: the arm carries a
+little more of itself under the body, the body a little shadow under the
+chin, and each upper leg a round end at the hip under the body (the seat)
+and at the knee under its lower leg, so turning or bending never shows a
+hole or a square corner.
 
 The picture can be any whole multiple of 144x204 (it is 288x408: upscaled
 2026-09-28, so he stays sharp on a phone); every position below is given in
@@ -77,13 +78,43 @@ head = without_slivers(head, max(1, int(round(K))), 70, ys)
 # the two columns at the edge are the body's own outline.
 ARM_EDGE = 60
 arm = opaque & ~head & (((xs < ARM_EDGE + 1) & (ys < 100)) | ((xs < ARM_EDGE - 1) & (ys < 112)))
-# The legs: below the belt, split along the crease between them.
-LEGS_TOP = 145
+# The legs: from just under the belt (and under the fist on the hip) down,
+# split along the crease between them; the trousers right under the belt go
+# with the legs, so a turning hip shows its round seat, not a fixed band.
+LEGS_TOP = [(0, 135.5), (60, 135.5), (62, 135), (68, 138), (74, 139.5), (82, 139.5), (90, 138), (96, 136),
+            (100, 134), (102, 132.5), (104, 135), (144, 136)]
 def split(y):
     return np.interp(y, [146, 158], [83, 81])
-legs = opaque & ~head & ~arm & (ys >= LEGS_TOP)
-front_leg = legs & (xs < split(ys))          # his right leg, on the left of the picture, a step ahead
+legs = opaque & ~head & ~arm & (ys >= np.interp(xs, *zip(*LEGS_TOP)))
+# The belt's bottom outline stays with the body: a thin dark run at the top
+# of a leg's column (not a leg's own outline, which runs on down).
+lum = 0.299 * im[:, :, 0] + 0.587 * im[:, :, 1] + 0.114 * im[:, :, 2]
+for x in range(W):
+    rows = np.nonzero(legs[:, x])[0]
+    if len(rows):
+        run = 0
+        while run < 5 and rows[0] + run < H and lum[rows[0] + run, x] < 60:
+            run += 1
+        if 0 < run < 5:
+            legs[rows[0]:rows[0] + run, x] = False
+front_leg = legs & (xs < split(ys))          # his right leg, on the left of the picture
 back_leg = legs & ~front_leg
+# Above the hip joint, what a leg has outside the circle it turns in (round
+# the joint, out to the leg's edge on each side) stays with the body: the
+# hip's outline holds still and the leg turns under it, its top never poking
+# out as a corner.
+def hip_slivers(leg, name):
+    hip, knee = np.array(JOINTS[name], float), np.array(JOINTS[name.replace('leg', 'shin')], float)
+    u = (knee - hip) / np.hypot(*(knee - hip))
+    across = np.array([-u[1], u[0]])
+    along, side = (xs - hip[0]) * u[0] + (ys - hip[1]) * u[1], (xs - hip[0]) * across[0] + (ys - hip[1]) * across[1]
+    band = leg & (along >= 0) & (along < 1.5)
+    edge = lambda v: v.max() if v.size else np.inf             # none there: the leg starts lower on that side
+    far = np.where(side > 0, edge(side[band & (side > 0)]), edge(-side[band & (side < 0)]))
+    return leg & (along < 0) & (np.hypot(along, side) > far)
+front_leg &= ~hip_slivers(front_leg, 'mp-leg-front')
+back_leg &= ~hip_slivers(back_leg, 'mp-leg-back')
+legs = front_leg | back_leg
 body = opaque & ~head & ~arm & ~legs
 # The knees: halfway down, each leg is cut across, square to the line from
 # the hip; the knee joint is the middle of that cut.
@@ -116,32 +147,34 @@ def extend_right(cell, x_to, hidden):
             if hidden[y, x] and cell[y, x, 3] == 0:
                 cell[y, x] = cell[y, last]
 
-def extend_up(cell, y_from, y_to, hidden):
-    """A leg goes on up under the belt: its top row, repeated."""
-    y_from, y_to = int(round(y_from * K)), int(round(y_to * K))
-    row = cell[y_from + 1]
-    for y in range(y_to, y_from + 1):
-        keep = (row[:, 3] > 0) & hidden[y] & (cell[y, :, 3] == 0)
-        cell[y, keep] = row[keep]
-
-def knee_cap(cell, shin_name, shin, hidden):
-    """The upper leg goes on past the knee as a round end, outlined, under the
-    lower leg: when the knee bends, it fills the gap at the front."""
-    knee, u = leg_axis(shin_name)
-    across = np.array([-u[1], u[0]])            # along the cut, towards his front (left)
-    t = np.arange(0, 20, 0.05)
-    xy = knee[None, :] + t[:, None] * across[None, :]
-    outside = [not opaque[int(y * K), int(x * K)] for x, y in xy]
-    r = t[outside.index(True)]                  # to the leg's front edge
-    dist = np.hypot(xs - knee[0], ys - knee[1])
-    cap = hidden & shin & (dist <= r + 1 / K)
-    # its outline, as dark and about as thick as the leg's own; smooth edges
-    dark = im[front_leg | back_leg][:, :3]
-    dark = np.median(dark[dark.sum(1) < dark.sum(1).min() + 60], axis=0)
-    line = np.clip((dist - (r - 0.85)) * K + 0.5, 0, 1)[cap][:, None]
-    cell[cap, :3] = (im[cap, :3] * (1 - line) + dark * line).round().astype(np.int32)
-    cell[cap, 3] = (255 * np.clip((r - dist) * K + 0.5, 0, 1)[cap]).round().astype(np.int32)
-    print('  %s knee: round end of radius %.1f' % (shin_name, r))
+def round_end(cell, part, joint, u, end, hidden):
+    """A round end where a leg's part turns, so that turning shows a curve
+    (the seat, the knee), never a square corner: past the line across the
+    leg at the joint (end -1: towards the hip, +1: towards the boot), the
+    part's own cross-section just inside it, swept round the joint, each
+    side as far as its edge (outline and shading included); where the part
+    stops short of that line, straight on up to it first. Only where the
+    part in front hides it at rest."""
+    across = np.array([-u[1], u[0]])
+    vx, vy = xs - joint[0], ys - joint[1]
+    along, side = vx * u[0] + vy * u[1], vx * across[0] + vy * across[1]
+    gap = max(0.0, (-end * along[part & (np.abs(side) < 3)]).min())   # how far short of the line it stops
+    todo = hidden & (cell[:, :, 3] == 0) & (end * along > -gap)
+    rho = np.hypot(side[todo], np.maximum(end * along[todo], 0))
+    sign = np.where(side[todo] < 0, -1.0, 1.0)
+    depth = gap + 3.0 / K                                         # 3 pixels inside the part
+    sx = (joint[0] + sign * rho * across[0] - end * depth * u[0]) * K
+    sy = (joint[1] + sign * rho * across[1] - end * depth * u[1]) * K
+    src = layer(part).astype(float)
+    src[:, :, :3] *= src[:, :, 3:4] / 255.0                         # premultiplied, to blend neighbours
+    x0, y0 = np.floor(sx).astype(int), np.floor(sy).astype(int)
+    fx, fy = (sx - x0)[:, None], (sy - y0)[:, None]
+    at = lambda y, x: src[np.clip(y, 0, H - 1), np.clip(x, 0, W - 1)]
+    px = (at(y0, x0) * (1 - fx) * (1 - fy) + at(y0, x0 + 1) * fx * (1 - fy)
+          + at(y0 + 1, x0) * (1 - fx) * fy + at(y0 + 1, x0 + 1) * fx * fy)
+    a = px[:, 3:4]
+    px[:, :3] = np.where(a > 0, px[:, :3] * 255.0 / np.maximum(a, 1e-9), 0)
+    cell[todo] = px.round().astype(np.int32)
 
 def shadow_under(cell, region):
     """Under the bottom of the head, between the collar flaps: a plain dark
@@ -157,10 +190,10 @@ solid = im[:, :, 3] == 255
 arm_cell = layer(arm)
 extend_right(arm_cell, ARM_EDGE + 9, body & solid)
 front_cell, back_cell = layer(front_thigh), layer(back_thigh)
-for cell in (front_cell, back_cell):
-    extend_up(cell, LEGS_TOP, LEGS_TOP - 10, body & solid)
-knee_cap(front_cell, 'mp-shin-front', front_shin, solid)
-knee_cap(back_cell, 'mp-shin-back', back_shin, solid)
+for cell, thigh, shin, name in ((front_cell, front_thigh, front_shin, 'mp-shin-front'), (back_cell, back_thigh, back_shin, 'mp-shin-back')):
+    knee, u = leg_axis(name)
+    round_end(cell, thigh, np.array(JOINTS[name.replace('shin', 'leg')], float), u, -1, body & solid)   # the seat, under the body
+    round_end(cell, thigh, knee, u, 1, shin & solid)                                                    # the knee, under the shin
 front_shin_cell, back_shin_cell = layer(front_shin), layer(back_shin)
 body_cell = layer(body)
 shadow_under(body_cell, head & solid & (ys >= head_bottom(xs) - 3) & (xs >= 66) & (xs < 92))

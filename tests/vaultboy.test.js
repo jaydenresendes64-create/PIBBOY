@@ -101,6 +101,7 @@ test('the rig: the parts stacked back to front, each showing its cell and turnin
   at.forEach((i, n) => assert.ok(i > 0, PARTS[n] + ' in the page'));
   assert.deepEqual(at.slice().sort((x, y) => x - y), at);
   assert.match(html, /<span class="vb vb-head"><span class="vb vb-blink"><\/span><\/span>/);
+  ['back', 'front'].forEach(side => assert.match(html, new RegExp('<span class="vb vb-leg-' + side + '"><span class="vb-knee"><span class="vb vb-shin-' + side + '"></span></span></span>')));
   assert.match(rule('.vb'), /background:url\(\.\.\/images\/vaultboy\/parts-lvl05\.png\) no-repeat; background-size:800% 100%;/);
   ['10', '20', '30', '50'].forEach(t => assert.match(css, new RegExp('\\.vaultboy\\[data-tier="' + t + '"\\] \\.vb\\{ background-image:url\\(\\.\\./images/vaultboy/parts-lvl' + t + '\\.png\\); \\}')));
   PARTS.forEach((cls, i) => {
@@ -253,6 +254,41 @@ test('he walks toward the hand on his hip, the thumb behind: going right as draw
     moves++;
   });
   assert.ok(moves >= 16, 'level 5: there and back, drawing by drawing');
+});
+
+test('a bent knee folds into a V: each shin\'s box hides its corner above the knee line, where the thigh is, and never his boot', () => {
+  assert.match(rule('.vb-knee'), /position:absolute; inset:0;/);
+  const tool = read('tools/vaultboy-moves.py');
+  [false, true].forEach(old => {
+    const who = old ? 'the original Vault Boy' : 'the outfits', pre = old ? '.vaultboy[data-tier="00"] ' : '';
+    const rig = tool.slice(tool.indexOf(old ? "('Old', dict(" : "('', dict("));
+    const H = +rig.match(/H=(\d+)/)[1], W = +rig.match(/W=(\d+)/)[1];
+    const origin = sel => { const o = rule(sel).match(/transform-origin:([\d.]+)% ([\d.]+)%;/); return [o[1] / 100 * W, o[2] / 100 * H]; };
+    [['F', 'front'], ['B', 'back']].forEach(([s, side]) => {
+      const hip = origin(pre + '.vb-leg-' + side), knee = origin(pre + '.vb-shin-' + side);
+      const L = Math.hypot(knee[0] - hip[0], knee[1] - hip[1]), u = [(knee[0] - hip[0]) / L, (knee[1] - hip[1]) / L];
+      const at = p => [(p[0] - knee[0]) * u[0] + (p[1] - knee[1]) * u[1], (p[0] - knee[0]) * -u[1] + (p[1] - knee[1]) * u[0]];   // [along the leg, across]
+      const poly = rule(pre + '.vb-leg-' + side + ' > .vb-knee').match(/clip-path:polygon\(evenodd, -100% -100%, 200% -100%, 200% 200%, -100% 200%, -100% -100%, ([^)]*)\);/);
+      assert.ok(poly, who + ' ' + side + ': a knee box');
+      const box = poly[1].split(', ').map(pt => pt.split(' ').map(parseFloat)).map(([x, y]) => at([x / 100 * W, y / 100 * H]));
+      assert.equal(box.length, 5);
+      [0, 3].forEach(i => assert.ok(Math.abs(box[i][0]) < 0.05, who + ' ' + side + ': the box starts on the knee line'));
+      [1, 2].forEach(i => assert.ok(Math.abs(box[i][0] + L) < 0.05, who + ' ' + side + ': up to the hip'));
+      const [lo, hi] = [Math.min(box[0][1], box[3][1]), Math.max(box[0][1], box[3][1])];
+      assert.ok(hi - lo > 40 && hi - lo < 60, who + ' ' + side + ': as wide as the thigh at the knee');
+      // as he walks: where the boot's sole is in the thigh's own frame (the shin turned at the knee)
+      const sole = rig.match(new RegExp('sole' + s + '=\\(([\\d.]+), ([\\d.]+)\\)')).slice(1).map(Number);
+      const shin = keyframes('vbShin' + s + (old ? 'Old' : ''));
+      let deepest = 0;
+      for (let ms = 0; ms <= 11000; ms += 2) {
+        const deg = valueAt(shin, ms / 11000)[0];
+        deepest = Math.max(deepest, Math.abs(deg));
+        const [a, c] = at(turned(sole, knee, deg));
+        assert.ok(!(a <= 0 && a >= -L && c >= lo && c <= hi), who + ' ' + side + ': the knee box would hide the boot at ' + ms + 'ms');
+      }
+      assert.ok(deepest > 45, who + ' ' + side + ': the knee bends ' + deepest.toFixed(0) + ' degrees');
+    });
+  });
 });
 
 test('the walk\'s other moves: the legs shorten with --vb-swing, a small turn of the head (its cut never shows), the original Vault Boy his own legs and track', () => {

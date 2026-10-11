@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of the drawn walk PR (2026-10-11, after PR #26). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-279/279 tests pass locally. `sw.js` cache: `v27`.
+280/280 tests pass locally. `sw.js` cache: `v27`.
 
 ## 1. What it is
 
@@ -250,6 +250,24 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   keep its boot within 0.1px of picture (`simplified_leg()`, thigh and shin at the same moments;
   angle by angle, the planted boot wobbled when the knee came round). The drawn walk faces right
   as Gemini drew it. Tested: while he goes right his scale is 1, left −1 (both rigs and level 5).
+  **Smooth seat and knees (same day, owner: "les fesses et les genoux … trop carré, pas assez
+  lisse"):** walking, the top of each thigh swung out from under the belt as a striped square
+  block (the old `extend_up()` repeated its top row), the knee caps were measured on one side only
+  (the old front), and the straight cut at the top of each shin made a step at a bent knee. Now, in
+  both cutting tools (`vaultboy-parts.py`, `mascot-parts.py`): `round_end()` gives each thigh a round
+  end under the part in front, at the hip (under the body) and at the knee (under the shin): its
+  own cross-section swept round the joint, each side out to its edge, outline and shading
+  included (where the part starts short of the joint, straight on up first); `hip_slivers()` gives
+  the body what a leg has above its hip joint outside that circle (the hip's outline holds still,
+  the leg turns under it); the belt's bottom outline (a thin dark run at the top of a leg column)
+  stays with the body; the original Vault Boy's legs now start right under the belt and the fist
+  (`LEGS_TOP` polyline; a band of trousers used to stay with the body). Each shin sits in a
+  `.vb-knee` span in its leg (`index.html`), turned with the thigh, whose `clip-path` (evenodd
+  polygon from `knee_css()` in vaultboy-moves.py, `thighF/B` in `RIGS`: the narrowest thigh at the
+  knee line, a pixel inside its outline) hides the shin above the knee line where the thigh is:
+  the back of a bent knee folds into a V, the front shows the thigh's round end. At rest nothing
+  changes (both tools still give back the picture exactly). Tested: the boxes start on the knee
+  line, reach the hip, are as wide as the thigh, and never hide the boot while he walks.
   Markup: `#vaultboy-walk > .vb-track > .vb-move > .vb-body > .vb-breathe > .vb` parts, right after
   `.xp-gauge`; boots on the gauge's top (`margin-top: -14px - --vb-lane - --vb-feet` of the 100px
   frame, `--vb-feet` = the front sole, 411/420; 84px under 360px). render.js: `walkerTier(level)`
