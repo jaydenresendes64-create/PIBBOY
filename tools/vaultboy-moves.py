@@ -71,12 +71,18 @@ LEAN = AHEAD                # degrees: he leans into the walk
 # the point .vb-move turns and squashes him around (css/terminal.css: 55%
 # 97.9% of the 308px-wide frame, 52% 96.3% of the original's 288px), and
 # how tall his frame is on the page (--vb-h: the original's is taller, so
-# that he stands as tall). Each rig gets its own legs' angles.
+# that he stands as tall). Each rig gets its own legs' angles. thighF/B: how
+# far each thigh reaches across at the knee line, behind (his back, to the
+# left as drawn) and in front, a pixel inside its outline (measured in the
+# pictures, the narrowest of the outfits): where a bent shin is hidden
+# (knee_css()).
 RIGS = [
-    ('', dict(H=420, hipF=(160, 277), kneeF=(145, 326), soleF=(117.5, 411),
-              hipB=(215, 277), kneeB=(211, 326), soleB=(230.5, 401), origin=(0.55 * 308, 0.979 * 420), tall=100)),
-    ('Old', dict(H=408, hipF=(140, 286), kneeF=(131, 328.6), soleF=(108.5, 393),
-                 hipB=(188, 286), kneeB=(186.6, 328), soleB=(202, 384), origin=(0.52 * 288, 0.963 * 408), tall=117)),
+    ('', dict(H=420, W=308, hipF=(160, 277), kneeF=(145, 326), soleF=(117.5, 411),
+              hipB=(215, 277), kneeB=(211, 326), soleB=(230.5, 401), origin=(0.55 * 308, 0.979 * 420), tall=100,
+              thighF=(25.75, 28), thighB=(28.75, 22.75))),
+    ('Old', dict(H=408, W=288, hipF=(140, 286), kneeF=(131, 328.6), soleF=(108.5, 393),
+                 hipB=(188, 286), kneeB=(186.6, 328), soleB=(202, 384), origin=(0.52 * 288, 0.963 * 408), tall=117,
+                 thighF=(23.25, 22), thighB=(23.25, 22))),
 ]
 
 def turned(p, c, deg):
@@ -476,6 +482,27 @@ def drawn_css(tier, data):
         held_css('vbParts' + tier, [(at_, 'opacity:%d;' % o) for at_, o in parts_]),
     ]
 
+def knee_css(sel, rig):
+    """A bent knee folds like a drawn one: the shin's corner never shows as
+    a square step over the thigh. Each shin sits in a .vb-knee box that turns
+    with the thigh and hides it above the knee line, as wide as the thigh
+    there (so never the boot, never past the thigh's outline): the back of
+    the knee folds into a V, its front shows the thigh's round end
+    (tools/vaultboy-parts.py round_end())."""
+    rows = []
+    for f, cls in (('F', 'vb-leg-front'), ('B', 'vb-leg-back')):
+        hip, knee = rig['hip' + f], rig['knee' + f]
+        L = math.dist(hip, knee)
+        u = ((knee[0] - hip[0]) / L, (knee[1] - hip[1]) / L)
+        across = (-u[1], u[0])                                     # behind him, as drawn
+        behind, ahead = rig['thigh' + f]
+        pts = [(knee[0] + o * across[0] - a * u[0], knee[1] + o * across[1] - a * u[1])
+               for o, a in ((behind, 0), (behind, L), (-ahead, L), (-ahead, 0))]
+        pts = ['%s%% %s%%' % (num(100.0 * x / rig['W'], 2), num(100.0 * y / rig['H'], 2)) for x, y in pts]
+        rows.append('%s.%s > .vb-knee{ clip-path:polygon(evenodd, -100%% -100%%, 200%% -100%%, 200%% 200%%, -100%% 200%%, -100%% -100%%, %s); }'
+                    % (sel, cls, ', '.join(pts + pts[:1])))
+    return rows
+
 def lengths_css(name, samples, tol, fmt):
     rows = ['%s{ transform:%s; }' % (pct(t), fmt(num(v, 4))) for t, v in simplified(samples, tol)]
     return '@keyframes %s{ %s }' % (name, ' '.join(rows))
@@ -508,6 +535,7 @@ for suffix, rig in RIGS:
     out.append(lengths_css('vbTrack' + suffix, xs, 0.0005,
                            lambda v: 'translateX(calc(var(--vb-h) * var(--vb-swing, 1) * %s))' % v))
     out.append(lengths_css('vbBody' + suffix, ys, 0.0003, lambda v: 'translateY(calc(var(--vb-h) * %s))' % v))
+out += knee_css('', RIGS[0][1]) + knee_css('.vaultboy[data-tier="00"] ', RIGS[1][1])
 out.append('.vaultboy{ --vb-span:%s; }' % num(spans[''], 4))
 out.append('.vaultboy[data-tier="00"]{ --vb-span:%s; }' % num(spans['Old'], 4))
 out += [mover_css()] + [part_css(p) for p, _ in PARTS] + [part_css(p, 'Old') for p in LEGS]

@@ -17,6 +17,13 @@ multiple), so the joints are the same for all and the CSS rig is one;
 only where the legs start changes (the bag at 20, the jacket at 50 hang
 over the hips and stay with the body).
 
+Each thigh carries round ends under the parts in front of it (round_end():
+the seat under the body, the knee under the shin), and what a leg has above
+its hip joint outside the circle it turns in stays with the body
+(hip_slivers()), so a turning leg shows curves, never a square corner; the
+belt's bottom outline stays with the body too. The shin's own corner at a
+bent knee is hidden by its .vb-knee box (tools/vaultboy-moves.py knee_css()).
+
 The amber: each picture's brightness goes through one tone curve (matching
 lvl05's brightness spread to the old mascot's), then takes the old
 mascot's colour for that brightness. Laid on top of each other at rest,
@@ -140,9 +147,36 @@ def cut(tier):
     # The legs: from LEGS_TOP down, split along the crease between them.
     top = LEGS_TOP.get(tier, LEGS_TOP['base'])
     legs = opaque & ~head & ~arm & (ys >= np.interp(xs, *zip(*top)))
+    # The belt's bottom outline stays with the body: a thin dark run at the
+    # top of a leg's column (not a leg's own outline, which runs on down).
+    lum = Y(im)
+    for x in range(W):
+        rows = np.nonzero(legs[:, x])[0]
+        if len(rows):
+            run = 0
+            while run < 5 and rows[0] + run < H and lum[rows[0] + run, x] < 60:
+                run += 1
+            if 0 < run < 5:
+                legs[rows[0]:rows[0] + run, x] = False
     split = np.interp(ys, [272, 288, 300, 312, 330, 360], [193, 190, 186, 180, 176, 174])
     front_leg = legs & (xs < split)
     back_leg = legs & ~front_leg
+    # Above the hip joint, what a leg has outside the circle it turns in (round
+    # the joint, out to the leg's edge on each side) stays with the body: the
+    # hip's outline holds still and the leg turns under it, its top never
+    # poking out as a corner.
+    def hip_slivers(leg, name):
+        hip, knee = np.array(JOINTS[name], float), np.array(JOINTS[name.replace('leg', 'shin')], float)
+        u = (knee - hip) / np.hypot(*(knee - hip))
+        across = np.array([-u[1], u[0]])
+        along, side = (xs - hip[0]) * u[0] + (ys - hip[1]) * u[1], (xs - hip[0]) * across[0] + (ys - hip[1]) * across[1]
+        band = leg & (along >= 0) & (along < 3)
+        edge = lambda v: v.max() if v.size else np.inf             # none there: the leg starts lower on that side
+        far = np.where(side > 0, edge(side[band & (side > 0)]), edge(-side[band & (side < 0)]))
+        return leg & (along < 0) & (np.hypot(along, side) > far)
+    front_leg &= ~hip_slivers(front_leg, 'vb-leg-front')
+    back_leg &= ~hip_slivers(back_leg, 'vb-leg-back')
+    legs = front_leg | back_leg
     body = opaque & ~head & ~arm & ~legs
 
     def leg_axis(shin):
@@ -172,32 +206,34 @@ def cut(tier):
                 if hidden[y, x] and cell[y, x, 3] == 0:
                     cell[y, x] = cell[y, last]
 
-    def extend_up(cell, hidden, rows):
-        """A leg goes on up under the body: its top row, repeated, column by column."""
-        for x in range(W):
-            filled = np.nonzero(cell[:, x, 3])[0]
-            if not len(filled):
-                continue
-            first = filled[0]
-            for y in range(max(0, first - int(round(rows * K))), first):
-                if hidden[y, x] and cell[y, x, 3] == 0:
-                    cell[y, x] = cell[first + 1, x] if first + 1 < H else cell[first, x]
-
-    def knee_cap(cell, shin_name, shin, hidden):
-        knee, u = leg_axis(shin_name)
+    def round_end(cell, part, joint, u, end, hidden):
+        """A round end where a leg's part turns, so that turning shows a curve
+        (the seat, the knee), never a square corner: past the line across the
+        leg at the joint (end -1: towards the hip, +1: towards the boot), the
+        part's own cross-section just inside it, swept round the joint, each
+        side as far as its edge (outline and shading included); where the part
+        stops short of that line, straight on up to it first. Only where the
+        part in front hides it at rest."""
         across = np.array([-u[1], u[0]])
-        t = np.arange(0, 40, 0.05)
-        xy = knee[None, :] + t[:, None] * across[None, :]
-        outside = [not opaque[min(H - 1, int(y * K)), min(W - 1, int(x * K))] for x, y in xy]
-        r = t[outside.index(True)]
-        dist = np.hypot(xs - knee[0], ys - knee[1])
-        cap = hidden & shin & (dist <= r + 1 / K)
-        dark = im[front_leg | back_leg][:, :3]
-        dark = np.median(dark[dark.sum(1) < dark.sum(1).min() + 60], axis=0)
-        line = np.clip((dist - (r - 1.6)) * K / 1.6 * 0.85 + 0.5, 0, 1)[cap][:, None]
-        cell[cap, :3] = (im[cap, :3] * (1 - line) + dark * line).round().astype(np.int32)
-        cell[cap, 3] = (255 * np.clip((r - dist) * K + 0.5, 0, 1)[cap]).round().astype(np.int32)
-        return r
+        vx, vy = xs - joint[0], ys - joint[1]
+        along, side = vx * u[0] + vy * u[1], vx * across[0] + vy * across[1]
+        gap = max(0.0, (-end * along[part & (np.abs(side) < 3)]).min())   # how far short of the line it stops
+        todo = hidden & (cell[:, :, 3] == 0) & (end * along > -gap)
+        rho = np.hypot(side[todo], np.maximum(end * along[todo], 0))
+        sign = np.where(side[todo] < 0, -1.0, 1.0)
+        depth = gap + 3.0 / K                                         # 3 pixels inside the part
+        sx = (joint[0] + sign * rho * across[0] - end * depth * u[0]) * K
+        sy = (joint[1] + sign * rho * across[1] - end * depth * u[1]) * K
+        src = layer(part).astype(float)
+        src[:, :, :3] *= src[:, :, 3:4] / 255.0                     # premultiplied, to blend neighbours
+        x0, y0 = np.floor(sx).astype(int), np.floor(sy).astype(int)
+        fx, fy = (sx - x0)[:, None], (sy - y0)[:, None]
+        at = lambda y, x: src[np.clip(y, 0, H - 1), np.clip(x, 0, W - 1)]
+        px = (at(y0, x0) * (1 - fx) * (1 - fy) + at(y0, x0 + 1) * fx * (1 - fy)
+              + at(y0 + 1, x0) * (1 - fx) * fy + at(y0 + 1, x0 + 1) * fx * fy)
+        a = px[:, 3:4]
+        px[:, :3] = np.where(a > 0, px[:, :3] * 255.0 / np.maximum(a, 1e-9), 0)
+        cell[todo] = px.round().astype(np.int32)
 
     def shadow_under(cell, region):
         """Under the bottom of the head, between the shoulders: a plain dark
@@ -212,9 +248,10 @@ def cut(tier):
     arm_cell = layer(arm)
     extend_right(arm_cell, ARM_EDGE + 18, body & solid)
     front_cell, back_cell = layer(front_thigh), layer(back_thigh)
-    for cell in (front_cell, back_cell):
-        extend_up(cell, body & solid, 20)
-    radii = (knee_cap(front_cell, 'vb-shin-front', front_shin, solid), knee_cap(back_cell, 'vb-shin-back', back_shin, solid))
+    for cell, thigh, shin, name in ((front_cell, front_thigh, front_shin, 'vb-shin-front'), (back_cell, back_thigh, back_shin, 'vb-shin-back')):
+        knee, u = leg_axis(name)
+        round_end(cell, thigh, np.array(JOINTS[name.replace('shin', 'leg')], float), u, -1, body & solid)   # the seat, under the body
+        round_end(cell, thigh, knee, u, 1, shin & solid)                                                    # the knee, under the shin
     front_shin_cell, back_shin_cell = layer(front_shin), layer(back_shin)
     body_cell = layer(body)
     shadow_under(body_cell, head & solid & (ys >= neck(xs) - 6) & (xs >= 146) & (xs < 210))
@@ -246,8 +283,8 @@ def cut(tier):
         canvas[:, :, 3:4] = a * 255 + canvas[:, :, 3:4] * (1 - a)
     picture = np.dstack([im[:, :, :3] * (im[:, :, 3:4] / 255.0), im[:, :, 3]])
     diff = np.abs(canvas - picture).max()
-    print('wrote %s %dx%d | knees %.1f %.1f | largest difference from the picture at rest: %.1f (of 255)'
-          % (os.path.relpath(out, ROOT), sheet.shape[1], sheet.shape[0], radii[0], radii[1], diff))
+    print('wrote %s %dx%d | largest difference from the picture at rest: %.1f (of 255)'
+          % (os.path.relpath(out, ROOT), sheet.shape[1], sheet.shape[0], diff))
     return cells, (front_thigh, front_shin, back_thigh, back_shin, arm, body, head)
 
 if __name__ == '__main__':

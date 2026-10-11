@@ -168,7 +168,8 @@ images/vaultboy/    the Vault Boy walking on the level gauge (the hand on his hi
                     the original one (images/mascot-parts.png) for
                     levels 1-4, then one outfit per tier (5, 10, 20, 30, 50): lvlXX.png in colour (the
                     sources, not loaded by the app) and
-                    parts-lvlXX.png, the same in amber cut into parts that each move (js/render.js syncWalker);
+                    parts-lvlXX.png, the same in amber cut into parts that each move, with round hips and
+                    knees (js/render.js syncWalker);
                     walk-lvl05.png, the level 5 outfit's walk as 8 amber drawings, shown in turn while he
                     walks (walk-lvl05-source.webp: the sheet of poses they come from, not loaded)
 images/mascot.png   the old corner mascot's picture (288x408), the source of his parts (hidden since 2026-10-10)
