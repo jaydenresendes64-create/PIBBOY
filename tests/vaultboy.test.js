@@ -231,6 +231,30 @@ test('he really walks on the gauge: a boot always stands on it and doesn\'t slid
   });
 });
 
+test('he walks toward the hand on his hip, the thumb behind: going right as drawn, going left turned round, so his thumbs-up at each end is for the screen', () => {
+  const move = keyframes('vbMove');
+  [['vbTrack', 'the outfits'], ['vbTrackOld', 'the original Vault Boy']].forEach(([name, who]) => {
+    const track = keyframes(name);
+    let right = 0, left = 0;
+    for (let ms = 0; ms < 11000; ms += 5) {
+      const dx = valueAt(track, (ms + 5) / 11000)[0] - valueAt(track, ms / 11000)[0], sx = valueAt(move, ms / 11000)[2];
+      if (Math.abs(dx) < 5e-4) continue;                         // standing (his body settling aside)
+      assert.equal(Math.sign(sx), Math.sign(dx), who + ' goes ' + (dx > 0 ? 'right' : 'left') + ' with scale ' + sx + ' at ' + ms + 'ms');
+      if (dx > 0) right++; else left++;
+    }
+    assert.ok(right > 100 && left > 100, who + ': there and back');
+  });
+  // level 5's drawings: each move along the gauge, the way he faces then
+  const drawn = keyframes('vbMoveDrawn'), track = held('vbTrack05').map(k => ({ at: k.at, x: +k.css.match(/\* (-?[\d.]+)\)\);$/)[1] }));
+  let moves = 0;
+  track.forEach((k, i) => {
+    if (!i || k.x === track[i - 1].x) return;
+    assert.equal(Math.sign(valueAt(drawn, k.at)[2]), Math.sign(k.x - track[i - 1].x), 'level 5 at ' + (k.at * 11000).toFixed(0) + 'ms');
+    moves++;
+  });
+  assert.ok(moves >= 16, 'level 5: there and back, drawing by drawing');
+});
+
 test('the walk\'s other moves: the legs shorten with --vb-swing, a small turn of the head (its cut never shows), the original Vault Boy his own legs and track', () => {
   ['vbLegF', 'vbShinF', 'vbLegB', 'vbShinB', 'vbLegFOld', 'vbShinFOld', 'vbLegBOld', 'vbShinBOld'].forEach(k => {
     const body = css.slice(css.indexOf('@keyframes ' + k + '{')).split('\n')[0];
