@@ -15,8 +15,8 @@ and bends again at the knee.
 Every cell lines up with the picture, so the CSS stacks them as full-size
 layers; laid on top of each other at rest they give back the picture exactly.
 A part that turns tucks under the one in front of it: the arm and the legs
-carry a little more of themselves under the body, the body some collar
-under the head, and each upper leg a round knee under its lower leg, so
+carry a little more of themselves under the body, the body a little shadow
+under the chin, and each upper leg a round knee under its lower leg, so
 turning or bending never shows a hole.
 
 The picture can be any whole multiple of 144x204 (it is 288x408: upscaled
@@ -42,6 +42,21 @@ assert W % 144 == 0 and H == 204 * W // 144, 'the picture must be a whole multip
 ys, xs = np.mgrid[0:H, 0:W] / K                 # every pixel's place, in units
 opaque = im[:, :, 3] > 0
 
+def without_slivers(mask, r, below, ys):
+    """The mask without its thin bits (narrower than 2r+1 pixels) below y =
+    `below`: erosion then dilation. Slivers of the shoulder line caught at
+    the edge of the head stay with the body, so a turning head never drags
+    a hard cut edge over the background."""
+    def spread(m, keep):
+        out = m.copy()
+        for dy in range(-r, r + 1):
+            for dx in range(-r, r + 1):
+                shifted = np.roll(np.roll(m, dy, 0), dx, 1)
+                out = (out & shifted) if keep else (out | shifted)
+        return out
+    thick = spread(spread(mask, True), False)
+    return mask & (thick | (ys < below))
+
 # The joint each part turns around, in units. css/terminal.css gives them as
 # transform-origin percentages (x / 144, y / 204) on the .mp-* rules; this
 # script prints them.
@@ -50,11 +65,14 @@ JOINTS = {'mp-head': (81, 90), 'mp-arm': (62, 95), 'mp-leg-front': (70, 143), 'm
 
 # ---------- where each part is (picture pixels) ----------
 # The head: above the collar. The line follows the shoulders, dips under
-# the beard and leaves the two collar flaps to the body.
+# the beard and leaves the two collar flaps to the body; on the right it
+# climbs the beard's outline, so the shoulder's first pixels stay with the
+# body when the head turns.
 def head_bottom(x):
-    points = [(0, 85), (66, 84), (70, 84), (74, 89), (76, 91), (86, 91), (89, 88), (92, 84), (144, 84)]
+    points = [(0, 85), (66, 84), (70, 84), (74, 89), (76, 91), (86, 91), (88, 87), (90, 83.5), (92, 80.5), (96, 80), (144, 80)]
     return np.interp(x, [p[0] for p in points], [p[1] for p in points])
 head = opaque & (xs >= 56) & (xs < 111) & (ys < head_bottom(xs))
+head = without_slivers(head, max(1, int(round(K))), 70, ys)
 # The thumb arm: left of the body's edge (x = 60). Under the armpit (y >= 100)
 # the two columns at the edge are the body's own outline.
 ARM_EDGE = 60
@@ -125,22 +143,15 @@ def knee_cap(cell, shin_name, shin, hidden):
     cell[cap, 3] = (255 * np.clip((r - dist) * K + 0.5, 0, 1)[cap]).round().astype(np.int32)
     print('  %s knee: round end of radius %.1f' % (shin_name, r))
 
-def fill_under(cell, region):
-    """The collar under the head: the body's colours, spread inwards."""
+def shadow_under(cell, region):
+    """Under the bottom of the head, between the collar flaps: a plain dark
+    shadow, hidden at rest; when the head turns a little, that's what a
+    sliver of it shows (never a patch above the shoulders)."""
+    dark = im[body][:, :3]
+    dark = np.median(dark[dark.sum(1) < dark.sum(1).min() + 60], axis=0)
     todo = region & (cell[:, :, 3] == 0)
-    for _ in range(int(40 * K)):
-        if not todo.any():
-            break
-        have = cell[:, :, 3] > 0
-        total = np.zeros((H, W, 4)); count = np.zeros((H, W))
-        for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-            shifted = np.roll(np.roll(cell, dy, 0), dx, 1)
-            ok = np.roll(np.roll(have, dy, 0), dx, 1)
-            total[ok] += shifted[ok]; count[ok] += 1
-        grow = todo & (count > 0)
-        cell[grow] = (total[grow] / count[grow][:, None]).round().astype(np.int32)
-        cell[grow, 3] = 255
-        todo &= ~grow
+    cell[todo, :3] = dark.round().astype(np.int32)
+    cell[todo, 3] = 255
 
 solid = im[:, :, 3] == 255
 arm_cell = layer(arm)
@@ -152,7 +163,7 @@ knee_cap(front_cell, 'mp-shin-front', front_shin, solid)
 knee_cap(back_cell, 'mp-shin-back', back_shin, solid)
 front_shin_cell, back_shin_cell = layer(front_shin), layer(back_shin)
 body_cell = layer(body)
-fill_under(body_cell, head & solid & (ys >= 76) & (xs >= 62) & (xs < 101))
+shadow_under(body_cell, head & solid & (ys >= head_bottom(xs) - 3) & (xs >= 66) & (xs < 92))
 head_cell = layer(head)
 
 # ---------- the blink: the same head, eyes shut ----------

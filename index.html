@@ -80,8 +80,12 @@
           <span class="level-tag">LVL</span>
           <span class="level-num" id="hdr-level">07</span>
         </div>
-        <div class="xp-bar-outer"><div class="xp-bar-fill" id="hdr-xp-fill"></div></div>
-        <!-- The Vault Boy walking on the level bar, right of the name and level (never over them);
+        <!-- The level gauge in 3D: its top, a plane leaning back that the Vault Boy walks on, and its front face. -->
+        <div class="xp-gauge">
+          <div class="xp-top" aria-hidden="true"><div class="xp-top-fill" id="hdr-xp-top"></div></div>
+          <div class="xp-bar-outer"><div class="xp-bar-fill" id="hdr-xp-fill"></div></div>
+        </div>
+        <!-- The Vault Boy walking on the level gauge's top, right of the name and level (never over them);
              his outfit follows the level (js/render.js syncWalker). In amber parts that each move,
              like the old mascot (tools/vaultboy-parts.py). Taps go through him. -->
         <div class="vaultboy" id="vaultboy-walk" aria-hidden="true" hidden>
