@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of the drawn walk PR (2026-10-11, after PR #26). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-278/278 tests pass locally. `sw.js` cache: `v27`.
+279/279 tests pass locally. `sw.js` cache: `v27`.
 
 ## 1. What it is
 
@@ -197,10 +197,10 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   keyframes back (`planted()`: each leg turned at knee and hip, the body down by y, .vb-move's lean
   and squash) to make vbTrack (x: the boot with the weight stays put) and vbBody (y: the lower boot on
   its lane), and asserts the boot with the weight is never more than 0.2% of his height above the
-  gauge (actual: 0.02% / 0.01%). `--vb-span` (0.68 / 0.58 frame heights: 68px) is how far he goes;
+  gauge (actual: 0.00% for both). `--vb-span` (0.68 / 0.58 frame heights: 68px) is how far he goes;
   placeWalker shortens his steps with `--vb-swing` (legs and track scale together) only when the
   free stretch is shorter (under ~390px wide; there the boots can be up to ~1px off). The CSS is
-  ~280 KB (37 KB gzipped), mostly the leg keyframes. **The 3D gauge:** `.xp-gauge` wraps `.xp-top`
+  ~290 KB (39 KB gzipped), mostly the leg keyframes. **The 3D gauge:** `.xp-gauge` wraps `.xp-top`
   (a plane `perspective(240px) rotateX(65deg)` above the bar, ~10px deep, its far edge shorter so the
   ends slope like bevels, showing the fill too: `#hdr-xp-top`) and `.xp-bar-outer` (the front face,
   lit top edge, shadow); his front boot stands `--vb-lane` (3px) back on the top, the back boot
@@ -216,10 +216,10 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   cells of 500×558, facing right; same head and size in all 8, but the near leg in front in all 8 and
   the arms never swing; the top row's hips sit higher). `tools/vaultboy-walk.py` builds the cycle
   from the bottom row (contact, down, passing, up) plus the same 4 with the two legs' blues exchanged
-  (`CYCLES`: a minus sign), evens a greyer jacket, makes the white transparent, turns it to face left,
-  applies the outfits' amber (`amber()` imported from vaultboy-parts.py), scales it to lvl05's height
+  (`CYCLES`: a minus sign), evens a greyer jacket, makes the white transparent (keeps it facing
+  right, as drawn: see "Which way he walks"), applies the outfits' amber (`amber()` imported from vaultboy-parts.py), scales it to lvl05's height
   (×0.804) with the boots on 411 and the belt over lvl05's, and writes `images/vaultboy/walk-lvl05.png`
-  (8 frames of 319×420: the back fist needs 11px more than 308; 256 colours, 70 KB). It measures the
+  (8 frames of 325×420: the front fist needs 17px more than 308; 256 colours, 70 KB). It measures the
   boot that stays on the ground between drawings (`PLANTED`, toes of the boots ≤13px above the lowest)
   into `tools/vaultboy-walk.json`; Gemini's spacing is uneven (its "down" = "contact", its "up" = the
   next contact: −6, +76, +45, +2 px of 420), so where he is at each drawing is halfway (`PLANT` 0.5)
@@ -234,6 +234,22 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   held), the legs and body don't animate, the move/arm/head use vbMoveDrawn/vbArmDrawn/vbHeadDrawn.
   Other tiers keep the parts' walk until they get drawings: same process (send Gemini the tier's
   lvlXX.png with the brief and pose guide), then add the tier to `CYCLES` and run both tools.
+  **Which way he walks (same day, owner: "il ne doit pas marcher vers le côté pouce en l'air, mais
+  … où sa main est derrière son dos"):** he leads with the hand on his hip, the thumb behind, so at
+  each end of the gauge his thumbs-up points to the middle of the screen, not the edge. As drawn he
+  goes right (`RIGHT, LEFT = 1, -1`: .vb-move's scale x), `AHEAD = 1` (his front along the picture's
+  x), `LEAD, TRAIL = 'B', 'F'`. The legs keep their names, which are about depth: front = his right,
+  near us, on top, its boot on the lower lane (411); back = his left, under the hand, its boot higher
+  (401). `reach()` gives CSS angles with the knee to his front; the back leg's knee is drawn bent the
+  other way, so it comes round in the wind-up and goes back in the brake. The boot behind stands far
+  back as drawn (42.5 px of 420 behind its hip, the leg straight), so: he gets going evenly over the
+  wind-up and the first step (with only the wind-up, the boot ahead, which stands until the first
+  contact, couldn't stay down), its first step is longer, he slows down evenly in the last step and
+  straightens up then (leaning, the straight back leg couldn't reach the gauge); the step length
+  comes from `SPAN` (69px each way, so steps of ~13px on screen, were 11.5). Each leg's keyframes
+  keep its boot within 0.1px of picture (`simplified_leg()`, thigh and shin at the same moments;
+  angle by angle, the planted boot wobbled when the knee came round). The drawn walk faces right
+  as Gemini drew it. Tested: while he goes right his scale is 1, left −1 (both rigs and level 5).
   Markup: `#vaultboy-walk > .vb-track > .vb-move > .vb-body > .vb-breathe > .vb` parts, right after
   `.xp-gauge`; boots on the gauge's top (`margin-top: -14px - --vb-lane - --vb-feet` of the 100px
   frame, `--vb-feet` = the front sole, 411/420; 84px under 360px). render.js: `walkerTier(level)`

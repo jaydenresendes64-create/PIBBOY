@@ -1,7 +1,7 @@
 """
 Makes the Vault Boy's drawn walk for an outfit, images/vaultboy/walk-lvlXX.png
-(8 drawings side by side, in the parts' amber, facing left as drawn there,
-each as high as the parts' 308x420 frame and as wide as his back fist needs:
+(8 drawings side by side, in the parts' amber, facing right as drawn there:
+he walks toward the hand on his hip; each as high as the parts' 308x420 frame and as wide as his back fist needs:
 `left` and `width` in tools/vaultboy-walk.json), from a sheet of walk poses made by an
 image generator (images/vaultboy/walk-lvlXX-source.webp: 2 rows of 4 on white,
 from the brief and pose guide the owner sent to Gemini). It also measures how
@@ -18,8 +18,7 @@ Gemini kept the near leg in front in all 8 poses, so the walk is made from the
 4 of its bottom row (the top row's hips sit higher): for the other leg's 4,
 the same drawings with the two legs' blues exchanged (CYCLES: a minus sign).
 Some drawings also had a greyer jacket: made the same blue as the others
-(above the belt). Then: the white background made transparent, turned to face
-left, the outfits' amber (tools/vaultboy-parts.py amber()), scaled to the
+(above the belt). Then: the white background made transparent, the outfits' amber (tools/vaultboy-parts.py amber()), scaled to the
 outfit's height (the head to the boots as in lvl05.png) and placed with the
 boots on the same ground (411 of 420) and the belt over the outfit's belt.
 
@@ -29,7 +28,7 @@ many for that boot to stay put. Which boot that is follows from the cycle:
 the near one from contact to the other leg's contact, then the far one; it's
 found among the boots on the ground (dark shapes at most 13px above the
 lowest: the far boot stands a little higher), the front one, the one under
-him or the back one, its toe (his front: the left end) the point that stays.
+him or the back one, its toe (his front: the right end) the point that stays.
 Gemini's drawings don't space those evenly (its "down" has the boots where
 "contact" has them, its "up" where the next contact has them), so a boot
 held exactly would make the body lurch: where he is at each drawing is taken
@@ -132,10 +131,10 @@ def boots(rgba):
     return sorted(found)
 
 def toe(found, where, middle):
-    if where == 'front': b = found[0]
-    elif where == 'back': b = found[-1]
+    if where == 'front': b = found[-1]
+    elif where == 'back': b = found[0]
     else: b = min(found, key=lambda g: abs((g[0] + g[1]) / 2.0 - middle))
-    return b[0]
+    return b[1]
 
 def make(tier):
     sheet = np.asarray(Image.open(os.path.join(DIR, 'walk-lvl%s-source.webp' % tier)).convert('RGB'))
@@ -150,8 +149,8 @@ def make(tier):
     for n in CYCLES[tier]:
         r, c = divmod(abs(n) - 1, 4)
         rgb, belt = drawing(sheet[r * ch:(r + 1) * ch, c * cw:(c + 1) * cw], n < 0)
-        rgba = transparent(rgb)[:, ::-1]                             # facing left, like the parts
-        frames.append(rgba); belts.append(cw - 1 - belt)
+        rgba = transparent(rgb)
+        frames.append(rgba); belts.append(belt)
         ys = np.nonzero(rgba[..., 3] > 128)[0]
         tops.append(ys.min()); grounds.append(ys.max())
     top, ground, belt = np.median(tops), np.median(grounds), np.median(belts)
@@ -162,7 +161,7 @@ def make(tier):
         lit = parts.amber(rgba.astype(float))
         im = Image.fromarray(lit.astype(np.uint8), 'RGBA').convert('RGBa')
         scaled.append(im.resize((round(cw * s), round(ch * s)), Image.LANCZOS).convert('RGBA'))
-    # Walking, he's wider than the parts' frame (his back fist): his own frame,
+    # Walking, he's wider than the parts' frame (his fists): his own frame,
     # from `left` (px of the 308 frame) and `width` wide, as high.
     cols = np.nonzero(np.any([np.asarray(im)[..., 3].max(axis=0) > 0 for im in scaled], axis=0))[0]
     left = min(0, int(np.floor(ox + cols[0])) - 2)
@@ -174,7 +173,7 @@ def make(tier):
     strip.quantize(colors=256, method=Image.Quantize.FASTOCTREE).save(out, optimize=True)   # amber: 256 colours are plenty
     # How far between drawings (measured in the drawings, then in px of the 420 frame).
     on_ground = [boots(rgba) for rgba in frames]
-    advance = [s * (toe(on_ground[(i + 1) % len(frames)], there, belt) - toe(on_ground[i], here, belt))
+    advance = [s * (toe(on_ground[i], here, belt) - toe(on_ground[(i + 1) % len(frames)], there, belt))
                for i, (here, there) in enumerate(PLANTED)]
     cycle, n = sum(advance), len(advance)
     held = np.concatenate([[0], np.cumsum(advance)])

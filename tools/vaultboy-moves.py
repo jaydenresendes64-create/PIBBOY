@@ -8,11 +8,14 @@ look and thumbs-up, a spin.
 He really walks: his boots don't slide. The walk is worked out the way it is
 animated by hand, from where the boots go: one boot stands still on the
 gauge while the other swings forward in an arc, lifted off it, and lands a
-step ahead; each step as long as the last, both legs alike, the body going
-on at an even speed (it gets going and slows down at the ends) and bobbing
+step ahead; each step as long as the last, both legs alike (but the first
+and last ones: he gets going and stops), the body going on at an even speed
+(it gets going and slows down evenly at the ends) and bobbing
 a little (lowest when both boots are down). The legs' angles come from that
 (each leg a thigh and a shin reaching the boot, the knee to his front:
-reach()). Then what the page will draw is checked back from the legs alone,
+reach()). He walks toward the hand on his hip, the thumb behind (the owner's
+choice): at each end of the gauge, his thumbs-up is for the screen, not the
+edge. Then what the page will draw is checked back from the legs alone,
 for each rig (the outfits', and the original Vault Boy's for levels 1-4),
 from the joints and soles of his boots (RIGS): where he is along the gauge
 (.vb-track) so that the boot with the weight stays put, and how high his
@@ -20,10 +23,12 @@ body is (.vb-body) so that the lower boot is on its lane of the gauge's top
 (the back foot stands a little further back, so a little higher).
 
 Every element of the rig gets one animation of the same length, so they stay
-together: .vb-track, .vb-move (which way he faces, squash and stretch, the
-lean), .vb-body, and each part (degrees: a positive angle swings a leg or
-the thumb arm to his front, a negative one bends a knee). He faces left as
-drawn; scale(-1,1) turns him to the right. Lengths are shares of his frame's
+together: .vb-track, .vb-move (which way he goes, squash and stretch, the
+lean), .vb-body, and each part (degrees, as CSS turns them: clockwise). As
+drawn he goes right, toward the hand on his hip; scale(-1,1) turns him to
+go left. The legs are named for how near they are: the front one (his right,
+on top, under the thumb) and the back one (his left, its boot a little
+higher on the gauge's top). Lengths are shares of his frame's
 height (--vb-h); --vb-swing (js/render.js, 1 unless the gauge's free stretch
 is short) shortens his steps, legs and distance together.
 
@@ -44,7 +49,7 @@ PARTS = [('LegF', 'vb-leg-front'), ('ShinF', 'vb-shin-front'), ('LegB', 'vb-leg-
          ('Arm', 'vb-arm'), ('Head', 'vb-head')]
 LEGS = ('LegF', 'ShinF', 'LegB', 'ShinB')
 LOOP = 11                   # seconds
-STEPS, STEP = 6, 0.28      # each way: quick steps (the old mascot's took 0.25 s); the last one lands the front boot
+STEPS, STEP = 6, 0.28      # each way: quick steps (the old mascot's took 0.25 s); even: the boot ahead lands last
 SPAN = 69                   # page pixels he goes each way (frame 100px high): a 390px-wide screen's room
 LIFT = 3.8                  # page pixels: how high the swinging boot goes
 BOB = (0.95, 0.36)          # page pixels his body is lower than standing: both boots down, one boot under him
@@ -55,8 +60,10 @@ DRAWN_FRAMES = 4 * DRAWN_STEPS + 1   # the steps' drawings, and the first one ag
 WALK_DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'vaultboy-walk.json')
 WALKS = json.load(open(WALK_DATA)) if os.path.exists(WALK_DATA) else {}   # tools/vaultboy-walk.py: the outfits with one
 RATE = 250                  # samples a second (STEP and 0.12 s fall on it)
-RIGHT, LEFT = -1, 1         # scale x to face that way
-LEAN = -1                   # degrees: he leans into the walk
+RIGHT, LEFT = 1, -1         # scale x to go that way
+AHEAD = 1                   # his front along the picture's x: right, the hand on his hip
+LEAD, TRAIL = 'B', 'F'      # standing: the boot ahead (the back leg's), the one behind
+LEAN = AHEAD                # degrees: he leans into the walk
 
 # Each rig, in pixels of its picture: the hips and knees (the joints the
 # cutting tools use: tools/vaultboy-parts.py JOINTS, tools/mascot-parts.py
@@ -87,14 +94,14 @@ def reach(rig, side, foot):
     pixels), the knee to his front; a leg can't reach further than straight."""
     hip, knee, sole = rig['hip' + side], rig['knee' + side], rig['sole' + side]
     l1, l2 = math.dist(hip, knee), math.dist(knee, sole)
-    ahead, down = hip[0] - foot[0], foot[1] - hip[1]                # he faces left
+    ahead, down = AHEAD * (foot[0] - hip[0]), foot[1] - hip[1]
     d = min(math.hypot(ahead, down), l1 + l2 - 1e-9)
-    line = math.atan2(ahead, down)                                  # from the hip to the boot, from straight down
+    line = math.atan2(ahead, down)                                  # from the hip to the boot, from straight down, to his front
     thigh = line + math.acos((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d))
     shin = line - math.acos((l2 * l2 + d * d - l1 * l1) / (2 * l2 * d))
-    drawn = lambda a, b: math.atan2(a[0] - b[0], b[1] - a[1])        # as drawn, from straight down
+    drawn = lambda a, b: math.atan2(AHEAD * (b[0] - a[0]), b[1] - a[1])   # as drawn, from straight down
     leg = math.degrees(thigh - drawn(hip, knee))
-    return leg, math.degrees(shin - drawn(knee, sole)) - leg
+    return -AHEAD * leg, -AHEAD * (math.degrees(shin - drawn(knee, sole)) - leg)   # as CSS turns them
 
 # One timeline at a time (timeline()): the keys it collects.
 ch = legs = mover = steps = walks = None   # the arm and head; each rig's legs; .vb-move; who has the weight; (from, to, facing) of each walk
@@ -170,7 +177,7 @@ def smooth(u):
     return u * u * (3 - 2 * u)
 
 def walk(start, face, drawn=False):
-    """A wind-up, STEPS steps from `start` (the back boot first), the stop:
+    """A wind-up, STEPS steps from `start` (the boot behind first), the stop:
     each rig's legs (strides()); the arm swings against the legs and the head
     bobs a beat late. Steps start on the RATE grid, so both ways are worked
     out alike. drawn: an outfit with a drawn walk (tools/vaultboy-walk.py),
@@ -181,54 +188,59 @@ def walk(start, face, drawn=False):
         at(start, IO, sx=face, sy=1, ty=0, rot=0)
         at(end, OUT, sx=face, sy=1, rot=0)
         key('Arm', start, 0); key('Arm', end + 0.12, 0)
-        key('Head', start, 0); key('Head', end + 0.08, -2); key('Head', end + 0.25, 0)
-        at(end + 0.08, IO, sx=face, sy=0.97, rot=1)                # brakes, the parts back: leans back, squashes
-        at(end + 0.18, IO, sx=face, sy=1.01, rot=-0.3)
+        key('Head', start, 0); key('Head', end + 0.08, 2 * AHEAD); key('Head', end + 0.25, 0)
+        at(end + 0.08, IO, sx=face, sy=0.97, rot=-AHEAD)           # brakes, the parts back: leans back, squashes
+        at(end + 0.18, IO, sx=face, sy=1.01, rot=0.3 * AHEAD)
         at(end + 0.26, IO, sx=face, sy=1, rot=0)
         walks.append((start, end, face))
         return end + 0.26
     at(start, IO, sx=face, sy=1, ty=0, rot=0)
-    at(start + 0.08, IO, sx=face, sy=0.98, rot=1.5)               # wind-up: leans back, dips
+    at(start + 0.08, IO, sx=face, sy=0.98, rot=-1.5 * AHEAD)      # wind-up: leans back, dips
     c0 = start + 0.12
     at(c0, LIN, sx=face, sy=1, rot=LEAN)                           # leans into the walk
     contacts = [c0 + i * STEP for i in range(STEPS + 1)]
     end = contacts[-1]
-    at(end, OUT, sx=face, sy=1, rot=LEAN)
-    steps.append((start, 'F'))                                     # both down at first: the front one stays
+    at(contacts[-2], IO, sx=face, sy=1, rot=LEAN)
+    at(end, OUT, sx=face, sy=1, rot=0)                             # straightens up in the last step: the boot behind stands far back
+    steps.append((start, LEAD))                                    # both down at first: the one ahead stays
     for i, c in enumerate(contacts[:-1]):
-        swinging = 'B' if i % 2 == 0 else 'F'                      # the back boot first, the front one lands last
-        steps.append((c, 'F' if swinging == 'B' else 'B'))         # the other one has the weight
-        key('Arm', c + 0.03, 6 if swinging == 'B' else -6)
-        key('Head', c + 0.05, 2 if swinging == 'B' else -2)
+        swinging = TRAIL if i % 2 == 0 else LEAD                   # the boot behind first, the one ahead lands last
+        steps.append((c, LEAD if swinging == TRAIL else TRAIL))    # the other one has the weight
+        key('Arm', c + 0.03, -6 * AHEAD if swinging == 'B' else 6 * AHEAD)   # the thumb arm against his right leg
+        key('Head', c + 0.05, -2 * AHEAD if swinging == 'B' else 2 * AHEAD)
     for name, rig in RIGS:
         strides(rig, legs[name], start, contacts)
     key('Arm', start, 0); key('Arm', end + 0.12, 0)
-    key('Head', start, 0); key('Head', end + 0.08, -2); key('Head', end + 0.25, 0)
-    at(end + 0.08, IO, sx=face, sy=0.97, rot=1)                    # brakes: leans back, squashes
-    at(end + 0.18, IO, sx=face, sy=1.01, rot=-0.3)
+    key('Head', start, 0); key('Head', end + 0.08, 2 * AHEAD); key('Head', end + 0.25, 0)
+    at(end + 0.08, IO, sx=face, sy=0.97, rot=-AHEAD)               # brakes: leans back, squashes
+    at(end + 0.18, IO, sx=face, sy=1.01, rot=0.3 * AHEAD)
     at(end + 0.26, IO, sx=face, sy=1, rot=0)
     walks.append((start, end, face))                               # then both boots are down: he stays there
     return end + 0.26
 
 def strides(rig, into, start, contacts):
     """One rig's legs for a walk (see the top): where the boots go, then the angles."""
-    c0, end, last = contacts[0], contacts[-1], contacts[-2]
-    # Lengths ahead (picture pixels, he faces left): a step, his speed, where
-    # each boot stands at rest from its hip (the back one behind it: below 0).
+    c0, c1, end, last = contacts[0], contacts[1], contacts[-1], contacts[-2]
+    # Lengths ahead (picture pixels, along AHEAD): a step, his speed, where
+    # each boot stands at rest from its hip (the one behind: below 0). He
+    # gets going evenly in the wind-up and the first step (the boot ahead
+    # stands until then: not too far for it to stay down) and slows down
+    # evenly in the last one: SPAN in all.
     px = rig['H'] / float(rig['tall'])                             # picture pixels in a page pixel (frame 100px high)
-    step = SPAN * px / STEPS
+    w = (c1 - start) / STEP / 2                                    # the way to get going, in steps
+    step = SPAN * px / (len(contacts) - 2.5 + w)
     speed = step / STEP
-    rest = {f: rig['hip' + f][0] - rig['sole' + f][0] for f in 'FB'}
+    shift, stop = w * step, step / 2
+    rest = {f: AHEAD * (rig['sole' + f][0] - rig['hip' + f][0]) for f in 'FB'}
     def hermite(u, a, b, va, vb, T):                               # from a to b, at those speeds, in T
         return (2*u**3 - 3*u*u + 1) * a + (u**3 - 2*u*u + u) * va * T + (-2*u**3 + 3*u*u) * b + (u**3 - u*u) * vb * T
-    shift = step / 2 + rest['B']                                   # the wind-up: onto the front boot, both down
     def body(t):                                                   # how far ahead he is
-        if t <= c0:
-            return hermite((t - start) / (c0 - start), 0, shift, 0, speed, c0 - start)
+        if t <= c1:
+            return hermite((t - start) / (c1 - start), 0, shift, 0, speed, c1 - start)
         if t <= last:
-            return shift + speed * (t - c0)
-        a = shift + speed * (last - c0)
-        return hermite((t - last) / STEP, a, a + step / 2 - rest['B'], speed, 0, STEP)
+            return shift + speed * (t - c1)
+        a = shift + speed * (last - c1)
+        return hermite((t - last) / STEP, a, a + stop, speed, 0, STEP)
     low, high = BOB[0] * px, BOB[1] * px
     def drop(t):                                                   # how much lower than standing
         if t <= c0:
@@ -238,11 +250,13 @@ def strides(rig, into, start, contacts):
         u = ((t - c0) % STEP) / STEP
         return low - (low - high) * math.sin(math.pi * u) ** 2
     # Each boot: where it stands (ahead), then, swinging, from there to where it lands.
+    # Each lands half a step ahead of its hip; the last two where they stand
+    # at rest once he has stopped.
     swings = {'F': [], 'B': []}
-    stand = {f: -rig['sole' + f][0] for f in 'FB'}
+    stand = {f: AHEAD * rig['sole' + f][0] for f in 'FB'}
     for i, (c, nxt) in enumerate(zip(contacts, contacts[1:])):
-        f = 'B' if i % 2 == 0 else 'F'
-        lands = body(nxt) - rig['hip' + f][0] + (rest[f] if nxt == end else step / 2)
+        f = TRAIL if i % 2 == 0 else LEAD
+        lands = body(nxt) + AHEAD * rig['hip' + f][0] + (rest[f] if nxt == end else rest[f] + stop if nxt == last else step / 2)
         swings[f].append((c, nxt, stand[f], lands))
         stand[f] = lands
     def boot_at(f, t):                                             # (ahead, up above its lane)
@@ -263,22 +277,45 @@ def strides(rig, into, start, contacts):
         m = mover_at(moves, t)
         for f in 'FB':
             ahead, up = boot_at(f, t)
-            gx, gy = -ahead + body(t) - ox, (rig['sole' + f][1] - up - oy) / m['sy']
+            gx, gy = AHEAD * (ahead - body(t)) - ox, (rig['sole' + f][1] - up - oy) / m['sy']
             x, y = turned((gx, gy), (0, 0), -m['rot'])
             leg, shin = reach(rig, f, (ox + x, oy + y - drop(t)))
             angles['Leg' + f].append((t, leg))
             angles['Shin' + f].append((t, shin))
-    # From standing as drawn (0: a front leg may be drawn a hair past straight)
-    # in the wind-up; back to it while he brakes, both boots down.
+    # From standing as drawn (0) in the wind-up: the back leg's knee is drawn
+    # bent behind him, it comes round to his front then (a front leg may also
+    # be drawn a hair past straight); back to it while he brakes, both boots down.
     for k, samples in angles.items():
         a0 = samples[0][1]
         for j, (t, v) in enumerate(samples):
             samples[j] = (t, v - a0 * (1 - smooth(min(1.0, (t - start) / (c0 - start)))))
-        kept = simplified(samples, 0.15)
-        for t, v in kept[:-1]:
-            into[k].append((t, round(v, 3), LIN))
-        into[k].append((end, round(kept[-1][1], 3), IO))
-        into[k].append((end + 0.26, 0, IO))
+    for f in 'FB':
+        kept = simplified_leg(rig, f, angles['Leg' + f], angles['Shin' + f], 0.1)
+        for t, leg, shin in kept[:-1]:
+            into['Leg' + f].append((t, round(leg, 3), LIN))
+            into['Shin' + f].append((t, round(shin, 3), LIN))
+        for k, v in (('Leg' + f, kept[-1][1]), ('Shin' + f, kept[-1][2])):
+            into[k].append((end, round(v, 3), IO))
+            into[k].append((end + 0.26, 0, IO))
+
+def simplified_leg(rig, f, legs_, shins, tol):
+    """A leg's two angles at the fewest same moments that, joined by straight
+    lines, keep its boot within tol picture pixels of where it should be."""
+    exact = [boot(rig, f, a, b) for (_, a), (_, b) in zip(legs_, shins)]
+    out, i, n = [(legs_[0][0], legs_[0][1], shins[0][1])], 0, len(legs_)
+    while i < n - 1:
+        best, j = i + 1, i + 1
+        while j < n:
+            (t0, a0), (t1, a1), b0, b1 = legs_[i], legs_[j], shins[i][1], shins[j][1]
+            def off(k):
+                u = (legs_[k][0] - t0) / (t1 - t0)
+                return math.dist(boot(rig, f, a0 + (a1 - a0) * u, b0 + (b1 - b0) * u), exact[k])
+            if any(off(k) > tol for k in range(i + 1, j)):
+                break
+            best, j = j, j + 1
+        out.append((legs_[best][0], legs_[best][1], shins[best][1]))
+        i = best
+    return out
 
 def look(t):
     """One way, the other, back (a small turn of the head)."""
@@ -306,7 +343,7 @@ def turn(t0, t1, sx_from, sx_to):
     at(t1, IO, sx=sx_to, sy=1, ty=0, rot=0)
     return t1
 
-# ---------- the loop: from the left end, facing right ----------
+# ---------- the loop: from the left end, going right ----------
 def timeline(drawn=False):
     """The whole loop's keys, for the parts' walk or a drawn one: the same
     moves at the same moments, a drawn walk being shorter, he waits longer
