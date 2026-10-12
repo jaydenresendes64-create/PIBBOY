@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
-State as of the drawn walk PR (2026-10-11, after PR #26). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-281/281 tests pass locally. `sw.js` cache: `v27`.
+State as of the VITALS insight PR (2026-10-12, after PR #29). Live: https://jaydenresendes64-create.github.io/PIBBOY/
+297/297 tests pass locally. `sw.js` cache: `v28`.
 
 ## 1. What it is
 
@@ -26,6 +26,7 @@ Plain scripts (not ES modules, so `index.html` still opens from disk) sharing
 | `js/render.js` | Builds every tab's HTML (escapes everything), toasts/banners, `switchTab` |
 | `js/items3d.js` | ITEMS 3D wireframe models (Three.js, dynamic `import()`), one shared WebGLRenderer copied into small 2D canvases |
 | `js/mascot.js` | Mascot gesture scheduling (moves are CSS keyframes, per body part: see §3 Look & feel) |
+| `js/insight.js` | VITALS words, read-only (`ST.insight`): `readings()` (STATUS / TREND / PRIORITY / ACTION / PATTERN from the logged check-ins), `urgeContext()` + `urgeMessages()` (the urge decoder's messages, context first), `urgeReflection()`, `resetLine()`, `urgeHint()`; keeps no data |
 | `js/vitals.js` | VITALS tab with its CHECK-IN / TRIALS sub-tabs (`app.vitalsView`; check-in, urge decoder + its timer's clock, chem-free streak card, last 7 days), the morning path (`order`, `fieldReport`, `nextStep`) and Check-in first (`locked`); its buttons use `data-vital` (its own listeners), the rules are in state.js |
 | `js/trials.js` | VITALS → TRIALS screen (`ST.trials.html()` drawn by vitals.js `render()`): cards, the open trial's panel (3-2-1, stopwatch/countdown clock, tap counter, save confirm, last results), the timer loop + wake lock; buttons use `data-trial` (its own listeners), the rules are in state.js |
 | `js/crt.js`, `js/tilt.js` | CRT flicker; 3D tilt (DeviceOrientation/mouse) incl. glass glare parallax |
@@ -144,6 +145,34 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   on return) redraws at 4:00, and a Log tap on a form drawn before 4:00 redraws with a notice
   instead of logging unseen values. Dailies, streak, urges' daily cap, trials keep midnight
   (`todayStr`). Tests in `tests/vitalsday.test.js`; checked live with a fake clock (Toronto).
+- **VITALS readings + urge decoder messages (2026-10-12, owner's "OPUS ULTRA CODE" prompt):**
+  `js/insight.js`, pure and read-only (no new data, no migration, no XP: tested that the state is
+  byte-identical after every call and that an edit after logging still pays nothing). `readings()`
+  only for today's *logged* check-in (an unlogged entry holds the last one's levels); earlier
+  check-ins with a level that isn't a number are left out for that level, never read as 0. Lines in
+  `LINES` (sleep/energy/mood ≤ 3, tension/hunger ≥ 7, craving ≥ 6). STATUS: the two levels furthest
+  past their line or at their lowest/highest in up to 14 check-ins (needs 4 before), else "steady"
+  (each within 1 of its 7-check-in average), else "nothing past its line". TREND: the best scored of
+  run (3+ check-ins one way, ≥ 2 in all, within 10 days), avg (|today − avg of up to 7| ≥ 2, needs 4;
+  dropped for a level STATUS flagged), last (≤ 3 days back, change ≥ 2), back after ≥ 3 days, regular
+  (≥ 5 of 7 days), urges this week vs last. PRIORITY: furthest past its line, +1 when its run goes
+  the bad way, +0.5 for craving (first among equals); ACTION one step for it (craving → a `goto-urge`
+  "Decoder" button). PATTERN (`LINKS`): mean craving on matching days vs the others, shown only when
+  today matches, ≥ 3 entries each side and a difference ≥ 1.5, ending "a link, not a cause". The
+  phrasing is picked by the VITALS day number (`pick()`), so it changes daily; the numbers don't.
+  `fieldReport()` dropped its "Sleep low. Craving high." (STATUS says it now).
+  Urge decoder: `urgeMessages()` = context lines first (today's logged check-in: sleep ≤ 3 unless
+  TIRED, hunger ≥ 7 unless HUNGRY, tension ≥ 7 unless ANGRY, as questions; round ≥ 2; same need
+  ridden out before, with the last one's rounds and when, else the total; 22:00–4:00; WHY = clean day
+  + next milestone + best run) then `POOL` (DECODER, REALITY CHECK, DIRECT, INNER DIALOGUE, STRATEGY;
+  need-specific entries `{NEED: text}`) interleaved in `ORDER[need]`, starting at `seed % n`
+  (`seed` = urges logged + the start minute), deduplicated. vitals.js shows
+  `said[app.urgeAngle % said.length]` in `.urge-angle` (aria-live), "Another angle" (`urge-angle`)
+  increments it; `urge-start` / `urge-again` reset it to 0 (session only, not saved). At zero:
+  `urgeReflection()` (REFLECTION; after 2+ rounds it asks what changed). After a lapse logged today:
+  `resetLine()` on the streak card and `urgeHint()` on the decoder pick different lines (no blame
+  words, tested); otherwise `urgeHint()` is the sleep ≤ 3 or hunger ≥ 7 line, or nothing. No AI call:
+  everything is local text. Tested in `tests/insight.test.js`; checked in Chromium at 390 and 320 px.
 - **Skill sources (2026-10-10, a Grok render.js the owner sent):** STATUS skills are buttons
   (`data-action="skill"` toggles `app.skillOpen`, events.js); open: Earned / Coming from state.js
   `skillSources(key)` (mains/side by their skillGains and done/completed, books, and history events with
@@ -470,8 +499,9 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
    progressing by themselves from PLACE_DISCOVERED events), a weekly summary from `historySummary(7)`
    (e.g. a line in the RobCo boot), bobbleheads based on events.
 
-1. Collect the owner's phone feedback and adjust: `canvas.item-model` size in `css/terminal.css`,
-   `.crt-glare` opacity, `.device-plate` opacity.
+1. Collect the owner's phone feedback and adjust: VITALS insight wording (`PRIORITY`, `ACTION`,
+   `POOL` in js/insight.js are plain lists, easy to edit or extend; the thresholds are `LINES`),
+   `canvas.item-model` size in `css/terminal.css`, `.crt-glare` opacity, `.device-plate` opacity.
 2. (Done: the SETTINGS panel, PR #10.)
 3. Extend `CAPS_OBJECTIVE` in `state.js` with French verbs (obtenir|avoir|atteindre|gagner) — a new
    one-time migration flag is needed since `capsQuestsLinked` is already set on existing saves.

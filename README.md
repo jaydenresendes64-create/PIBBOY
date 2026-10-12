@@ -19,8 +19,16 @@ tension, sleep and craving from 0 to 10, the resting pulse, and two counters (RA
 **Log check-in** gives **+15 XP** once a day and trains Intelligence; what you change after it is
 kept. At the bottom, the last 7 entries with their averages. The **urge decoder**: name the real
 need (hungry, angry, lonely, tired, or none of these), read what to do first, and leave the room for a
-**20-minute timer** (it keeps running when the app is closed). At zero: **Rode it out** (**+40 XP
-and +1 SURVIVAL**, 3 times a day; logged every time) or **Still strong** (another round). The support
+**20-minute timer** (it keeps running when the app is closed). Under the clock, one message at a time
+and **Another angle** for the next: what might be behind it (DECODER), REALITY CHECK, DIRECT, INNER
+DIALOGUE, STRATEGY, and WHY (your chem-free day and the next milestone). What the app already knows
+comes first, as questions: a short night or high hunger at today's check-in ("You logged sleep 2 this
+morning. Could tiredness be part of this?"), the urges of the same kind you rode out before and how
+many rounds the last one took, a second round, a late hour. The rest change from one urge to the next,
+and none comes back until all have shown. Without a check-in or a history, it uses the general ones.
+At zero: one question to look back with (REFLECTION), then **Rode it out** (**+40 XP
+and +1 SURVIVAL**, 3 times a day; logged every time) or **Still strong** (another round). The day of a
+lapse, the streak card and the decoder each show a way back (RESET), without blame. The support
 line (1-800-265-2626, 24/7) and when to call 911 are always on the card. When a round ends, the app says so
 whatever tab is open (a sound and a notice). A small light on the **VITALS** tab key shows, from every
 tab, a timer running (pulsing) or over (steady), or today's check-in still to do (dim). The RobCo boot
@@ -32,7 +40,14 @@ in the order that matters today: the **urge decoder** first while its timer runs
 ("Day 7. Tomorrow: +150 XP."), else the **check-in**, then the streak, then the urge decoder. The sliders start from your last check-in, shown
 above them ("Yesterday · energy 4 · sleep 3 · craving 7"), so a day like yesterday is one tap. Under
 the button, the Intelligence training (`INT 5 · TRAIN 15/300`). Once logged, the check-in folds into one
-line and a **FIELD REPORT** written from your day ("Sleep low. Craving high. INT 5 · TRAIN 30/300.
+line, then what your check-ins say, a few short lines, each only when the data says something:
+**STATUS** (a level past its line, or the lowest or highest in your recent check-ins), **TREND** (a
+level going one way several check-ins running, today against your average or since the last one,
+how regularly you checked in, urges ridden out this week against last), **PRIORITY** and **ACTION**
+(the one level that deserves attention today and one small step; for a craving, a **Decoder** button),
+**PATTERN** (a link in your history, like "craving ran higher on days with sleep at 4 or less", only
+on such a day and with enough check-ins on both sides, said as a link, never as a cause). The wording
+changes from day to day; the numbers don't. Then the **FIELD REPORT** ("INT 5 · TRAIN 30/300.
 2 dailies left. 1 trial due. Chem-free day 11 (4 to 14).") and the **NEXT** step: a trial that's due
 (**Go** opens it), else the daily quest left the longest (**Go** opens QUESTS). The two counters
 (RADS // type N and T) stay on the folded card: a tap on **+** each time, any time of the day; the
@@ -156,6 +171,7 @@ js/bulk.js          MAP: "Add several places" (paste a list, review it, reveal i
 js/routes.js        MAP: routes (road trips): stops, the road traced once (OSRM), its line and card
 js/radar.js         MAP: the scanner, a radar sweep whose blips are real undiscovered cities
 js/holotapes.js     LOG: holotapes, voice recordings kept on the device (their own IndexedDB)
+js/insight.js       VITALS: what the check-ins say (STATUS, TREND...) and the urge decoder's messages
 js/vitals.js        VITALS (check-in, urge decoder, chem-free streak, last 7 days), the morning path
 js/trials.js        VITALS: TRIALS (weekly physical tests, records, timers, tap counter)
 vendor/maplibre/    MapLibre GL JS 6.11.2, the map library (licence: vendor/maplibre/LICENSE.txt)

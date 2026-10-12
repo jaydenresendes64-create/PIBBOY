@@ -137,7 +137,7 @@
  * SCRIPTS — every file attaches to one namespace, window.StatusTerminal, and
  * index.html loads them in dependency order: state → storage → ai → places →
  * weather → boot → render → mascot → crt → tilt → fog → map → bulk → routes → radar →
- * holotapes → vitals → trials → events → main (map.js loads
+ * holotapes → insight → vitals → trials → events → main (map.js loads
  * MapLibre, vendor/maplibre/, the first time MAP opens: the one module, needing
  * http(s) like the map's lists). They are plain scripts rather than ES modules so the app
  * still runs when index.html is opened straight from disk (file://), where
@@ -283,6 +283,7 @@
     addOpen: null,              // the add form unfolded: 'main', 'side', 'daily' (QUESTS) or 'book' (ITEMS)
     streakEdit: false,          // the chem-free streak's start date is being set (VITALS)
     confirmLapse: false,        // "Log a lapse?" awaits "Yes, log it"
+    urgeAngle: 0,               // which of the urge decoder's messages shows ("Another angle"), from 0 each round
     vitalsView: 'checkin',      // VITALS shows 'checkin' or 'trials'
     trialOpen: null,            // id of the trial whose panel (timer, result) is open
     trialCount: null,           // {id, n}: the tap counter of that trial's set
