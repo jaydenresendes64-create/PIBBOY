@@ -87,11 +87,13 @@ test('logged: the check-in folds into one line, a field report from the state an
     ST.setVital('sleep', 2); ST.setVital('craving', 6);
     ST.logVitals();
   });
+  // Where the day stands (the levels themselves are read in STATUS, js/insight.js).
   const report = a.ST.vitals.fieldReport();
-  assert.equal(report, 'Sleep low. Craving high. INT 5 · TRAIN 15/300. 2 dailies left. 4 trials due. Chem-free day 11 (4 to 14).');
+  assert.equal(report, 'INT 5 · TRAIN 15/300. 2 dailies left. 4 trials due. Chem-free day 11 (4 to 14).');
   const html = vitals(a);
   assert.match(html, /CHECK-IN · DONE ✓ · energy 5 · sleep 2 · craving 6/);
-  assert.match(html, /FIELD REPORT \/\/<\/span> Sleep low\. Craving high\./);
+  assert.match(html, /STATUS \/\/<\/span> Sleep 2, [^.<]+\. Craving 6, [^.<]+\.<\/p>/);
+  assert.match(html, /PRIORITY \/\/<\/span> Sleep, at 2[\s\S]*?ACTION \/\/<\/span> [^<]+<\/p>[\s\S]*?FIELD REPORT \/\/<\/span> INT 5/);
   assert.match(html, /NEXT: Push-ups <span class="next-kind">trial due<\/span><\/span><button class="vital-btn hot" data-vital="go" data-key="trial" data-id="pushups">Go<\/button>/);
   assert.doesNotMatch(html, /class="vital-range"/);              // folded
   a.ST.app.vitalsEdit = true;                                    // Edit check-in: the sliders again

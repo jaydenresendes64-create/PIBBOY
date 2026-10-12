@@ -1628,6 +1628,14 @@ canvas.item-model{
 .vital-fine.count-hint{ margin:4px 0 0; }
 .field-report{ font-size:0.84rem; line-height:1.5; margin:8px 0 0; }
 .field-tag{ color:var(--amber); letter-spacing:0.08em; }
+/* What the check-in and the urge decoder have to say (js/insight.js): short
+   tagged lines (STATUS //, TREND //...), one under the other. */
+.readings{ margin:8px 0 0; }
+.reading{ font-size:0.8rem; line-height:1.45; margin:4px 0 0; }
+.vital-sub.reading{ color:var(--phosphor); margin:8px 0 4px; }
+.reading .inline-go{ padding:4px 10px; margin-left:4px; font-size:0.7rem; min-height:32px; }
+.urge-angle{ border-left:2px solid var(--amber-dim); padding:2px 0 2px 10px; margin:10px 0 0; }
+.urge-said{ font-size:0.84rem; line-height:1.45; margin:0; }
 .next-step{
   display:flex; align-items:center; justify-content:space-between; gap:10px;
   margin-top:10px; padding-top:10px; border-top:1px solid var(--line); font-size:0.84rem;

@@ -15,6 +15,10 @@
  * due, else the daily quest left longest). Until it's logged, QUESTS,
  * ITEMS, MAP and LOG wait (Settings: Check-in first).
  *
+ * The words of the readings and of the urge decoder's messages come from
+ * js/insight.js (readings(), urgeMessages(), urgeReflection(), resetLine(),
+ * urgeHint()); "Another angle" walks down the messages (app.urgeAngle).
+ *
  * The rules and rewards live in js/state.js (logVitals, claimCleanMilestones,
  * urgeWon, trainStat: through award(), recorded in the history); this file
  * draws the VITALS tab and the streak card, and turns their taps into those
@@ -48,6 +52,10 @@
   function pad2(n){ return (n<10 ? '0' : '')+n; }
   function plural(n, word){ return n+' '+word+(n===1 ? '' : 's'); }
   function sound(name, delay){ if (ST.sfx) ST.sfx.play(name, delay); }
+  // A line of js/insight.js with its tag ("TREND //"), or '' for none.
+  function insightLine(m, cls){
+    return m ? '<p class="'+cls+'"><span class="field-tag">'+escapeHtml(m.style || m.tag)+' //</span> '+escapeHtml(m.text)+'</p>' : '';
+  }
   function save(now){ if (now) ST.storage.saveNow(); else ST.storage.scheduleSave(); }
   // 19:59, for the urge timer.
   function clockText(ms){
@@ -82,6 +90,7 @@
       // A lapse logged today: the next run starts tomorrow.
       html += '<div class="streak-big">RESTART // TOMORROW</div>'+
         '<p class="vital-sub">Stop for today. The '+plural(num(c.totalClean), 'chem-free day')+' behind you still count.</p>'+
+        (ST.insight ? insightLine(ST.insight.resetLine(), 'vital-sub reading') : '')+
         '<div class="vital-btns"><button class="vital-btn hot" data-vital="goto-urge">Urge? Decode it</button>'+
         '<button class="vital-btn quiet" data-vital="streak-edit">Edit start</button></div>';
     } else {
@@ -116,7 +125,8 @@
     var a = app.state.urges.active, left = ST.urgeLeft();
     var html = '<div class="vital-card urge-card" id="urge-card"><div class="vital-head">Urge decoder</div>';
     if (!a){
-      html += '<p class="urge-tip">Before acting on it, name the real need. Right now I am mostly:</p>'+
+      html += (ST.insight ? insightLine(ST.insight.urgeHint(), 'vital-sub reading') : '')+
+        '<p class="urge-tip">Before acting on it, name the real need. Right now I am mostly:</p>'+
         '<div class="urge-grid">'+
           ['HUNGRY','ANGRY','LONELY','TIRED'].map(function(n){
             return '<button class="vital-btn" data-vital="urge-start" data-key="'+n+'">'+n+'</button>';
@@ -126,15 +136,19 @@
         (ST.urgesToday()>0 ? '<p class="vital-sub">Ridden out today: '+ST.urgesToday()+' · SURVIVAL '+num(app.state.skills.SURVIVAL)+'</p>' : '')+
         '<p class="vital-fine">'+HELP_LINE+'</p>';
     } else if (left>0){
+      var said = ST.insight ? ST.insight.urgeMessages() : [];
       html += '<p class="urge-tip">'+escapeHtml(TIPS[a.need] || TIPS.NONE)+'</p>'+
         '<div class="urge-clock" id="urge-clock" role="timer" aria-label="Time left">'+clockText(left)+'</div>'+
         '<p class="vital-sub urge-note">'+(num(a.rounds)>1 ? 'Round '+num(a.rounds)+'. ' : '')+'Leave this room. Come back at zero.</p>'+
-        '<div class="vital-btns"><button class="vital-btn quiet" data-vital="urge-cancel">Cancel</button></div>'+
+        (said.length ? '<div class="urge-angle" aria-live="polite">'+insightLine(said[num(app.urgeAngle) % said.length], 'urge-said')+'</div>' : '')+
+        '<div class="vital-btns">'+(said.length>1 ? '<button class="vital-btn" data-vital="urge-angle">Another angle</button>' : '')+
+          '<button class="vital-btn quiet" data-vital="urge-cancel">Cancel</button></div>'+
         '<p class="vital-fine">'+HELP_LINE+'</p>';
     } else {
       var paid = ST.urgesToday()<ST.URGE_XP_PER_DAY;
       html += '<div class="urge-clock">00:00</div>'+
         '<p class="urge-tip">Twenty minutes down. Did it pass?</p>'+
+        (ST.insight ? insightLine(ST.insight.urgeReflection(), 'vital-sub reading') : '')+
         '<div class="urge-grid">'+
           '<button class="vital-btn hot" data-vital="urge-won">Rode it out'+
             (paid ? '<span class="btn-sub">+'+ST.URGE_XP+' XP · +1 SURVIVAL</span>' : '')+'</button>'+
@@ -212,7 +226,7 @@
   }
 
   // ---------- the morning ----------
-  var CRAVING_HIGH = 6, SLEEP_LOW = 3;
+  var CRAVING_HIGH = 6;
   var BRIEF = ['energy', 'sleep', 'craving'];       // the levels in the one-line summaries
   // A craving at 6 or more: today's check-in's, or else yesterday's.
   function cravingHigh(){
@@ -241,13 +255,22 @@
   function briefText(e){
     return BRIEF.map(function(k){ return LABELS[k].toLowerCase()+' '+num(e[k]); }).join(' · ');
   }
-  // The day in one line, from the state, once the check-in is logged.
+  // What the logged check-in says (js/insight.js readings(): STATUS, TREND,
+  // PRIORITY and ACTION, PATTERN), each line only when the data says it.
+  // A craving to watch gets a way to the decoder, on the same screen.
+  function readingsHtml(){
+    var list = ST.insight ? ST.insight.readings() : [];
+    if (!list.length) return '';
+    return '<div class="readings">'+list.map(function(r){
+      var line = insightLine(r, 'reading');
+      return r.tag==='ACTION' && r.key==='craving'
+        ? line.replace(/<\/p>$/, ' <button class="vital-btn quiet inline-go" data-vital="goto-urge">Decoder</button></p>') : line;
+    }).join('')+'</div>';
+  }
+  // Where the day stands, in one line, once the check-in is logged: the
+  // training, the dailies and trials left, the chem-free day.
   function fieldReport(){
-    var s = app.state, e = ST.vitalsToday(false), out = [];
-    if (e && e.logged){
-      if (num(e.sleep)<=SLEEP_LOW) out.push('Sleep low.');
-      if (num(e.craving)>=CRAVING_HIGH) out.push('Craving high.');
-    }
+    var s = app.state, out = [];
     out.push(trainText('INT')+'.');
     var daily = s.quests.daily, left = daily.filter(function(d){ return !ST.dailyDoneToday(d); }).length;
     if (daily.length) out.push(left ? left+' dail'+(left===1 ? 'y' : 'ies')+' left.' : 'Dailies done.');
@@ -287,6 +310,7 @@
       return html+'<div class="checkin-done">'+
         '<div class="checkin-line">CHECK-IN · DONE ✓ · '+briefText(e)+'</div>'+
         countsHtml(e)+
+        readingsHtml()+
         '<p class="field-report"><span class="field-tag">FIELD REPORT //</span> '+escapeHtml(fieldReport())+'</p>'+
         (step ? '<div class="next-step"><span class="next-text">NEXT: '+escapeHtml(step.name)+
             ' <span class="next-kind">'+(step.kind==='trial' ? 'trial due' : 'daily')+'</span></span>'+
@@ -494,12 +518,23 @@
     // A timer running puts the decoder first (order()): the whole view is drawn again.
     'urge-start': function(btn, key){
       ST.startUrge(key);
+      app.urgeAngle = 0;
       redraw('[data-vital="urge-cancel"]');
       var card = el('urge-card');
       if (card && card.scrollIntoView) card.scrollIntoView({block:'start', behavior:'auto'});
       save(true);
     },
-    'urge-again': function(){ if (ST.urgeAgain()){ redrawUrge(); save(true); } },
+    'urge-again': function(){ if (ST.urgeAgain()){ app.urgeAngle = 0; redrawUrge(); save(true); } },
+    // The next message of the round (js/insight.js urgeMessages()), none twice until all have shown.
+    // Only the message changes, in place: its aria-live box stays, so a screen reader reads it out.
+    'urge-angle': function(){
+      app.urgeAngle = num(app.urgeAngle) + 1;
+      var box = document.querySelector('#urge-card .urge-angle'), said = ST.insight ? ST.insight.urgeMessages() : [];
+      if (box && said.length){ box.innerHTML = insightLine(said[app.urgeAngle % said.length], 'urge-said'); return; }
+      redrawUrge();
+      var b = document.querySelector('[data-vital="urge-angle"]');
+      if (b) b.focus();
+    },
     'urge-cancel': function(){ ST.cancelUrge(); render(); save(); },
     // A reward is saved first: drawing the screen afterwards can't lose it.
     'urge-won': function(){
@@ -607,7 +642,7 @@
   ST.vitals = {
     init: init, render: render, onTab: onTab, stop: stop, markTab: markTab, refreshIfNewDay: refreshIfNewDay,
     locked: locked, refuse: refuse, toggleLock: toggleLock,
-    order: order, fieldReport: fieldReport, nextStep: nextStep,
+    order: order, fieldReport: fieldReport, nextStep: nextStep, readingsHtml: readingsHtml,
     clockText: clockText, boxDate: boxDate, alertState: alertState
   };
 })(window.StatusTerminal);
