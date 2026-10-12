@@ -159,6 +159,7 @@ function bezier(x1, y1, x2, y2) {
   return u => { let lo = 0, hi = 1; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (at(x1, x2, m) < u) lo = m; else hi = m; } return at(y1, y2, (lo + hi) / 2); };
 }
 function keyframes(name) {
+  assert.ok(css.includes('@keyframes ' + name + '{'), name + ' in the css');
   const from = css.indexOf('@keyframes ' + name + '{') + name.length + 12;
   let depth = 1, i = from;
   for (; depth; i++) depth += css[i] === '{' ? 1 : css[i] === '}' ? -1 : 0;
@@ -174,20 +175,18 @@ function valueAt(kf, t) {
   return a.nums.map((v, n) => v + (b.nums[n] - v) * p);
 }
 const turned = (p, c, deg) => { const r = deg * Math.PI / 180, dx = p[0] - c[0], dy = p[1] - c[1]; return [c[0] + dx * Math.cos(r) - dy * Math.sin(r), c[1] + dx * Math.sin(r) + dy * Math.cos(r)]; };
-function bootsWalking(old) {
+function bootsWalking() {
   const tool = read('tools/vaultboy-moves.py');
-  const rig = tool.slice(tool.indexOf(old ? "('Old', dict(" : "('', dict("));
+  const rig = tool.slice(tool.indexOf("('', dict("));
   const H = +rig.match(/H=(\d+)/)[1];
   const sole = { F: rig.match(/soleF=\(([\d.]+), ([\d.]+)\)/).slice(1).map(Number), B: rig.match(/soleB=\(([\d.]+), ([\d.]+)\)/).slice(1).map(Number) };
-  const tier = old ? '.vaultboy[data-tier="00"]' : '.vaultboy';
-  const W = H * rule(tier).match(/--vb-ratio:([\d.]+);/)[1];
-  assert.equal(+rule(tier).match(/--vb-feet:([\d.]+);/)[1], +(sole.F[1] / H).toFixed(4), 'his front sole is where the css stands him');
+  const W = H * rule('.vaultboy').match(/--vb-ratio:([\d.]+);/)[1];
+  assert.equal(+rule('.vaultboy').match(/--vb-feet:([\d.]+);/)[1], +(sole.F[1] / H).toFixed(4), 'his front sole is where the css stands him');
   const origin = sel => { const o = rule(sel).match(/transform-origin:([\d.]+)% ([\d.]+)%;/); return [o[1] / 100 * W, o[2] / 100 * H]; };
-  const part = cls => origin(old ? '.vaultboy[data-tier="00"] .' + cls : '.' + cls);
+  const part = cls => origin('.' + cls);
   const hip = { F: part('vb-leg-front'), B: part('vb-leg-back') }, knee = { F: part('vb-shin-front'), B: part('vb-shin-back') };
-  const O = origin(old ? '.vaultboy[data-tier="00"] .vb-move, .vaultboy[data-tier="00"] .vb-body, .vaultboy[data-tier="00"] .vb-breathe' : '.vb-move, .vb-body, .vb-breathe');
-  const own = name => keyframes(name + (old ? 'Old' : ''));        // each rig its own legs, track and body
-  const kf = { track: own('vbTrack'), body: own('vbBody'), move: keyframes('vbMove'), LegF: own('vbLegF'), ShinF: own('vbShinF'), LegB: own('vbLegB'), ShinB: own('vbShinB') };
+  const O = origin('.vb-move, .vb-body, .vb-breathe');
+  const kf = { track: keyframes('vbTrack'), body: keyframes('vbBody'), move: keyframes('vbMove'), LegF: keyframes('vbLegF'), ShinF: keyframes('vbShinF'), LegB: keyframes('vbLegB'), ShinB: keyframes('vbShinB') };
   const px = v => v / H * 100, out = [];
   for (let ms = 0; ms <= 11000; ms++) {
     const t = ms / 11000, [x] = valueAt(kf.track, t), [y] = valueAt(kf.body, t), [, ty, sx, sy, rot] = valueAt(kf.move, t);
@@ -202,10 +201,10 @@ function bootsWalking(old) {
   return out;
 }
 
-test('he really walks on the gauge: a boot always stands on it and doesn\'t slide, none sinks into it, the other lifts as it swings', () => {
-  [false, true].forEach(old => {
-    const who = old ? 'the original Vault Boy' : 'the outfits';
-    const boots = bootsWalking(old);
+test('he really walks on the gauge (the outfits that walk in parts): a boot always stands on it and doesn\'t slide, none sinks into it, the other lifts as it swings', () => {
+  [false].forEach(() => {
+    const who = 'the outfits';
+    const boots = bootsWalking();
     let lifted = 0;
     boots.forEach((b, ms) => {
       if (b.hop) return;                                         // his little hops: both boots up, on purpose
@@ -227,14 +226,14 @@ test('he really walks on the gauge: a boot always stands on it and doesn\'t slid
       else { least = Math.min(least, v); assert.ok(v < least + 0.001, who + ': a step back at ' + ms + 'ms'); }
     });
     assert.equal(track[0], 0); assert.equal(track[track.length - 1], 0);
-    const span = +css.match(old ? /\.vaultboy\[data-tier="00"\]\{ --vb-span:([\d.]+); \}/ : /\.vaultboy\{ --vb-span:([\d.]+); \}/)[1];
+    const span = +css.match(/\.vaultboy\{ --vb-span:([\d.]+); \}/)[1];
     assert.ok(Math.abs(track[peak] - span) < 0.001, who + ': --vb-span ' + span + ', walks ' + track[peak].toFixed(4));
   });
 });
 
 test('he walks toward the hand on his hip, the thumb behind: going right as drawn, going left turned round, so his thumbs-up at each end is for the screen', () => {
   const move = keyframes('vbMove');
-  [['vbTrack', 'the outfits'], ['vbTrackOld', 'the original Vault Boy']].forEach(([name, who]) => {
+  [['vbTrack', 'the outfits']].forEach(([name, who]) => {
     const track = keyframes(name);
     let right = 0, left = 0;
     for (let ms = 0; ms < 11000; ms += 5) {
@@ -245,23 +244,26 @@ test('he walks toward the hand on his hip, the thumb behind: going right as draw
     }
     assert.ok(right > 100 && left > 100, who + ': there and back');
   });
-  // level 5's drawings: each move along the gauge, the way he faces then
-  const drawn = keyframes('vbMoveDrawn'), track = held('vbTrack05').map(k => ({ at: k.at, x: +k.css.match(/\* (-?[\d.]+)\)\);$/)[1] }));
-  let moves = 0;
-  track.forEach((k, i) => {
-    if (!i || k.x === track[i - 1].x) return;
-    assert.equal(Math.sign(valueAt(drawn, k.at)[2]), Math.sign(k.x - track[i - 1].x), 'level 5 at ' + (k.at * 11000).toFixed(0) + 'ms');
-    moves++;
+  // the drawings (level 5, and the original Vault Boy with level 5's): each move along the gauge, the way he faces then
+  const drawn = keyframes('vbMoveDrawn');
+  ['05', '00'].forEach(tier => {
+    const track = held('vbTrack' + tier).map(k => ({ at: k.at, x: +k.css.match(/\* (-?[\d.]+)\)\);$/)[1] }));
+    let moves = 0;
+    track.forEach((k, i) => {
+      if (!i || k.x === track[i - 1].x) return;
+      assert.equal(Math.sign(valueAt(drawn, k.at)[2]), Math.sign(k.x - track[i - 1].x), 'tier ' + tier + ' at ' + (k.at * 11000).toFixed(0) + 'ms');
+      moves++;
+    });
+    assert.ok(moves >= 32, 'tier ' + tier + ': there and back, drawing by drawing');
   });
-  assert.ok(moves >= 16, 'level 5: there and back, drawing by drawing');
 });
 
 test('a bent knee folds into a V: each shin\'s box hides its corner above the knee line, where the thigh is, and never his boot', () => {
   assert.match(rule('.vb-knee'), /position:absolute; inset:0;/);
   const tool = read('tools/vaultboy-moves.py');
-  [false, true].forEach(old => {
-    const who = old ? 'the original Vault Boy' : 'the outfits', pre = old ? '.vaultboy[data-tier="00"] ' : '';
-    const rig = tool.slice(tool.indexOf(old ? "('Old', dict(" : "('', dict("));
+  [false].forEach(() => {
+    const who = 'the outfits', pre = '';
+    const rig = tool.slice(tool.indexOf("('', dict("));
     const H = +rig.match(/H=(\d+)/)[1], W = +rig.match(/W=(\d+)/)[1];
     const origin = sel => { const o = rule(sel).match(/transform-origin:([\d.]+)% ([\d.]+)%;/); return [o[1] / 100 * W, o[2] / 100 * H]; };
     [['F', 'front'], ['B', 'back']].forEach(([s, side]) => {
@@ -278,7 +280,7 @@ test('a bent knee folds into a V: each shin\'s box hides its corner above the kn
       assert.ok(hi - lo > 40 && hi - lo < 60, who + ' ' + side + ': as wide as the thigh at the knee');
       // as he walks: where the boot's sole is in the thigh's own frame (the shin turned at the knee)
       const sole = rig.match(new RegExp('sole' + s + '=\\(([\\d.]+), ([\\d.]+)\\)')).slice(1).map(Number);
-      const shin = keyframes('vbShin' + s + (old ? 'Old' : ''));
+      const shin = keyframes('vbShin' + s);
       let deepest = 0;
       for (let ms = 0; ms <= 11000; ms += 2) {
         const deg = valueAt(shin, ms / 11000)[0];
@@ -291,18 +293,15 @@ test('a bent knee folds into a V: each shin\'s box hides its corner above the kn
   });
 });
 
-test('the walk\'s other moves: the legs shorten with --vb-swing, a small turn of the head (its cut never shows), the original Vault Boy his own legs and track', () => {
-  ['vbLegF', 'vbShinF', 'vbLegB', 'vbShinB', 'vbLegFOld', 'vbShinFOld', 'vbLegBOld', 'vbShinBOld'].forEach(k => {
+test('the walk\'s other moves: the legs shorten with --vb-swing, a small turn of the head (its cut never shows); the original Vault Boy has no walk in parts of his own any more', () => {
+  ['vbLegF', 'vbShinF', 'vbLegB', 'vbShinB'].forEach(k => {
     const body = css.slice(css.indexOf('@keyframes ' + k + '{')).split('\n')[0];
     assert.match(body, /rotate\(calc\(var\(--vb-swing, 1\) \* -?[\d.]+deg\)\)/, k);
     assert.doesNotMatch(body, /rotate\(-?[\d.]+deg\)/, k + ': every angle shortens');
   });
   const head = keyframes('vbHead').map(k => k.nums[0]);
   assert.ok(Math.max(...head.map(Math.abs)) <= 5, 'the head turns at most 5 degrees');
-  assert.match(css, /\.vaultboy\[data-tier="00"\] \.vb-track\{ animation-name:vbTrackOld; \}/);
-  assert.match(css, /\.vaultboy\[data-tier="00"\] \.vb-body\{ animation-name:vbBodyOld; \}/);
-  [['leg-front', 'LegF'], ['shin-front', 'ShinF'], ['leg-back', 'LegB'], ['shin-back', 'ShinB']].forEach(([cls, k]) =>
-    assert.match(css, new RegExp('\\.vaultboy\\[data-tier="00"\\] \\.vb-' + cls + '\\{ animation-name:vb' + k + 'Old; \\}')));
+  assert.doesNotMatch(css, /vb(Track|Body|LegF|ShinF|LegB|ShinB)Old/);
 });
 
 test('the gauge in 3D: a top he walks on, leaning back, under the front face; both show the fill; taps go through the top', () => {
@@ -349,7 +348,33 @@ test('level 5 walks with its drawings: in the walker, hidden until he walks, the
   assert.match(walk, /background-image:url\(\.\.\/images\/vaultboy\/walk-lvl05\.png\); background-size:1600% 100%; animation:vbWalk05 11s linear infinite;/);
   assert.ok(Math.abs(parseFloat(walk.match(/width:([\d.]+)%/)[1]) - walkData.width / 308 * 100) < 0.01, 'his frame as wide as the drawings');
   assert.match(css, /\.vaultboy\[data-tier="05"\] \.vb-leg-front, [^{]*\.vb-shin-back\{ animation:none; \}/);
-  ['10', '20', '30', '50', '00'].forEach(other => assert.doesNotMatch(css, new RegExp('\\.vaultboy\\[data-tier="' + other + '"\\] \\.vb-walk'), 'no drawings yet for ' + other));
+  ['10', '20', '30', '50'].forEach(other => assert.doesNotMatch(css, new RegExp('\\.vaultboy\\[data-tier="' + other + '"\\] \\.vb-walk'), 'no drawings yet for ' + other));
+});
+
+test('levels 1-4 walk with level 5\'s drawings: as big on the page, the front sole on the gauge, the belt over the original\'s; his own track, the same drawings and timing', () => {
+  const walkData = JSON.parse(read('tools/vaultboy-walk.json'))['05'];
+  const t = '.vaultboy[data-tier="00"]';
+  const walk = rule(t + ' .vb-walk');
+  assert.match(walk, /background-image:url\(\.\.\/images\/vaultboy\/walk-lvl05\.png\); background-size:1600% 100%; animation:vbWalk05 11s linear infinite;/);
+  const pc = k => parseFloat(walk.match(new RegExp('(?:^|[ ;])' + k + ':(-?[\\d.]+)%'))[1]) / 100;
+  const h00 = parseFloat(rule(t).match(/--vb-h:([\d.]+)px;/)[1]), feet = +rule(t).match(/--vb-feet:([\d.]+);/)[1], ratio = +rule(t).match(/--vb-ratio:([\d.]+);/)[1];
+  const h05 = parseFloat(rule('.vaultboy').match(/--vb-h:([\d.]+)px;/)[1]);
+  assert.ok(Math.abs(pc('height') * h00 - h05) < 0.05, 'the drawings as tall on the page as at level 5');
+  assert.ok(Math.abs(pc('top') + pc('height') * 411 / 420 - feet) < 0.0005, 'their ground on his front sole');
+  const tool = read('tools/vaultboy-moves.py'), belt = +tool.match(/BORROW = \{'00': dict\([^)]*belt=([\d.]+)\)/)[1];
+  const W = 408 * ratio, scale = pc('width') * W / walkData.width;
+  assert.ok(Math.abs(pc('left') * W + (walkData.belt - walkData.left) * scale - belt) < 0.5, 'the drawings\' belt over his');
+  assert.match(rule(t + ' .vb-track'), /animation-name:vbTrack00;/);
+  assert.match(rule(t + ' .vb-move'), /animation-name:vbMoveDrawn;/);
+  assert.match(css, /\.vaultboy\[data-tier="00"\] \.vb-breathe\{ animation:mascotBreathe 4\.2s ease-in-out infinite, vbParts05 11s linear infinite; \}/);
+  assert.match(css, /\.vaultboy\[data-tier="00"\] \.vb-leg-front, [^{]*\.vb-shin-back\{ animation:none; \}/);
+  // his track: level 5's, in his frame's heights (taller frame, same steps on the page)
+  const x = name => held(name).map(k => ({ at: k.at, x: +k.css.match(/\* (-?[\d.]+)\)\);$/)[1] }));
+  const a = x('vbTrack05'), b = x('vbTrack00');
+  assert.deepEqual(b.map(k => k.at), a.map(k => k.at));
+  a.forEach((k, i) => assert.ok(Math.abs(b[i].x - k.x * h05 / h00) < 0.0002, 'the same distance on the page at ' + (k.at * 11000).toFixed(0) + 'ms'));
+  const span = +css.match(/\.vaultboy\[data-tier="00"\]\{ --vb-span:([\d.]+); \}/)[1];
+  assert.ok(Math.abs(span - Math.max(...b.map(k => k.x))) < 1e-9, '--vb-span: as far as he goes');
 });
 
 test('the drawn walk: the drawings in order, one at a time, the parts exactly when they aren\'t; he moves on at each drawing, never back, as far as --vb-span', () => {

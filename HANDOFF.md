@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of the drawn walk PR (2026-10-11, after PR #26). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-280/280 tests pass locally. `sw.js` cache: `v27`.
+281/281 tests pass locally. `sw.js` cache: `v27`.
 
 ## 1. What it is
 
@@ -193,7 +193,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   0.09 frame heights), because the outfits' legs are drawn at different angles. Now the tool works
   out where each boot goes (one planted, the other swinging forward in an arc 3.8px up, equal steps,
   even speed, a small bob), then each rig's leg angles from it by inverse kinematics (`reach()`;
-  separate keyframes vbLegF… / vbLegFOld… for the outfits and the original), then reads its own
+  separate keyframes vbLegF… for the outfits; the original's vbLegFOld… are gone since he walks with
+  drawings, below), then reads its own
   keyframes back (`planted()`: each leg turned at knee and hip, the body down by y, .vb-move's lean
   and squash) to make vbTrack (x: the boot with the weight stays put) and vbBody (y: the lower boot on
   its lane), and asserts the boot with the weight is never more than 0.2% of his height above the
@@ -283,6 +284,17 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   leg comes in front, as in the next drawing); a hidden far thigh is filled in its own blue. The
   in-between stands halfway between the two drawings' places. The tests read the frame count from
   `tools/vaultboy-walk.json`.
+  **Levels 1-4 walk with the drawings too (same day; the owner is level 2: "revoir tout le taff et
+  refaire en mieux"):** the original Vault Boy is the same man in the same suit, so tier '00' borrows
+  level 5's drawings (`BORROW` in vaultboy-moves.py): `drawn_css()` fits them to his frame (288×408,
+  117px high) at their size on the page (k = (100/420)/(117/408) ≈ 0.83 of his px a drawing px), their
+  ground on his front sole (393), their belt's middle (`belt` in vaultboy-walk.json, 184, measured on
+  the strip) over his (163.5, measured on mascot.png); his own track (`vbTrack00`: level 5's × 100/117),
+  level 5's drawings, parts switch and timing (`vbWalk05`, `vbParts05`, vbMoveDrawn…). The original's
+  walk in parts is gone (the `Old` rig, vbTrackOld/vbBodyOld/vbLeg…Old, his knee boxes): the CSS went
+  from 291 to 234 KB. Only the outfits from level 10 still walk in parts (their sunglasses, bag or
+  jacket aren't in the drawings). Tested: as tall on the page as level 5, ground on his `--vb-feet`,
+  belt over his, the same distance on the page at every key.
   Markup: `#vaultboy-walk > .vb-track > .vb-move > .vb-body > .vb-breathe > .vb` parts, right after
   `.xp-gauge`; boots on the gauge's top (`margin-top: -14px - --vb-lane - --vb-feet` of the 100px
   frame, `--vb-feet` = the front sole, 411/420; 84px under 360px). render.js: `walkerTier(level)`

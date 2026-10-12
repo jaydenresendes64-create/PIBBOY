@@ -366,6 +366,18 @@ def make(tier):
         strip.alpha_composite(im, (i * width + int(round(ox - left)), int(round(oy))))
     out = os.path.join(DIR, 'walk-lvl%s.png' % tier)
     strip.quantize(colors=256, method=Image.Quantize.FASTOCTREE).save(out, optimize=True)   # amber: 256 colours are plenty
+    # Where the belt's middle lands (px of the parts' frame), for a frame that
+    # borrows these drawings (tools/vaultboy-moves.py BORROW): the widest band
+    # of the bright amber between the chest and the hips.
+    lit = np.asarray(strip).astype(int)
+    middles = []
+    for i in range(len(frames)):
+        f = lit[:, i * width:(i + 1) * width]
+        bright = (f[..., 3] > 200) & (f[..., 0] > 200) & (f[..., 1] > 120)
+        row = max(range(200, 300), key=lambda y: bright[y].sum())
+        xs = np.nonzero(bright[row])[0]
+        middles.append(left + (xs.min() + xs.max()) / 2.0)
+    belt_x = float(np.median(middles))
     # How far between drawings (measured in the drawings, then in px of the 420 frame).
     # Measured on Gemini's drawings (the boot that stays down); an
     # in-between is halfway.
@@ -382,7 +394,7 @@ def make(tier):
     print('  the boot on the ground moves back (px of 420):', [round(float(a), 1) for a in advance], '= %.1f for two steps' % cycle)
     print('  where he is at each frame:', [round(float(p), 1) for p in position], '| the boot slips at most %.1f px of 420' % slip)
     assert cycle > 0 and all(b > a for a, b in zip(position, position[1:])), 'always forward'
-    return dict(frames=len(frames), left=left, width=width, advance=[round(float(a), 2) for a in np.diff(position)],
+    return dict(frames=len(frames), left=left, width=width, belt=round(belt_x, 1), advance=[round(float(a), 2) for a in np.diff(position)],
                 position=[round(float(p), 2) for p in position])
 
 if __name__ == '__main__':

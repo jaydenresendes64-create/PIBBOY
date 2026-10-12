@@ -171,8 +171,8 @@ images/vaultboy/    the Vault Boy walking on the level gauge (the hand on his hi
                     parts-lvlXX.png, the same in amber cut into parts that each move, with round hips and
                     knees (js/render.js syncWalker);
                     walk-lvl05.png, the level 5 outfit's walk as 16 amber drawings (Gemini's 8 and an
-                    in-between after each, made by tools/vaultboy-walk.py), shown in turn while he walks
-                    (walk-lvl05-source.webp: the sheet of poses they come from, not loaded)
+                    in-between after each, made by tools/vaultboy-walk.py), shown in turn while he walks,
+                    at levels 1-9 (walk-lvl05-source.webp: the sheet of poses they come from, not loaded)
 images/mascot.png   the old corner mascot's picture (288x408), the source of his parts (hidden since 2026-10-10)
 images/mascot-parts.png  the mascot cut into parts that each move (legs, knees, thumb arm, body, head, blink)
 data/map-style.json MAP: the map's own amber Pip-Boy style (colours, line widths, labels, by zoom)
