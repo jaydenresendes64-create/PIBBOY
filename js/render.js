@@ -76,8 +76,8 @@
     if (tier!==walkerOn){
       walkerOn = tier;
       walk.setAttribute('data-tier', tier);
-      // Hidden for a moment so all his animations start again together (the
-      // original Vault Boy's walk is worked out for his own legs).
+      // Hidden for a moment so all his animations start again together (each
+      // outfit's walk has its own track).
       walk.hidden = true;
       void walk.offsetWidth;
       walk.hidden = false;

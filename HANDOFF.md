@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of the drawn walk PR (2026-10-11, after PR #26). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-280/280 tests pass locally. `sw.js` cache: `v27`.
+281/281 tests pass locally. `sw.js` cache: `v27`.
 
 ## 1. What it is
 
@@ -193,7 +193,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   0.09 frame heights), because the outfits' legs are drawn at different angles. Now the tool works
   out where each boot goes (one planted, the other swinging forward in an arc 3.8px up, equal steps,
   even speed, a small bob), then each rig's leg angles from it by inverse kinematics (`reach()`;
-  separate keyframes vbLegF… / vbLegFOld… for the outfits and the original), then reads its own
+  separate keyframes vbLegF… for the outfits; the original's vbLegFOld… are gone since he walks with
+  drawings, below), then reads its own
   keyframes back (`planted()`: each leg turned at knee and hip, the body down by y, .vb-move's lean
   and squash) to make vbTrack (x: the boot with the weight stays put) and vbBody (y: the lower boot on
   its lane), and asserts the boot with the weight is never more than 0.2% of his height above the
@@ -219,7 +220,7 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   (`CYCLES`: a minus sign), evens a greyer jacket, makes the white transparent (keeps it facing
   right, as drawn: see "Which way he walks"), applies the outfits' amber (`amber()` imported from vaultboy-parts.py), scales it to lvl05's height
   (×0.804) with the boots on 411 and the belt over lvl05's, and writes `images/vaultboy/walk-lvl05.png`
-  (8 frames of 325×420: the front fist needs 17px more than 308; 256 colours, 70 KB). It measures the
+  (8 frames of 325×420 then; now 16 with the in-betweens, below). It measures the
   boot that stays on the ground between drawings (`PLANTED`, toes of the boots ≤13px above the lowest)
   into `tools/vaultboy-walk.json`; Gemini's spacing is uneven (its "down" = "contact", its "up" = the
   next contact: −6, +76, +45, +2 px of 420), so where he is at each drawing is halfway (`PLANT` 0.5)
@@ -268,6 +269,32 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   the back of a bent knee folds into a V, the front shows the thigh's round end. At rest nothing
   changes (both tools still give back the picture exactly). Tested: the boxes start on the knee
   line, reach the hip, are as wide as the thigh, and never hide the boot while he walks.
+  **In-betweens for the drawn walk (2026-10-12, owner: "Fabrique les toi même"):** with Gemini's 8
+  drawings a cycle he moved in jumps (14 a second). `tools/vaultboy-walk.py` now makes one drawing
+  between each two (`inbetween()`), so 16 a cycle, 8 a step, 35 ms each (`PER_STEP` in
+  vaultboy-moves.py; `background-size:1600%` in the tier rule; `walk-lvl05.png` is 16 × 325×420,
+  100 KB). How: `legs_of()` splits each source drawing's legs below the belt (fists aside): the near
+  leg's light blue and the far leg's dark blue (their thick parts, not the soft outline edges), each
+  boot's grey inside (the black outline parts boots that touch; each to the nearest trousers), then
+  the outlines grown from those. The joints are measured by hand (`TWEEN_JOINTS`: hip, knee, ankle,
+  boot tip for both legs of drawings 5–8; the automatic guess failed on the far leg, half hidden).
+  `bent()` moves each pixel of a leg by its bones (thigh, shin, foot, weighted by nearness: a cartoon
+  knee, no cut) and by a pelvis bone just above the hips that holds still (no flap or gap under the
+  belt); each leg comes from the drawing that shows more of it (where the legs cross, the swinging
+  leg comes in front, as in the next drawing); a hidden far thigh is filled in its own blue. The
+  in-between stands halfway between the two drawings' places. The tests read the frame count from
+  `tools/vaultboy-walk.json`.
+  **Levels 1-4 walk with the drawings too (same day; the owner is level 2: "revoir tout le taff et
+  refaire en mieux"):** the original Vault Boy is the same man in the same suit, so tier '00' borrows
+  level 5's drawings (`BORROW` in vaultboy-moves.py): `drawn_css()` fits them to his frame (288×408,
+  117px high) at their size on the page (k = (100/420)/(117/408) ≈ 0.83 of his px a drawing px), their
+  ground on his front sole (393), their belt's middle (`belt` in vaultboy-walk.json, 184, measured on
+  the strip) over his (163.5, measured on mascot.png); his own track (`vbTrack00`: level 5's × 100/117),
+  level 5's drawings, parts switch and timing (`vbWalk05`, `vbParts05`, vbMoveDrawn…). The original's
+  walk in parts is gone (the `Old` rig, vbTrackOld/vbBodyOld/vbLeg…Old, his knee boxes): the CSS went
+  from 291 to 234 KB. Only the outfits from level 10 still walk in parts (their sunglasses, bag or
+  jacket aren't in the drawings). Tested: as tall on the page as level 5, ground on his `--vb-feet`,
+  belt over his, the same distance on the page at every key.
   Markup: `#vaultboy-walk > .vb-track > .vb-move > .vb-body > .vb-breathe > .vb` parts, right after
   `.xp-gauge`; boots on the gauge's top (`margin-top: -14px - --vb-lane - --vb-feet` of the 100px
   frame, `--vb-feet` = the front sole, 411/420; 84px under 360px). render.js: `walkerTier(level)`
