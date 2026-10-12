@@ -332,8 +332,8 @@ const heldAt = (kf, t) => kf.filter(k => k.at <= t + 1e-9).pop();
 
 test('level 5 walks with its drawings: in the walker, hidden until he walks, the parts hidden while he does', () => {
   const walkData = JSON.parse(read('tools/vaultboy-walk.json'))['05'];
-  assert.equal(walkData.frames, 8);
-  assert.deepEqual(pngSize('images/vaultboy/walk-lvl05.png'), [walkData.width * 8, 420]);
+  assert.equal(walkData.frames, 16, 'two steps: Gemini\'s 8 drawings and an in-between after each');
+  assert.deepEqual(pngSize('images/vaultboy/walk-lvl05.png'), [walkData.width * walkData.frames, 420]);
   assert.match(read('sw.js'), /'images\/vaultboy\/walk-lvl05\.png'/);
   const html = read('index.html');
   assert.match(html, /<div class="vb-body"><div class="vb-breathe">[\s\S]*?<\/div><span class="vb-walk"><\/span><\/div><\/div><\/div>/);   // inside .vb-move: it turns with him
@@ -346,7 +346,7 @@ test('level 5 walks with its drawings: in the walker, hidden until he walks, the
   assert.match(rule(t + ' .vb-body'), /animation:none;/);
   assert.match(rule(t + ' .vb-breathe'), /animation:mascotBreathe 4\.2s ease-in-out infinite, vbParts05 11s linear infinite;/);
   const walk = rule(t + ' .vb-walk');
-  assert.match(walk, /background-image:url\(\.\.\/images\/vaultboy\/walk-lvl05\.png\); animation:vbWalk05 11s linear infinite;/);
+  assert.match(walk, /background-image:url\(\.\.\/images\/vaultboy\/walk-lvl05\.png\); background-size:1600% 100%; animation:vbWalk05 11s linear infinite;/);
   assert.ok(Math.abs(parseFloat(walk.match(/width:([\d.]+)%/)[1]) - walkData.width / 308 * 100) < 0.01, 'his frame as wide as the drawings');
   assert.match(css, /\.vaultboy\[data-tier="05"\] \.vb-leg-front, [^{]*\.vb-shin-back\{ animation:none; \}/);
   ['10', '20', '30', '50', '00'].forEach(other => assert.doesNotMatch(css, new RegExp('\\.vaultboy\\[data-tier="' + other + '"\\] \\.vb-walk'), 'no drawings yet for ' + other));
@@ -364,17 +364,17 @@ test('the drawn walk: the drawings in order, one at a time, the parts exactly wh
     assert.equal(/opacity:1;/.test(p), !shown, 'the parts or the drawings, never both or neither (' + ms + 'ms)');
     if (shown) {
       const pos = s.match(/background-position:(\S+) 0;/)[1];
-      const frame = pos === '0' ? 0 : Math.round(parseFloat(pos) / 100 * 7);
+      const frame = pos === '0' ? 0 : Math.round(parseFloat(pos) / 100 * (walkData.frames - 1));
       if (lastFrame === null) { walks++; seen = []; }
       if (frame !== lastFrame) {
-        if (lastFrame !== null) assert.equal(frame, (lastFrame + 1) % 8, 'the drawings in order (' + ms + 'ms)');
+        if (lastFrame !== null) assert.equal(frame, (lastFrame + 1) % walkData.frames, 'the drawings in order (' + ms + 'ms)');
         seen.push(frame);
       }
       lastFrame = frame;
       if (out) { assert.ok(x >= most - 1e-9, 'never a step back (' + ms + 'ms)'); most = x; }
       else { assert.ok(x <= least + 1e-9, 'never a step back (' + ms + 'ms)'); least = x; }
     } else if (lastFrame !== null) {
-      assert.deepEqual(seen, [0, 1, 2, 3, 4, 5, 6, 7, 0], 'two steps and the landing');
+      assert.deepEqual(seen, [...Array(walkData.frames).keys(), 0], 'two steps and the landing');
       lastFrame = null;
       out = !out;
     }
@@ -382,6 +382,6 @@ test('the drawn walk: the drawings in order, one at a time, the parts exactly wh
   assert.equal(walks, 2, 'there and back');
   assert.equal(heldAt(track, 0).x, 0); assert.equal(heldAt(track, 1).x, 0);
   assert.ok(Math.abs(Math.max(...track.map(k => k.x)) - span) < 1e-9);
-  assert.ok(Math.abs(span - walkData.position[8] / 420) < 0.001, 'two steps of the drawings, as measured');
+  assert.ok(Math.abs(span - walkData.position[walkData.frames] / 420) < 0.001, 'two steps of the drawings, as measured');
   assert.ok(span * 100 < 69, 'his drawn walk fits a 390px-wide screen');
 });

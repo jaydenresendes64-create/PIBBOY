@@ -219,7 +219,7 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   (`CYCLES`: a minus sign), evens a greyer jacket, makes the white transparent (keeps it facing
   right, as drawn: see "Which way he walks"), applies the outfits' amber (`amber()` imported from vaultboy-parts.py), scales it to lvl05's height
   (×0.804) with the boots on 411 and the belt over lvl05's, and writes `images/vaultboy/walk-lvl05.png`
-  (8 frames of 325×420: the front fist needs 17px more than 308; 256 colours, 70 KB). It measures the
+  (8 frames of 325×420 then; now 16 with the in-betweens, below). It measures the
   boot that stays on the ground between drawings (`PLANTED`, toes of the boots ≤13px above the lowest)
   into `tools/vaultboy-walk.json`; Gemini's spacing is uneven (its "down" = "contact", its "up" = the
   next contact: −6, +76, +45, +2 px of 420), so where he is at each drawing is halfway (`PLANT` 0.5)
@@ -268,6 +268,21 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   the back of a bent knee folds into a V, the front shows the thigh's round end. At rest nothing
   changes (both tools still give back the picture exactly). Tested: the boxes start on the knee
   line, reach the hip, are as wide as the thigh, and never hide the boot while he walks.
+  **In-betweens for the drawn walk (2026-10-12, owner: "Fabrique les toi même"):** with Gemini's 8
+  drawings a cycle he moved in jumps (14 a second). `tools/vaultboy-walk.py` now makes one drawing
+  between each two (`inbetween()`), so 16 a cycle, 8 a step, 35 ms each (`PER_STEP` in
+  vaultboy-moves.py; `background-size:1600%` in the tier rule; `walk-lvl05.png` is 16 × 325×420,
+  100 KB). How: `legs_of()` splits each source drawing's legs below the belt (fists aside): the near
+  leg's light blue and the far leg's dark blue (their thick parts, not the soft outline edges), each
+  boot's grey inside (the black outline parts boots that touch; each to the nearest trousers), then
+  the outlines grown from those. The joints are measured by hand (`TWEEN_JOINTS`: hip, knee, ankle,
+  boot tip for both legs of drawings 5–8; the automatic guess failed on the far leg, half hidden).
+  `bent()` moves each pixel of a leg by its bones (thigh, shin, foot, weighted by nearness: a cartoon
+  knee, no cut) and by a pelvis bone just above the hips that holds still (no flap or gap under the
+  belt); each leg comes from the drawing that shows more of it (where the legs cross, the swinging
+  leg comes in front, as in the next drawing); a hidden far thigh is filled in its own blue. The
+  in-between stands halfway between the two drawings' places. The tests read the frame count from
+  `tools/vaultboy-walk.json`.
   Markup: `#vaultboy-walk > .vb-track > .vb-move > .vb-body > .vb-breathe > .vb` parts, right after
   `.xp-gauge`; boots on the gauge's top (`margin-top: -14px - --vb-lane - --vb-feet` of the 100px
   frame, `--vb-feet` = the front sole, 411/420; 84px under 360px). render.js: `walkerTier(level)`

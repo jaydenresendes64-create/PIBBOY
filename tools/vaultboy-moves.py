@@ -55,10 +55,12 @@ LIFT = 3.8                  # page pixels: how high the swinging boot goes
 BOB = (0.95, 0.36)          # page pixels his body is lower than standing: both boots down, one boot under him
 HOVER = 0.002               # at most this share of his height between the boot with the weight and the gauge
 DRAWN_STEPS = 2             # each way, for an outfit with a drawn walk: its steps are longer (2 fit a 390px-wide screen)
-FRAME = STEP / 4            # seconds a drawing shows: 4 a step, the parts' pace
-DRAWN_FRAMES = 4 * DRAWN_STEPS + 1   # the steps' drawings, and the first one again: he lands
 WALK_DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'vaultboy-walk.json')
 WALKS = json.load(open(WALK_DATA)) if os.path.exists(WALK_DATA) else {}   # tools/vaultboy-walk.py: the outfits with one
+PER_STEP = 8                # drawings a step: Gemini's 4 and an in-between after each (tools/vaultboy-walk.py)
+assert all(w['frames'] == 2 * PER_STEP for w in WALKS.values()), 'a drawn walk: two steps of PER_STEP drawings'
+FRAME = STEP / PER_STEP     # seconds a drawing shows: the parts' pace
+DRAWN_FRAMES = PER_STEP * DRAWN_STEPS + 1   # the steps' drawings, and the first one again: he lands
 RATE = 250                  # samples a second (STEP and 0.12 s fall on it)
 RIGHT, LEFT = 1, -1         # scale x to go that way
 AHEAD = 1                   # his front along the picture's x: right, the hand on his hip
@@ -443,8 +445,8 @@ def held_css(name, rows):
     return '@keyframes %s{ %s }' % (name, ' '.join('%s{ %s animation-timing-function:steps(1, end); }' % (k, css) for k, (t, css) in sorted(last.items(), key=lambda kv: kv[1][0])))
 
 def drawn_css(tier, data):
-    """An outfit with a drawn walk (images/vaultboy/walk-lvlXX.png, 8 drawings
-    of 308x420 side by side): while he walks, the drawings in turn (.vb-walk)
+    """An outfit with a drawn walk (images/vaultboy/walk-lvlXX.png, its drawings
+    side by side, each as high as the frame): while he walks, the drawings in turn (.vb-walk)
     and the parts hidden (.vb-breathe); where he is moves on at each drawing,
     as far as tools/vaultboy-walk.py measured; the rest of the loop as for the
     parts, from the drawn timeline (vbMoveDrawn, vbArmDrawn, vbHeadDrawn)."""
@@ -473,8 +475,8 @@ def drawn_css(tier, data):
         '%s .vb-head{ animation-name:vbHeadDrawn; }' % t,
         '%s{ animation:none; }' % legs_,
         '%s .vb-breathe{ animation:mascotBreathe 4.2s ease-in-out infinite, vbParts%s %s linear infinite; }' % (t, tier, length),
-        '%s .vb-walk{ left:%s%%; right:auto; width:%s%%; background-image:url(../images/vaultboy/walk-lvl%s.png); animation:vbWalk%s %s linear infinite; }'
-        % (t, num(100.0 * data['left'] / 308, 3), num(100.0 * data['width'] / 308, 3), tier, tier, length),
+        '%s .vb-walk{ left:%s%%; right:auto; width:%s%%; background-image:url(../images/vaultboy/walk-lvl%s.png); background-size:%d%% 100%%; animation:vbWalk%s %s linear infinite; }'
+        % (t, num(100.0 * data['left'] / 308, 3), num(100.0 * data['width'] / 308, 3), tier, 100 * n, tier, length),
         '%s{ --vb-span:%s; }' % (t, num(span, 4)),
         held_css('vbTrack' + tier, [(at_, 'transform:translateX(calc(var(--vb-h) * var(--vb-swing, 1) * %s));' % num(v, 4)) for at_, v in track]),
         held_css('vbWalk' + tier, [(at_, 'opacity:%d; background-position:%s 0;' % (o, '%s%%' % num(100.0 * k / (n - 1), 4) if k else '0'))

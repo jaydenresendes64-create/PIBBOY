@@ -1,7 +1,8 @@
 """
 Makes the Vault Boy's drawn walk for an outfit, images/vaultboy/walk-lvlXX.png
-(8 drawings side by side, in the parts' amber, facing right as drawn there:
-he walks toward the hand on his hip; each as high as the parts' 308x420 frame and as wide as his back fist needs:
+(16 drawings side by side: Gemini's 8 and one of mine after each, in the
+parts' amber, facing right as drawn there: he walks toward the hand on his
+hip; each as high as the parts' 308x420 frame and as wide as his fists need:
 `left` and `width` in tools/vaultboy-walk.json), from a sheet of walk poses made by an
 image generator (images/vaultboy/walk-lvlXX-source.webp: 2 rows of 4 on white,
 from the brief and pose guide the owner sent to Gemini). It also measures how
@@ -36,11 +37,24 @@ PLANT of the way from an even pace to the boot held exactly (the boot slips
 a little, the body goes on a little unevenly). He moves when the drawing
 changes, as in a flip book.
 
+The in-betweens (the owner: make them yourself): with 8 drawings a cycle he
+moved in jumps. Between each two of Gemini's, a drawing of mine, halfway
+(inbetween()): the body and hips as in the first (they hold still from one
+drawing to the next); each leg, split from the drawing (legs_of(): the near
+leg lighter, the far one darker, each with its outline and boot), bent from
+its pose to halfway to its pose in the next drawing, from the joints
+measured by hand (TWEEN_JOINTS: hip, knee, ankle, toe), smoothly, each pixel
+moved by its bones and a pelvis that holds still (bent()); taken from the
+drawing that shows more of that leg; the far leg's thigh, where the near leg
+hides it, filled in its own blue. It stands halfway between the two
+drawings' places.
+
 After a change: python tools/vaultboy-walk.py (Python 3 with Pillow and numpy),
 then python tools/vaultboy-moves.py, then node --test.
 """
 import importlib.util
 import json
+import math
 import os
 import sys
 from collections import deque
@@ -109,25 +123,32 @@ def transparent(rgb):
                 bg[yy, xx] = True; todo.append((yy, xx))
     return np.dstack([rgb, np.where(bg, 0, 255)])
 
+def components(mask):
+    """Each 4-connected piece of the mask: (labels, how many)."""
+    lab, n = np.zeros(mask.shape, int), 0
+    for y0, x0 in zip(*np.nonzero(mask)):
+        if lab[y0, x0]: continue
+        n += 1; lab[y0, x0] = n
+        todo = deque([(y0, x0)])
+        while todo:
+            y, x = todo.popleft()
+            for yy, xx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                if 0 <= yy < mask.shape[0] and 0 <= xx < mask.shape[1] and mask[yy, xx] and not lab[yy, xx]:
+                    lab[yy, xx] = n; todo.append((yy, xx))
+    return lab, n
+
 def boots(rgba):
     """The boots on the ground, left to right: (left end, right end) of each
     dark shape near the bottom at most 13px above the lowest one."""
     dark = (rgba[..., 3] > 128) & (rgba[..., :3].max(axis=2) < 70)
     bottom = np.nonzero(rgba[..., 3] > 128)[0].max()
     dark[:bottom - 75] = False
-    seen, found = np.zeros_like(dark), []
-    for y0, x0 in zip(*np.nonzero(dark)):
-        if seen[y0, x0]: continue
-        todo, pts = deque([(y0, x0)]), []
-        seen[y0, x0] = True
-        while todo:
-            y, x = todo.popleft(); pts.append((y, x))
-            for yy, xx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
-                if 0 <= yy < dark.shape[0] and 0 <= xx < dark.shape[1] and dark[yy, xx] and not seen[yy, xx]:
-                    seen[yy, xx] = True; todo.append((yy, xx))
-        p = np.array(pts)
-        if len(p) > 400 and bottom - p[:, 0].max() <= 13:
-            found.append((int(p[:, 1].min()), int(p[:, 1].max())))
+    lab, n = components(dark)
+    found = []
+    for k in range(1, n + 1):
+        ys, xs = np.nonzero(lab == k)
+        if len(ys) > 400 and bottom - ys.max() <= 13:
+            found.append((int(xs.min()), int(xs.max())))
     return sorted(found)
 
 def toe(found, where, middle):
@@ -135,6 +156,174 @@ def toe(found, where, middle):
     elif where == 'back': b = found[0]
     else: b = min(found, key=lambda g: abs((g[0] + g[1]) / 2.0 - middle))
     return b[1]
+
+# ---------- in-betweens: a drawing of mine between each two of Gemini's ----------
+# Each source drawing's legs, measured by hand (pixels of its 500x558 cell):
+# the near leg (drawn lighter) and the far one, hip, knee, ankle and the tip
+# of the boot. The body holds still from one drawing to the next (same
+# height, same place in the cell); only the legs move.
+TWEEN_JOINTS = {'05': {
+    5: {'near': dict(hip=(252, 352), knee=(287, 425), ankle=(322, 497), toe=(383, 486)),
+        'far': dict(hip=(246, 354), knee=(212, 415), ankle=(178, 476), toe=(217, 512))},
+    6: {'near': dict(hip=(252, 352), knee=(300, 411), ankle=(330, 496), toe=(392, 510)),
+        'far': dict(hip=(246, 354), knee=(203, 410), ankle=(160, 466), toe=(183, 512))},
+    7: {'near': dict(hip=(252, 352), knee=(288, 410), ankle=(230, 463), toe=(233, 520)),
+        'far': dict(hip=(246, 354), knee=(253, 425), ankle=(260, 497), toe=(298, 517))},
+    8: {'near': dict(hip=(252, 352), knee=(280, 426), ankle=(307, 501), toe=(362, 515)),
+        'far': dict(hip=(246, 354), knee=(211, 415), ankle=(177, 477), toe=(218, 512))},
+}}
+BONES = (('hip', 'knee'), ('knee', 'ankle'), ('ankle', 'toe'))
+PELVIS = 372                         # cell rows above: the hips as drawn, under the turning legs
+
+def grown(mask, n=1):
+    for _ in range(n):
+        mask = mask | np.roll(mask, 1, 0) | np.roll(mask, -1, 0) | np.roll(mask, 1, 1) | np.roll(mask, -1, 1)
+    return mask
+
+def shrunk(mask, n=1):
+    for _ in range(n):
+        mask = mask & np.roll(mask, 1, 0) & np.roll(mask, -1, 0) & np.roll(mask, 1, 1) & np.roll(mask, -1, 1)
+    return mask
+
+def legs_of(rgb):
+    """A drawing's legs below the belt (the fists aside), each with its outline
+    and boot: {'near', 'far'}, and its upper body (with the fists). The near
+    leg is the lighter blue; its trousers and the far one's (their thick
+    parts: not the soft edges of the outlines) and each boot's grey inside
+    (the black outline parts two boots that touch; each goes to the leg whose
+    trousers are nearest its top), then the outlines, to the leg they join."""
+    a = rgb.astype(float)
+    h, w = a.shape[:2]
+    ys = np.mgrid[0:h, 0:w][0]
+    ink = a.min(axis=2) < 215
+    b0, b1, yellow = belt_rows(a)
+    sat = a[..., 2] - a[..., 0]
+    blue = ink & (sat > 12) & (a.max(axis=2) > 60) & (a.min(axis=2) < 200)
+    skin = ink & (a[..., 0] > 150) & (a[..., 0] > a[..., 2] + 30) & ~yellow
+    below = ys > b1
+    fist = grown(skin, 5) & ink
+    zone = below & ink & ~fist
+    def thick(mask, least):
+        lab, n = components(shrunk(mask, 2))
+        keep = np.isin(lab, [k for k in range(1, n + 1) if (lab == k).sum() >= least])
+        for _ in range(2):
+            keep = keep | (grown(keep) & mask)
+        return keep
+    lab = np.zeros((h, w), int)
+    lab[thick(zone & blue & (sat > 60), 800)] = 1
+    lab[thick(zone & blue & (sat <= 60), 400)] = 2
+    trousers = {1: np.argwhere(lab == 1), 2: np.argwhere(lab == 2)}
+    fill = zone & ~blue & (a.max(axis=2) >= 35) & (a.max(axis=2) < 90) & (ys > b1 + 60)
+    pieces, n = components(fill)
+    for k in range(1, n + 1):
+        m = pieces == k
+        if m.sum() < 300: continue
+        pts = np.argwhere(m)
+        top = pts[pts[:, 0] <= pts[:, 0].min() + 10][::7]
+        near = {leg: min(np.min(np.sum((tp - q) ** 2, axis=1)) for q in top) for leg, tp in trousers.items()}
+        lab[m] = 1 if near[1] < near[2] else 2
+    for _ in range(200):                                            # the outlines: grown from the trousers and boots
+        todo = zone & (lab == 0)
+        if not todo.any(): break
+        nb = np.zeros_like(lab)
+        for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            sh = np.roll(np.roll(lab, dy, 0), dx, 1)
+            nb = np.where((nb == 0) & (sh > 0), sh, nb)
+        lab = np.where(todo & (nb > 0), nb, lab)
+    return {'near': lab == 1, 'far': lab == 2}, ink & ~(below & ~fist)
+
+def to_segment(xs, ys, a, b):
+    ab = b - a
+    u = np.clip(((xs - a[0]) * ab[0] + (ys - a[1]) * ab[1]) / (ab @ ab), 0, 1)
+    return np.hypot(xs - (a[0] + u * ab[0]), ys - (a[1] + u * ab[1]))
+
+def angle(a, b):
+    return math.atan2(b[1] - a[1], b[0] - a[0])
+
+def layers(tier, sheet, n):
+    """Cycle entry n's picture (the legs' blues exchanged for a minus) and,
+    for each leg as seen (light, dark): its pixels, joints and whether it is
+    in front; with a hidden far leg's thigh filled in its own blue (a tube
+    round its bones, under the near leg), for when the near leg moves off it."""
+    H, W = sheet.shape[:2]
+    ch, cw = H // 2, W // 4
+    r, c = divmod(abs(n) - 1, 4)
+    cell = sheet[r * ch:(r + 1) * ch, c * cw:(c + 1) * cw]
+    legs, upper = legs_of(drawing(cell, False)[0])
+    rgb = drawing(cell, n < 0)[0]
+    h, w = rgb.shape[:2]
+    ys, xs = np.mgrid[0:h, 0:w].astype(float)
+    seen = {'light': 'near', 'dark': 'far'} if n > 0 else {'light': 'far', 'dark': 'near'}
+    out = dict(rgb=rgb, upper=upper, legs=legs['near'] | legs['far'])
+    for look, leg in seen.items():
+        joints = {k: np.array(v, float) for k, v in TWEEN_JOINTS[tier][abs(n)][leg].items()}
+        mask, img = legs[leg], rgb.copy()
+        if leg == 'far':
+            tube = (np.min([to_segment(xs, ys, joints[a], joints[b]) for a, b in BONES[:2]], axis=0) < 24) & legs['near']
+            img[tube] = np.median(rgb[mask & (rgb.min(axis=2) > 60)], axis=0)
+            mask = mask | tube
+        out[look] = dict(rgb=img, mask=mask, joints=joints, front=(leg == 'near'))
+    return out
+
+def halfway(ja, jb):
+    """The skeleton halfway: each bone's direction halfway, from the hip down."""
+    out = {'hip': (ja['hip'] + jb['hip']) / 2}
+    for a, b in BONES:
+        aa = angle(ja[a], ja[b])
+        th = aa + ((angle(jb[a], jb[b]) - aa + math.pi) % (2 * math.pi) - math.pi) / 2
+        L = (np.linalg.norm(ja[b] - ja[a]) + np.linalg.norm(jb[b] - jb[a])) / 2
+        out[b] = out[a] + L * np.array([math.cos(th), math.sin(th)])
+    return out
+
+def bent(rgb, mask, js, jd):
+    """The leg (rgb where mask) bent from skeleton js to jd, smoothly (each
+    pixel moved by its bones, the nearer ones weighing more: a cartoon
+    knee, no cut); the pelvis just above the hips holds still, so the
+    thigh's top stays under the belt. Premultiplied rgb and alpha; the
+    outline's soft edge round the leg as opaque as it is dark."""
+    h, w = mask.shape
+    ys, xs = np.mgrid[0:h, 0:w].astype(float)
+    weights, src = [], []
+    for a, b in BONES:
+        weights.append(1.0 / (to_segment(xs, ys, jd[a], jd[b]) + 4.0) ** 4)
+        th = angle(js[a], js[b]) - angle(jd[a], jd[b])
+        c, s = math.cos(th), math.sin(th)
+        dx, dy = xs - jd[a][0], ys - jd[a][1]
+        src.append((js[a][0] + c * dx - s * dy, js[a][1] + s * dx + c * dy))
+    weights.append(1.0 / (to_segment(xs, ys, js['hip'] + (-45.0, -10.0), js['hip'] + (45.0, -10.0)) + 4.0) ** 4)
+    src.append((xs, ys))
+    total = np.sum(weights, axis=0)
+    sx = sum(k * p[0] for k, p in zip(weights, src)) / total
+    sy = sum(k * p[1] for k, p in zip(weights, src)) / total
+    ring = grown(mask, 2) & ~mask
+    alpha = np.where(mask, 1.0, np.where(ring, 1 - rgb.min(axis=2) / 255.0, 0.0))
+    layer = np.dstack([rgb * mask[..., None], alpha])
+    x0, y0 = np.floor(sx).astype(int), np.floor(sy).astype(int)
+    fx, fy = (sx - x0)[..., None], (sy - y0)[..., None]
+    at = lambda y, x: layer[np.clip(y, 0, h - 1), np.clip(x, 0, w - 1)]
+    return (at(y0, x0) * (1 - fx) * (1 - fy) + at(y0, x0 + 1) * fx * (1 - fy)
+            + at(y0 + 1, x0) * (1 - fx) * fy + at(y0 + 1, x0 + 1) * fx * fy)
+
+def inbetween(tier, sheet, na, nb):
+    """The drawing halfway between cycle entries na and nb: A's body and hips
+    as drawn, each leg bent halfway to its pose in B, taken from the
+    drawing that shows more of it; the leg in front as in both, or where
+    they cross, as in B (the swinging leg comes in front)."""
+    la, lb = layers(tier, sheet, na), layers(tier, sheet, nb)
+    h, w = la['rgb'].shape[:2]
+    ys = np.mgrid[0:h, 0:w][0]
+    out = np.full((h, w, 3), 255.0)
+    pelvis = la['legs'] & (ys <= PELVIS)
+    out[pelvis] = la['rgb'][pelvis]
+    front = 'light' if (lb if la['light']['front'] != lb['light']['front'] else la)['light']['front'] else 'dark'
+    for look in [v for v in ('light', 'dark') if v != front] + [front]:
+        other = 'dark' if look == 'light' else 'light'
+        shown = lambda l: (l[look]['mask'] & ~(l[other]['mask'] if not l[look]['front'] else False)).sum()
+        src = la if shown(la) >= shown(lb) else lb
+        leg = bent(src[look]['rgb'], src[look]['mask'], src[look]['joints'], halfway(la[look]['joints'], lb[look]['joints']))
+        out = leg[..., :3] + out * (1 - leg[..., 3:4])
+    out[la['upper']] = la['rgb'][la['upper']]
+    return out
 
 def make(tier):
     sheet = np.asarray(Image.open(os.path.join(DIR, 'walk-lvl%s-source.webp' % tier)).convert('RGB'))
@@ -146,13 +335,19 @@ def make(tier):
     rbx = np.nonzero(ryellow[rb0:rb1 + 1].any(axis=0))[0]
     ref_belt = (rbx[0] + rbx[-1]) / 2.0
     frames, belts, tops, grounds = [], [], [], []
-    for n in CYCLES[tier]:
+    entries = CYCLES[tier]
+    for i, n in enumerate(entries):
         r, c = divmod(abs(n) - 1, 4)
         rgb, belt = drawing(sheet[r * ch:(r + 1) * ch, c * cw:(c + 1) * cw], n < 0)
         rgba = transparent(rgb)
         frames.append(rgba); belts.append(belt)
         ys = np.nonzero(rgba[..., 3] > 128)[0]
         tops.append(ys.min()); grounds.append(ys.max())
+    drawn = list(frames)
+    if tier in TWEEN_JOINTS:                                        # and one of mine after each
+        frames = []
+        for i, n in enumerate(entries):
+            frames += [drawn[i], transparent(inbetween(tier, sheet, n, entries[(i + 1) % len(entries)]))]
     top, ground, belt = np.median(tops), np.median(grounds), np.median(belts)
     s = (GROUND - rys.min()) / float(ground - top)                    # as tall as the outfit
     ox, oy = ref_belt - belt * s, GROUND - ground * s
@@ -172,19 +367,23 @@ def make(tier):
     out = os.path.join(DIR, 'walk-lvl%s.png' % tier)
     strip.quantize(colors=256, method=Image.Quantize.FASTOCTREE).save(out, optimize=True)   # amber: 256 colours are plenty
     # How far between drawings (measured in the drawings, then in px of the 420 frame).
-    on_ground = [boots(rgba) for rgba in frames]
-    advance = [s * (toe(on_ground[i], here, belt) - toe(on_ground[(i + 1) % len(frames)], there, belt))
+    # Measured on Gemini's drawings (the boot that stays down); an
+    # in-between is halfway.
+    on_ground = [boots(rgba) for rgba in drawn]
+    advance = [s * (toe(on_ground[i], here, belt) - toe(on_ground[(i + 1) % len(drawn)], there, belt))
                for i, (here, there) in enumerate(PLANTED)]
     cycle, n = sum(advance), len(advance)
     held = np.concatenate([[0], np.cumsum(advance)])
     even = np.arange(n + 1) * cycle / n
-    position = even + PLANT * (held - even)
-    slip = np.abs(position - held).max()
-    print('wrote %s (%d drawings, x%.3f, each %dx%d from x %d of the parts\' frame)' % (os.path.relpath(out, ROOT), n, s, width, FH, left))
+    at = even + PLANT * (held - even)
+    slip = np.abs(at - held).max()
+    position = np.interp(np.arange(len(frames) + 1) * n / len(frames), np.arange(n + 1), at)
+    print('wrote %s (%d frames, x%.3f, each %dx%d from x %d of the parts\' frame)' % (os.path.relpath(out, ROOT), len(frames), s, width, FH, left))
     print('  the boot on the ground moves back (px of 420):', [round(float(a), 1) for a in advance], '= %.1f for two steps' % cycle)
-    print('  where he is at each drawing:', [round(float(p), 1) for p in position], '| the boot slips at most %.1f px of 420' % slip)
+    print('  where he is at each frame:', [round(float(p), 1) for p in position], '| the boot slips at most %.1f px of 420' % slip)
     assert cycle > 0 and all(b > a for a, b in zip(position, position[1:])), 'always forward'
-    return dict(frames=n, left=left, width=width, advance=[round(float(a), 2) for a in advance], position=[round(float(p), 2) for p in position])
+    return dict(frames=len(frames), left=left, width=width, advance=[round(float(a), 2) for a in np.diff(position)],
+                position=[round(float(p), 2) for p in position])
 
 if __name__ == '__main__':
     data = {tier: make(tier) for tier in sorted(CYCLES)}
