@@ -39,6 +39,10 @@
  *     claimed: [ days ],                    // the CLEAN_MILESTONES paid in this run
  *     lapses: [ 'YYYY-M-D' ]                // the latest LAPSES_MAX
  *   },
+ *   streaks: [ { id, name,                  // the player's own streaks (VITALS), at most STREAKS_MAX:
+ *                cleanSince, best, totalClean, claimed, lapses } ],  // a name they type (never in
+ *                                           // the code), the rest as in chems, same milestones;
+ *                                           // older saves: none yet
  *   vitals: [ { date:'YYYY-M-D', logged: boolean,   // VITALS: one entry a day (the latest VITALS_MAX), a day
  *                                           // from 4:00 to 4:00, dated the day it starts (vitalsDayStr);
  *               energy, mood, hunger, tension, sleep, craving: number(0-10),   // logged: the day's
@@ -113,7 +117,7 @@
  * money in the wallet and a journal line), discoverPlace (CITY_XP or
  * REGION_XP, once per place), rewardRoute, readBook (BOOK_XP and its skill),
  * findBobbleheads, logVitals (the day's check-in), claimCleanMilestones
- * (the chem-free streak), urgeWon (an urge ridden out), logTrial (a
+ * (the chem-free streak and the player's own), urgeWon (an urge ridden out), logTrial (a
  * TRIALS result). Milestones
  * without XP are recorded too (level-ups, perks, S.P.E.C.I.A.L. points,
  * backups, holotapes). Nothing else touches state.skills / state.xp;
@@ -176,6 +180,7 @@
   var VITALS_DAY_START = 4;           // VITALS' day starts at 4:00 local time (vitalsDayStr)
   var CLEAN_MILESTONES = [{days:7, xp:150}, {days:14, xp:300}, {days:30, xp:600}, {days:60, xp:900}, {days:90, xp:1500}];
   var LAPSES_MAX = 200;
+  var STREAKS_MAX = 10, STREAK_NAME_MAX = 24;   // the player's own streaks (see "streaks" above)
   var URGE_NEEDS = ['HUNGRY','ANGRY','LONELY','TIRED','NONE'];
   var URGE_MS = 20*60*1000;           // one round of the urge timer
   var URGE_XP = 40, URGE_XP_PER_DAY = 3, URGE_SKILL = 'SURVIVAL', URGES_MAX = 300;
@@ -258,6 +263,7 @@
     map:{ cities:[], regions:[], pins:[], routes:[], discovered:[] },
     statTrain:{STR:0,END:0,CHA:0,INT:0,AGI:0},
     chems:{ cleanSince:null, best:0, totalClean:0, claimed:[], lapses:[] },
+    streaks:[],
     vitals:[],
     urges:{ active:null, log:[] },
     trials:{ custom:[], hidden:[], log:[], active:null }
@@ -283,6 +289,8 @@
     addOpen: null,              // the add form unfolded: 'main', 'side', 'daily' (QUESTS) or 'book' (ITEMS)
     streakEdit: false,          // the chem-free streak's start date is being set (VITALS)
     confirmLapse: false,        // "Log a lapse?" awaits "Yes, log it"
+    ownForm: null,              // one of the player's own streaks being edited (its id), or 'new' (VITALS)
+    ownConfirm: null,           // {id, what: 'lapse'|'remove'}: that streak's question awaits its answer
     urgeAngle: 0,               // which of the urge decoder's messages shows ("Another angle"), from 0 each round
     vitalsView: 'checkin',      // VITALS shows 'checkin' or 'trials'
     trialOpen: null,            // id of the trial whose panel (timer, result) is open
@@ -455,8 +463,10 @@
   // dates written 'YYYY-MM-DD': sanitizeImported reads those). A save from
   // before them has none yet: no check-in, no streak started, no training.
   // TRIALS came after them: no result yet, and every built-in trial shown.
+  // The player's own streaks came after that: none yet.
   function migrateVitals(doc){
     if (!Array.isArray(doc.vitals)) doc.vitals = [];
+    if (!Array.isArray(doc.streaks)) doc.streaks = [];
     ['chems','urges','statTrain','trials'].forEach(function(part){
       if (!doc[part] || typeof doc[part]!=='object' || Array.isArray(doc[part])) doc[part] = {};
     });
@@ -658,7 +668,7 @@
   var EVENT_TYPES = ['QUEST_COMPLETED', 'BONUS_COMPLETED', 'DAILY_DONE', 'STREAK_CHECKIN', 'JOURNAL_ENTRY',
     'ITEM_SOLD', 'PLACE_DISCOVERED', 'ROUTE_ADDED', 'BOBBLEHEAD_FOUND', 'LEVEL_UP', 'PERK_TAKEN',
     'SPECIAL_RAISED', 'BACKUP_MADE', 'HOLOTAPE_RECORDED', 'BOOK_READ',
-    'VITALS_CHECKIN', 'CLEAN_MILESTONE', 'URGE_RESISTED', 'SPECIAL_TRAINED', 'TRIAL_DONE'];
+    'VITALS_CHECKIN', 'CLEAN_MILESTONE', 'URGE_RESISTED', 'SPECIAL_TRAINED', 'TRIAL_DONE', 'STREAK_MILESTONE'];
   function record(type, data, xp){
     var s = app.state;
     if (!Array.isArray(s.history)) s.history = [];
@@ -995,51 +1005,67 @@
     return copy;
   }
 
-  // ---------- the chem-free streak ----------
+  // ---------- the chem-free streak, and the player's own ----------
   // chems.cleanSince is the run's first chem-free day: that day is day 1,
   // and the full days done are one less. After a lapse the run starts again
   // tomorrow (day 0 today). Each milestone (CLEAN_MILESTONES) is paid once a
   // run, as soon as it's reached (claimCleanMilestones): correcting the
   // start date never pays one twice. A lapse keeps the days done (they go
   // into totalClean, and best), and takes nothing back.
-  function cleanDay(){
-    var d = daysSince(app.state.chems.cleanSince);
+  // The player's own streaks (state.streaks, a name they type) work the
+  // same way, with the same milestones (STREAK_MILESTONE): the functions
+  // below take a streak's id, and without one they mean the chem-free one.
+  function streakById(id){
+    if (id===undefined || id===null) return app.state.chems;
+    return (app.state.streaks || []).filter(function(x){ return x.id===id; })[0] || null;
+  }
+  function cleanDay(id){
+    var c = streakById(id), d = c ? daysSince(c.cleanSince) : null;
     return d===null ? null : d+1;
   }
-  function cleanFullDays(){ var d = cleanDay(); return d===null ? 0 : Math.max(0, d-1); }
-  function cleanTotal(){ return (Number(app.state.chems.totalClean)||0) + cleanFullDays(); }
-  function cleanBest(){ return Math.max(Number(app.state.chems.best)||0, cleanFullDays()); }
-  function nextCleanMilestone(){
-    var done = cleanFullDays();
+  function cleanFullDays(id){ var d = cleanDay(id); return d===null ? 0 : Math.max(0, d-1); }
+  function cleanTotal(id){ var c = streakById(id); return c ? (Number(c.totalClean)||0) + cleanFullDays(id) : 0; }
+  function cleanBest(id){ var c = streakById(id); return c ? Math.max(Number(c.best)||0, cleanFullDays(id)) : 0; }
+  function nextCleanMilestone(id){
+    var done = cleanFullDays(id);
     return CLEAN_MILESTONES.filter(function(m){ return done<m.days; })[0] || null;
   }
   // The run's first day, set or corrected: a date up to today. Returns false
   // for anything else.
-  function setCleanStart(date){
+  function setCleanStart(date, id){
+    var c = streakById(id);
     date = normalizeDate(date);
     var d = daysSince(date);
-    if (!date || d===null || d<0) return false;
-    app.state.chems.cleanSince = date;
+    if (!c || !date || d===null || d<0) return false;
+    c.cleanSince = date;
     return true;
   }
-  // The milestones reached and not paid yet in this run: each one its
-  // reward (CLEAN_MILESTONE). Returns [{days, xp, leveled}], [] for none.
+  // The milestones reached and not paid yet in this run, the chem-free
+  // streak's (CLEAN_MILESTONE) then each of the player's own
+  // (STREAK_MILESTONE): each one its reward. Returns [{days, xp, leveled,
+  // name (the player's own only)}], [] for none.
   function claimCleanMilestones(){
-    var c = app.state.chems, done = cleanFullDays(), paid = [];
-    CLEAN_MILESTONES.forEach(function(m){
-      if (done<m.days || c.claimed.indexOf(m.days)!==-1) return;
-      c.claimed.push(m.days);
-      var reward = award('CLEAN_MILESTONE', {days:m.days}, m.xp);
-      paid.push({days:m.days, xp:reward.xp, leveled:reward.leveled});
+    var paid = [];
+    [null].concat((app.state.streaks || []).map(function(x){ return x.id; })).forEach(function(id){
+      var c = streakById(id), done = cleanFullDays(id);
+      CLEAN_MILESTONES.forEach(function(m){
+        if (done<m.days || c.claimed.indexOf(m.days)!==-1) return;
+        c.claimed.push(m.days);
+        var reward = id===null ? award('CLEAN_MILESTONE', {days:m.days}, m.xp) :
+          award('STREAK_MILESTONE', {streak:c.id, name:c.name, days:m.days}, m.xp);
+        var out = {days:m.days, xp:reward.xp, leveled:reward.leveled};
+        if (id!==null) out.name = c.name;
+        paid.push(out);
+      });
     });
     return paid;
   }
   // A lapse today: the run's days are kept in the totals, and the next run
   // starts tomorrow. False when no run was started.
-  function logLapse(){
-    var c = app.state.chems, today = todayStr();
-    if (!c.cleanSince) return false;
-    var run = cleanFullDays();
+  function logLapse(id){
+    var c = streakById(id), today = todayStr();
+    if (!c || !c.cleanSince) return false;
+    var run = cleanFullDays(id);
     c.totalClean = (Number(c.totalClean)||0) + run;
     c.best = Math.max(Number(c.best)||0, run);
     if (c.lapses[c.lapses.length-1]!==today) c.lapses.push(today);
@@ -1048,6 +1074,42 @@
     tomorrow.setDate(tomorrow.getDate()+1);
     c.cleanSince = tomorrow.getFullYear()+'-'+(tomorrow.getMonth()+1)+'-'+tomorrow.getDate();
     c.claimed = [];
+    return true;
+  }
+  // A lapse logged today, on any streak (the urge decoder's reset line).
+  function lapsedToday(){
+    var today = todayStr();
+    return [app.state.chems].concat(app.state.streaks || []).some(function(c){
+      var lapses = (c && c.lapses) || [];
+      return lapses.length>0 && lapses[lapses.length-1]===today;
+    });
+  }
+  // The player's own streak, started: a name (STREAK_NAME_MAX letters at
+  // most) and its first day, up to today (today without one). Returns it,
+  // or null (no name, a bad date, STREAKS_MAX already).
+  function addStreak(name, date){
+    var list = app.state.streaks;
+    name = text(name, STREAK_NAME_MAX).trim();
+    date = date ? normalizeDate(date) : todayStr();
+    var d = daysSince(date);
+    if (!name || list.length>=STREAKS_MAX || !date || d===null || d<0) return null;
+    var x = {id:genId(), name:name, cleanSince:date, best:0, totalClean:0, claimed:[], lapses:[]};
+    list.push(x);
+    return x;
+  }
+  function renameStreak(id, name){
+    var x = id ? streakById(id) : null;
+    name = text(name, STREAK_NAME_MAX).trim();
+    if (!x || !name) return false;
+    x.name = name;
+    return true;
+  }
+  // Put away for good (asked first, vitals.js): the XP its milestones gave
+  // stays, and so do their events in the history.
+  function removeStreak(id){
+    var list = app.state.streaks, i = list.map(function(x){ return x.id; }).indexOf(id);
+    if (!id || i===-1) return false;
+    list.splice(i, 1);
     return true;
   }
 
@@ -1575,15 +1637,31 @@
   }
   function urgeNeed(v){ return URGE_NEEDS.indexOf(v)!==-1 ? v : 'NONE'; }
   function rounds(v){ return Math.max(1, Math.round(num(v, 1))); }
-  function sanitizeVitals(s){
-    var chems = s.chems, milestones = CLEAN_MILESTONES.map(function(m){ return m.days; });
-    s.chems = {
-      cleanSince: normalizeDate(chems.cleanSince),
-      best: Math.max(0, Math.round(num(chems.best, 0))),
-      totalClean: Math.max(0, Math.round(num(chems.totalClean, 0))),
-      claimed: milestones.filter(function(d){ return Array.isArray(chems.claimed) && chems.claimed.some(function(c){ return num(c, 0)===d; }); }),
-      lapses: dates(chems.lapses).slice(-LAPSES_MAX)
+  // A streak's run (chems, or one of the player's own).
+  function streakRun(c){
+    var milestones = CLEAN_MILESTONES.map(function(m){ return m.days; });
+    return {
+      cleanSince: normalizeDate(c.cleanSince),
+      best: Math.max(0, Math.round(num(c.best, 0))),
+      totalClean: Math.max(0, Math.round(num(c.totalClean, 0))),
+      claimed: milestones.filter(function(d){ return Array.isArray(c.claimed) && c.claimed.some(function(x){ return num(x, 0)===d; }); }),
+      lapses: dates(c.lapses).slice(-LAPSES_MAX)
     };
+  }
+  function sanitizeVitals(s){
+    s.chems = streakRun(s.chems);
+    // The player's own streaks: a name (or "Streak"), an id of their own, at most STREAKS_MAX.
+    var ids = {};
+    s.streaks = records(s.streaks, function(){}).map(function(x){
+      var out = {id:safeId(x.id), name:text(x.name, STREAK_NAME_MAX).trim() || 'Streak'};
+      var run = streakRun(x);
+      Object.keys(run).forEach(function(k){ out[k] = run[k]; });
+      return out;
+    }).filter(function(x){
+      if (ids[x.id]) return false;
+      ids[x.id] = true;
+      return true;
+    }).slice(0, STREAKS_MAX);
     // One entry a day: a second one for the same day replaces the first.
     var byDay = {};
     records(s.vitals, function(){}).forEach(function(v){
@@ -1796,6 +1874,13 @@
   ST.logVitals = logVitals;
   ST.lastVitals = lastVitals;
   ST.lastCheckIn = lastCheckIn;
+  ST.STREAKS_MAX = STREAKS_MAX;
+  ST.STREAK_NAME_MAX = STREAK_NAME_MAX;
+  ST.streakById = streakById;
+  ST.addStreak = addStreak;
+  ST.renameStreak = renameStreak;
+  ST.removeStreak = removeStreak;
+  ST.lapsedToday = lapsedToday;
   ST.cleanDay = cleanDay;
   ST.cleanFullDays = cleanFullDays;
   ST.cleanTotal = cleanTotal;

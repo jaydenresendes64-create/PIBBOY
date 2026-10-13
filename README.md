@@ -65,6 +65,14 @@ the next milestone and the days to go. Milestones at **7, 14, 30, 60 and 90 days
 never pays one twice. **Log a lapse** asks first: the run's days stay in your totals (and best run),
 no XP is lost, and the count starts again tomorrow. **Urge? Decode it** opens the urge decoder.
 
+**Your own streaks** (VITALS, under the chem-free one): **+ New streak**, then a name only you will
+see and the run's first day. Each one works like the chem-free streak: the same milestones and XP
+(7, 14, 30, 60 and 90 days: +150 to +1,500 XP, each once a run), **Log a lapse** asked first (the
+days stay in its total and best run, no XP is lost). **Edit** renames it, moves its first day, or
+removes it (asked first; the XP it gave stays). Up to 10. The name lives only in your data (on the
+device and in your backups), never in the app's code; it's not on the RobCo boot, in the field
+report or on STATUS. While a run is under way, the urge decoder's WHY lines include it.
+
 **TRIALS** (VITALS tab, second button at the top): physical tests to repeat about **once a week**, to
 see yourself get stronger. Built in: **Push-ups** (most in one set, trains STR), **Plank** (longest
 hold, END), **Squats** (most in 60 seconds, AGI) and **1 km** (fastest, walking or running, END).
@@ -458,7 +466,7 @@ next to a commit means a test failed.
 - **History:** everything that happens is recorded as an event, in order: quests, dailies, bonus
   objectives, check-ins, journal entries, sales, places discovered, routes, bobbleheads, level-ups,
   perks, S.P.E.C.I.A.L. points (spent or trained), backups, holotapes, VITALS check-ins, chem-free
-  milestones, urges ridden out, TRIALS (with the XP each gave, perks included). The
+  milestones and your own streaks' (with their name), urges ridden out, TRIALS (with the XP each gave, perks included). The
   latest 2,000 are kept, in the save and in backups. Nothing shows it yet: it's the base for a weekly
   summary, quests that progress by themselves, and statistics. A save from before it starts empty.
 

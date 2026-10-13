@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
-State as of the VITALS insight PR (2026-10-12, after PR #29). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-297/297 tests pass locally. `sw.js` cache: `v28`.
+State as of the own streaks PR (2026-10-13, after PR #31). Live: https://jaydenresendes64-create.github.io/PIBBOY/
+309/309 tests pass locally. `sw.js` cache: `v29`.
 
 ## 1. What it is
 
@@ -173,6 +173,25 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   `resetLine()` on the streak card and `urgeHint()` on the decoder pick different lines (no blame
   words, tested); otherwise `urgeHint()` is the sleep ≤ 3 or hunger ≥ 7 line, or nothing. No AI call:
   everything is local text. Tested in `tests/insight.test.js`; checked in Chromium at 390 and 320 px.
+- **Own streaks (2026-10-13, owner: a private streak named in the app, same XP as chem-free, not on
+  the boot):** `state.streaks` = `[{id, name, cleanSince, best, totalClean, claimed, lapses}]`
+  (≤ `STREAKS_MAX` 10, name ≤ `STREAK_NAME_MAX` 24). The owner types the name: it must never be
+  written in the code, tests or docs (public repo), like the N/T counters' meaning. state.js: the
+  chem-free functions take an optional streak id (`cleanDay(id)`, `cleanFullDays`, `cleanTotal`,
+  `cleanBest`, `nextCleanMilestone`, `setCleanStart(date, id)`, `logLapse(id)`; no id = `chems`,
+  so every older caller is unchanged), `streakById`, `addStreak(name, date)`, `renameStreak`,
+  `removeStreak` (the XP and history stay), `lapsedToday()` (any streak). `claimCleanMilestones()`
+  pays chems (`CLEAN_MILESTONE`) then each own streak (`STREAK_MILESTONE`, data `{streak, name,
+  days}`, same `CLEAN_MILESTONES` XP) and returns `name` for those; events.js passes it to
+  `R.showMilestone(days, name)` (the banner's name set as text). migrate: `streaks` → `[]`;
+  sanitize: `streakRun()` shared with chems, ids safe and unique, "Streak" for an empty name.
+  vitals.js: `ownStreaksHtml()` after the chem-free card (the "streak" block of `order()`, first
+  when any streak's milestone is tomorrow), `runHtml(id)` shared with the chem-free card, form
+  `app.ownForm` ('new' or an id), questions `app.ownConfirm` ({id, what: lapse|remove}); actions
+  `own-*` refuse a tap without a streak id (never the chem-free one). insight.js: a WHY line per
+  own streak under way; `resetLine()` always 4 lines, so the decoder (shift 1), the chem-free card
+  (0) and an own card (2) differ. Not in boot.js, `fieldReport()` or STATUS (owner's choice).
+  Tested in `tests/ownstreaks.test.js`; checked in Chromium at 390 and 320 px.
 - **Skill sources (2026-10-10, a Grok render.js the owner sent):** STATUS skills are buttons
   (`data-action="skill"` toggles `app.skillOpen`, events.js); open: Earned / Coming from state.js
   `skillSources(key)` (mains/side by their skillGains and done/completed, books, and history events with
