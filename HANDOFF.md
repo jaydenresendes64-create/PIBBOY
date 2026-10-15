@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
-State as of the own streaks PR (2026-10-13, after PR #31). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-309/309 tests pass locally. `sw.js` cache: `v29`.
+State as of the own streaks + globe PR (2026-10-15, after PR #31). Live: https://jaydenresendes64-create.github.io/PIBBOY/
+320/320 tests pass locally. `sw.js` cache: `v30`.
 
 ## 1. What it is
 
@@ -192,6 +192,34 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   own streak under way; `resetLine()` always 4 lines, so the decoder (shift 1), the chem-free card
   (0) and an own card (2) differ. Not in boot.js, `fieldReport()` or STATUS (owner's choice).
   Tested in `tests/ownstreaks.test.js`; checked in Chromium at 390 and 320 px.
+- **MAP globe (2026-10-15, owner: "comme Google Earth 3D... un globe", amber look kept, "voir les
+  différents océans"):** `data/map-style.json` `"projection": {"type": "globe"}` (MapLibre's preset:
+  vertical-perspective until zoom 11, mercator at 12) and `"sky": {"atmosphere-blend": 0}` (MapLibre's
+  default atmosphere is blue; fog.js draws an amber one). The last style layers, from `ST.fog.BEFORE`
+  ('sea'), are drawn over the fog: `sea` (water class ocean, same colour as `water`), `label-sea`
+  (water_name ocean/sea; `label-water` keeps the others under the fog) and `label-continent` (maxzoom
+  3). map.js adds the fog and `routes.attach(map, before)` the routes' lines before it. The fog's
+  composite pass keeps MapLibre's depth test on (the opaque `sea` layer, drawn earlier in the opaque
+  pass, occludes it) — it used to disable it when it was the top layer.
+  fog.js globe path, when `globeOf(args)` (custom-layer args: `shaderData.variantName==='globe'` and
+  `defaultProjectionData.projectionTransition>0`; `tileMercatorCoords` is [0,0,1,1], so positions are
+  0-1 world coords): programs compiled lazily from `shaderData.define + vertexShaderPrelude`
+  (`projectTile(p)`, poles as y = -32768 / 32767 with `projectTile(p, p)`), uniforms from
+  `setProjection()`. Mask: regions = same stencil fan + their box as a 16x16 grid (`gridBox`);
+  circles/routes as quads on the 0-1 world relative to the view centre (`globeCircle`,
+  `routeOnGlobe`; px per world unit = `globePxPerUnit`, MapLibre's radius worldSize/2pi/cos(centre
+  lat)); MapLibre's clipping plane hides the far side. Clouds: `globeMesh` (96x64 + pole rows) below
+  zoom 5, a 24x24 grid over the view from 5 (`viewPatch`, so triangles stay small); noise read
+  triplanar on the sphere (`sphereNoiseScale`, level ≥ 3 so far out the clouds turn with the globe),
+  mixed into the flat path's noise (same `layer()`, from `v_px` = where the flat map puts the point)
+  by `flatNoise(zoom)` 5→8, so at the hand-over (zoom 12, `globeOf` turns null and the flat path
+  runs) nothing jumps (checked frame by frame at 11.97–12.03). `CLOUD_GLSL` (layer + shade) shared
+  by both cloud shaders. Composite: `u_globe` = `globeOutline()` (pitch 0: centred; radius from the
+  camera distance d = 1 + cameraToCenter/R) → amber glow + still stars outside the limb, scaled by
+  the transition. radar.js: `inSight()` (fog `facing()` > horizon) drops cities behind the globe.
+  Tested in fog/map/radar tests; checked in Chromium (SwiftShader) with mock OpenMapTiles tiles made
+  from Natural Earth (the sandbox can't reach OpenFreeMap): globe, Manitoba/cities/route revealed,
+  poles, the date line, Casablanca's coast up close. Not checked on a phone GPU or with real tiles.
 - **Skill sources (2026-10-10, a Grok render.js the owner sent):** STATUS skills are buttons
   (`data-action="skill"` toggles `app.skillOpen`, events.js); open: Earned / Coming from state.js
   `skillSources(key)` (mains/side by their skillGains and done/completed, books, and history events with

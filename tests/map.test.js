@@ -163,6 +163,24 @@ test('style: amber on near-black', () => {
   assert.ok(widthAt('road-motorway', 18) > widthAt('road-minor', 18));
 });
 
+test('style: a globe zoomed out, no blue atmosphere (the fog draws an amber glow)', () => {
+  assert.deepEqual(style.projection, { type: 'globe' });
+  assert.equal(style.sky['atmosphere-blend'], 0);
+});
+
+test('style: over the fog, only the oceans and seas, their names and the continents', () => {
+  const fogApp = loadApp({ files: FILES.fog });
+  const ids = style.layers.map(l => l.id), from = ids.indexOf(fogApp.ST.fog.BEFORE);
+  assert.ok(from > 0, 'the fog goes under ' + fogApp.ST.fog.BEFORE);
+  assert.deepEqual(ids.slice(from), ['sea', 'label-sea', 'label-continent']);
+  const layer = id => style.layers.find(l => l.id === id);
+  assert.deepEqual(layer('sea').filter, ['==', ['get', 'class'], 'ocean']);         // lakes and rivers stay under the fog
+  assert.equal(layer('sea').paint['fill-color'], layer('water').paint['fill-color']);
+  assert.match(JSON.stringify(layer('label-sea').filter), /\["ocean","sea"\],true,false/);
+  assert.match(JSON.stringify(layer('label-water').filter), /\["!",\["match",\["get","class"\],\["ocean","sea"\],true,false\]\]/);   // the others, under it
+  assert.equal(layer('label-continent').layout['text-field'][0], 'upcase');
+});
+
 // ---------- offline ----------
 test('sw.js: every app file it keeps exists, including MapLibre, the style and the fog', () => {
   const sw = read('sw.js');

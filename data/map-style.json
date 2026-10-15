@@ -2,7 +2,13 @@
  "version": 8,
  "name": "Pip-Boy amber",
  "metadata": {
-  "about": "PIBBOY MAP style (js/map.js): amber on near-black, for OpenFreeMap vector tiles (OpenMapTiles schema)."
+  "about": "PIBBOY MAP style (js/map.js): amber on near-black, for OpenFreeMap vector tiles (OpenMapTiles schema). A globe until zoom 11, flat from 12. The layers from 'sea' on are drawn over the fog of war (js/fog.js BEFORE): the oceans and seas, their names, the continents."
+ },
+ "projection": {
+  "type": "globe"
+ },
+ "sky": {
+  "atmosphere-blend": 0
  },
  "sources": {
   "omt": {
@@ -1369,11 +1375,30 @@
    "source": "omt",
    "source-layer": "water_name",
    "filter": [
-    "==",
+    "all",
     [
-     "geometry-type"
+     "==",
+     [
+      "geometry-type"
+     ],
+     "Point"
     ],
-    "Point"
+    [
+     "!",
+     [
+      "match",
+      [
+       "get",
+       "class"
+      ],
+      [
+       "ocean",
+       "sea"
+      ],
+      true,
+      false
+     ]
+    ]
    ],
    "layout": {
     "text-field": [
@@ -2279,11 +2304,97 @@
    }
   },
   {
+   "id": "sea",
+   "type": "fill",
+   "source": "omt",
+   "source-layer": "water",
+   "filter": [
+    "==",
+    [
+     "get",
+     "class"
+    ],
+    "ocean"
+   ],
+   "paint": {
+    "fill-color": "#2a1606",
+    "fill-antialias": true
+   }
+  },
+  {
+   "id": "label-sea",
+   "type": "symbol",
+   "source": "omt",
+   "source-layer": "water_name",
+   "filter": [
+    "all",
+    [
+     "==",
+     [
+      "geometry-type"
+     ],
+     "Point"
+    ],
+    [
+     "match",
+     [
+      "get",
+      "class"
+     ],
+     [
+      "ocean",
+      "sea"
+     ],
+     true,
+     false
+    ]
+   ],
+   "layout": {
+    "text-field": [
+     "coalesce",
+     [
+      "get",
+      "name:latin"
+     ],
+     [
+      "get",
+      "name"
+     ]
+    ],
+    "text-font": [
+     "IBM Plex Mono"
+    ],
+    "text-size": [
+     "interpolate",
+     [
+      "linear"
+     ],
+     [
+      "zoom"
+     ],
+     0,
+     11,
+     3,
+     13,
+     8,
+     14
+    ],
+    "text-letter-spacing": 0.2,
+    "text-max-width": 8
+   },
+   "paint": {
+    "text-color": "#c8862e",
+    "text-halo-color": "rgba(42,22,6,0.95)",
+    "text-halo-width": 1.4,
+    "text-halo-blur": 1
+   }
+  },
+  {
    "id": "label-continent",
    "type": "symbol",
    "source": "omt",
    "source-layer": "place",
-   "maxzoom": 1.5,
+   "maxzoom": 3,
    "filter": [
     "match",
     [

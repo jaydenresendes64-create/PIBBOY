@@ -173,7 +173,7 @@ js/weather.js       the real weather (Open-Meteo), read the Pip-Boy way
 js/boot.js          the RobCo boot: the startup typed with your real status, once a day
 js/sfx-custom.js    "Custom sounds": your own clips, cut from a video or audio file, kept on the device
 js/places.js        the MAP tab's logic: positions, city and region lists, finding and revealing places
-js/fog.js           MAP: the fog of war, drawn with WebGL in the same frame as the map
+js/fog.js           MAP: the fog of war (flat map and globe), the globe's glow, drawn with WebGL in the map's frame
 js/map.js           the MAP tab (loads MapLibre the first time it's opened)
 js/bulk.js          MAP: "Add several places" (paste a list, review it, reveal it all)
 js/routes.js        MAP: routes (road trips): stops, the road traced once (OSRM), its line and card
@@ -318,8 +318,10 @@ in backups.
 
 A crisp vector map of the whole world, down to street level (street names, buildings, shops and
 places, train and metro lines and stations), drawn in the app's own amber Pip-Boy style. Drag and
-pinch on the phone (drag and the mouse wheel on a computer); the map always stays north up and flat,
-and goes from the whole world to zoom 19 (a few houses). It opens on Montréal. The round buttons on the
+pinch on the phone (drag and the mouse wheel on a computer); the map always stays north up (never
+rotated or tilted), and goes from the whole world to zoom 19 (a few houses). **Zoomed out, it's a
+globe**: a round Earth you turn with your finger, in space, with an amber glow around it and a few
+still stars; zooming in, it flattens out into the usual map (fully flat from zoom 12). It opens on Montréal. The round buttons on the
 map: **⌖** recenters on your latest place (Montréal when there's none yet), **⛶** zooms to show all
 your places. Each city is an amber diamond and each pin a dot, sized by the zoom so they never cover
 the map: small points over the whole world (about 6 px), their usual size at a city (as the map opens
@@ -352,14 +354,19 @@ shrink), and the place that's open keeps its full size.
   top.
 - With 3D tilt on, the map holds still while your finger is on it, so drags and pinches land exactly.
 
-**Fog of war:** dark, smoky amber-grey clouds cover the whole world: three layers of cloud of
+**Fog of war:** dark, smoky amber-grey clouds cover all the land: three layers of cloud of
 different sizes, each drifting slowly its own way, a little brighter on their edges, with a fine
 grain. They're stuck to the world, so they move with the map when you drag and grow with it when you
 pinch. Only the exact places you've been are cut out of it: a circle around each city and pin, the
 exact shape of each region, a corridor along each route's road, with soft edges that billow gently
 like smoke pulling back. Sizes are
 real distances, so a 5 km circle stays 5 km whatever the zoom. A newly revealed place clears in
-over about a second and a half; a removed one fogs over again.
+over about a second and a half; a removed one fogs over again. **The oceans and seas always show**,
+over the fog, with their names (Pacific, Atlantic, Indian, Arctic, Southern, Mediterranean...), and
+so do the continents' names when the whole globe is in view; lakes and rivers stay under the fog
+until you reveal them. On the globe the same fog wraps the sphere (the clouds turn with it, with no
+seam), and it hands over smoothly to the flat map's as you zoom in. The scanner only finds places on
+the side of the globe facing you.
 
 The fog is drawn with WebGL (`js/fog.js`) in the same frame as the map, with the map's own camera, so
 it can't lag or slide while you drag and pinch. It only moves while the map is on the screen and the

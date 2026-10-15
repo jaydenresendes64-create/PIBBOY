@@ -159,20 +159,21 @@
     })};
   }
   // Called by js/map.js once the map has loaded, before the fog (so the
-  // line is under it, where the road is cleared anyway).
-  function attach(m){
+  // line is under it, where the road is cleared anyway), under the style's
+  // layers over the fog (`before`).
+  function attach(m, before){
     map = m;
     map.addSource('routes', {type: 'geojson', data: lines()});
     function width(k){ return ['interpolate', ['linear'], ['zoom'], 4, 1.2*k, 10, 2.2*k, 15, 4*k]; }
     map.addLayer({id: 'routes-line', type: 'line', source: 'routes', layout: {'line-join': 'round'},
-      paint: {'line-color': LINE, 'line-width': width(1), 'line-dasharray': [2, 1.6], 'line-opacity': 0.9}});
+      paint: {'line-color': LINE, 'line-width': width(1), 'line-dasharray': [2, 1.6], 'line-opacity': 0.9}}, before);
     // The open route: a soft glow under its dots.
     map.addLayer({id: 'routes-selected', type: 'line', source: 'routes', filter: ['==', ['get', 'id'], ''],
       layout: {'line-join': 'round', 'line-cap': 'round'},
       paint: {'line-color': LINE, 'line-width': width(2.5), 'line-blur': 2, 'line-opacity': 0.45}}, 'routes-line');
     // An invisible wide line, so a tap near the road opens the route.
     map.addLayer({id: 'routes-hit', type: 'line', source: 'routes',
-      paint: {'line-color': LINE, 'line-width': 22, 'line-opacity': 0}});
+      paint: {'line-color': LINE, 'line-width': 22, 'line-opacity': 0}}, before);
     map.on('click', 'routes-hit', function(e){
       var p = ST.map.currentPanel();
       if (ST.map.isPlacing() || (p && p.kind==='route-new') || !e.features || !e.features[0]) return;
