@@ -71,3 +71,11 @@ test('a city inside a revealed city\'s circle (a borough) or pin is already out 
   const found = RD.candidates(DB.cities, BOX, RD.covered, 3);
   assert.ok(!found.some(c => c.name === 'Laval' || c.name === 'Montréal' || c.name === 'Ottawa'));
 });
+
+test('on the globe, a city behind it is out of range', () => {
+  const view = { lat: 45.5, lon: -73.57, horizon: ST.fog.globeOutline(390, 600, 2, 45.5, 36.87).horizon };
+  assert.equal(RD.inSight(view, { lat: 46.8, lon: -71.2 }), true);      // Québec City, near
+  assert.equal(RD.inSight(view, { lat: 35.68, lon: 139.7 }), false);    // Tokyo, on the far side
+  const flat = { lat: 45.5, lon: -73.57, horizon: ST.fog.globeOutline(390, 600, 12, 45.5, 36.87).horizon };
+  assert.equal(RD.inSight(flat, { lat: 45.55, lon: -73.6 }), true);     // zoomed in: anything near enough to show
+});

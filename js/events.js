@@ -764,17 +764,17 @@
     if (button) button();
   }
 
-  // What the state as it is now has earned: the chem-free streak's
-  // milestones reached (state.js claimCleanMilestones) and the bobbleheads
-  // found (findBobbleheads): a banner each, their XP, and the STATUS tab
-  // drawn again. Runs after every change (storage.onChange), once at
-  // startup for what a save already earned, and when a new day starts (the
-  // streak's count goes up by itself).
+  // What the state as it is now has earned: the streaks' milestones
+  // reached, chem-free and the player's own (state.js claimCleanMilestones),
+  // and the bobbleheads found (findBobbleheads): a banner each, their XP,
+  // and the STATUS tab drawn again. Runs after every change
+  // (storage.onChange), once at startup for what a save already earned, and
+  // when a new day starts (the streaks' counts go up by themselves).
   function checkBobbleheads(){
     if (!app.state) return;
     var milestones = ST.claimCleanMilestones();
     milestones.forEach(function(m){
-      R.showMilestone(m.days);
+      R.showMilestone(m.days, m.name);
       showXp(m.xp, m.leveled);
     });
     var found = ST.findBobbleheads();

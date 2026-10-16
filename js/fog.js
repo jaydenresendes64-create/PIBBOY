@@ -27,6 +27,17 @@
  * screen (the map is always north up and flat), so nothing shakes at
  * street level, where the world is 268 million pixels wide.
  *
+ * Zoomed out, MapLibre draws the map as a globe (js/map.js: until zoom 11,
+ * then it flattens out by zoom 12). There the same fog is drawn on the
+ * sphere with MapLibre's own projection (the shader code it hands custom
+ * layers): the revealed places in the mask, and the clouds on a mesh of
+ * the whole world, whose noise is read on the sphere itself (no seam, no
+ * pinching at the poles) and hands over to the flat map's noise between
+ * zooms 5 and 8, so nothing changes when the globe flattens out. Outside
+ * the globe: an amber glow around it and a few still stars. Every ocean
+ * and sea stays in sight above the fog (data/map-style.json: the layers
+ * from BEFORE on are drawn over it).
+ *
  * The helpers at the top don't touch WebGL or the page, so the tests run
  * them in Node.
  */
@@ -93,7 +104,7 @@
     // The box, as two triangles: what the fill is painted through.
     var box = new Float32Array([b[0]-ax, b[1]-ay, b[2]-ax, b[1]-ay, b[2]-ax, b[3]-ay,
       b[0]-ax, b[1]-ay, b[2]-ax, b[3]-ay, b[0]-ax, b[3]-ay]);
-    return {anchor:[ax, ay], vertices:v, count:count, box:box, lat:shape.lat};
+    return {anchor:[ax, ay], vertices:v, count:count, box:box, extent:[b[0]-ax, b[1]-ay, b[2]-ax, b[3]-ay], lat:shape.lat};
   }
   // A region's box is on the screen (with its soft edge).
   function boxOnScreen(view, box, pad){
@@ -151,6 +162,119 @@
   // How much of the upper zoom's clouds to show: 0 at a whole zoom, 1 at the next.
   function cloudFade(zoom){
     var f = zoom - Math.floor(zoom);
+    return f*f*(3-2*f);
+  }
+
+  // ---------- on the globe ----------
+  var RAD = Math.PI/180;
+  var EARTH_M = 6371008.8;            // MapLibre's globe radius, in metres
+  var GLOBE_COLS = 96, GLOBE_ROWS = 64;   // the clouds' sphere: a grid on the 0-1 world, and the poles
+  var POLE_N = -32768, POLE_S = 32767;    // how MapLibre marks a vertex at the north or south pole
+  var BOX_GRID = 16;                  // a region's box on the globe, cut into 16 x 16 (it curves)
+  var GLOBE_MIN_LEVEL = 3;            // zoomed further out, the clouds stay the size they are at zoom 3 and turn with the globe
+  var FLAT_NOISE_FROM = 5, FLAT_NOISE_TO = 8;   // the clouds' noise hands over to the flat map's between these zooms
+  var PATCH_FROM = 5, PATCH_GRID = 24;    // from zoom 5, the clouds are drawn on a finer grid over the view only
+  var BEFORE = 'sea';                 // the style's first layer over the fog (the oceans, data/map-style.json)
+
+  // MapLibre is drawing the globe this frame (the arguments it gives a
+  // custom layer): its shader code and projection, else null (flat map).
+  function globeOf(args){
+    var data = args && args.defaultProjectionData, shader = args && args.shaderData;
+    return data && shader && shader.variantName==='globe' && data.projectionTransition>0 ? {data:data, shader:shader} : null;
+  }
+  // The grid the clouds are drawn on: `cols` x `rows` squares over the 0-1
+  // world, and a row of triangles to each pole. {vertices: x, y pairs,
+  // indices: triangles}.
+  function globeMesh(cols, rows){
+    var lines = rows+3, v = new Float32Array((cols+1)*lines*2), k = 0;
+    for (var r=0;r<lines;r++){
+      var y = r===0 ? POLE_N : r===lines-1 ? POLE_S : (r-1)/rows;
+      for (var c=0;c<=cols;c++){ v[k++] = c/cols; v[k++] = y; }
+    }
+    var idx = new Uint16Array((lines-1)*cols*6), i = 0;
+    for (r=0;r<lines-1;r++){
+      for (c=0;c<cols;c++){
+        var a = r*(cols+1)+c, b = a+1, d = a+cols+1, e = d+1;
+        idx[i++] = a; idx[i++] = d; idx[i++] = b;
+        idx[i++] = b; idx[i++] = d; idx[i++] = e;
+      }
+    }
+    return {vertices:v, indices:idx};
+  }
+  // Zoomed in on the globe, the part of the 0-1 world the clouds are drawn
+  // on: the view's box on the flat map, with room to spare (the globe shows
+  // a little more), [x1, y1, x2, y2].
+  function viewPatch(view){
+    var hx = view.width/view.world*0.9 + 1e-6, hy = view.height/view.world*0.9 + 1e-6;
+    return [view.x-hx, Math.max(0, view.y-hy), view.x+hx, Math.min(1, view.y+hy)];
+  }
+  // A box [x1, y1, x2, y2] cut into n x n squares, as triangles (x, y pairs).
+  function gridBox(box, n){
+    var v = new Float32Array(n*n*12), k = 0;
+    function at(i, j){ v[k++] = box[0]+(box[2]-box[0])*i/n; v[k++] = box[1]+(box[3]-box[1])*j/n; }
+    for (var j=0;j<n;j++){
+      for (var i=0;i<n;i++){
+        at(i, j); at(i+1, j); at(i+1, j+1);
+        at(i, j); at(i+1, j+1); at(i, j+1);
+      }
+    }
+    return v;
+  }
+  // CSS pixels per unit of the 0-1 world at latitude `lat`, on the globe at
+  // `zoom` centred on `centerLat`: MapLibre keeps the flat map's scale at
+  // the centre (its globe is worldSize / 2pi / cos(centre latitude) wide).
+  function globePxPerUnit(zoom, centerLat, lat){
+    return TILE_PX*Math.pow(2, zoom)*Math.cos(lat*RAD)/Math.cos(clamp(centerLat, -85, 85)*RAD);
+  }
+  // A city or pin on the globe: its centre on the 0-1 world, its radius
+  // there and in CSS pixels (never under MIN_HOLE_PX, so it still shows).
+  function globeCircle(c, zoom, centerLat){
+    var perUnit = globePxPerUnit(zoom, centerLat, c.lat);
+    var r = Math.max(c.radius/(2*Math.PI*EARTH_M*Math.cos(c.lat*RAD)), MIN_HOLE_PX/perUnit);
+    return {x:P.mercX(c.lon), y:P.mercY(c.lat), r:r, px:r*perUnit};
+  }
+  // A route's road on the globe: the pieces up to `shown` (0-1) of it, on
+  // the 0-1 world, points closer than `step` merged.
+  function routeOnGlobe(g, shown, step){
+    var n = g.cum.length;
+    if (n<2) return [];
+    var limit = clamp(shown, 0, 1)*g.cum[n-1], segs = [], lx = g.merc[0], ly = g.merc[1];
+    for (var i=1;i<n;i++){
+      var x = g.merc[i*2], y = g.merc[i*2+1];
+      if (g.cum[i] > limit){
+        var span = g.cum[i]-g.cum[i-1], t = span>0 ? (limit-g.cum[i-1])/span : 0;
+        if (limit>0) segs.push(lx, ly, g.merc[i*2-2]+(x-g.merc[i*2-2])*t, g.merc[i*2-1]+(y-g.merc[i*2-1])*t);
+        break;
+      }
+      if (i<n-1 && Math.abs(x-lx) < step && Math.abs(y-ly) < step) continue;
+      segs.push(lx, ly, x, y);
+      lx = x; ly = y;
+    }
+    return segs;
+  }
+  // The globe on the screen (pitch 0: its middle is the screen's): its
+  // radius in CSS pixels, and the horizon (the cosine of how far from the
+  // centre of the view a place can be and still face the screen).
+  function globeOutline(width, height, zoom, centerLat, fovDeg){
+    var toCenter = 0.5/Math.tan(fovDeg*RAD/2)*height;      // the camera's distance to the map, in pixels
+    var radius = TILE_PX*Math.pow(2, zoom)/(2*Math.PI)/Math.cos(clamp(centerLat, -85, 85)*RAD);
+    var d = 1 + toCenter/radius;                             // the camera, in globe radii from its middle
+    return {x:width/2, y:height/2, r:toCenter/Math.sqrt(d*d-1), horizon:1/d};
+  }
+  // How directly a place faces the centre of the view: the cosine of the
+  // angle between them, seen from the middle of the Earth.
+  function facing(lat0, lon0, lat, lon){
+    return Math.sin(lat0*RAD)*Math.sin(lat*RAD) + Math.cos(lat0*RAD)*Math.cos(lat*RAD)*Math.cos((lon-lon0)*RAD);
+  }
+  // The clouds' noise on the sphere: how many noise pictures one globe
+  // radius spans at a whole zoom (the same size on the screen as the flat
+  // map's at the equator).
+  function sphereNoiseScale(level, tilePx){
+    return TILE_PX*Math.pow(2, level)/(2*Math.PI*tilePx);
+  }
+  // How much of the flat map's noise the globe's clouds use (0 to 1).
+  function flatNoise(zoom){
+    var f = clamp((zoom-FLAT_NOISE_FROM)/(FLAT_NOISE_TO-FLAT_NOISE_FROM), 0, 1);
     return f*f*(3-2*f);
   }
 
@@ -233,6 +357,24 @@
   ];
   var IDLE_FRAME_MS = 33;             // the clouds drift at 30 frames a second while the map is still
 
+  // The clouds, shared by the flat map and the globe: a layer of noise as
+  // the flat map lays it (layer()), and the fog's colour from the three
+  // layers and the mask (shade()).
+  var CLOUD_GLSL =
+    'vec4 layer(int i, vec2 p, vec2 warp){\n'+
+    '  vec4 a = texture(u_noise, u_lo[i].xy + p*u_lo[i].z + u_drift[i] + warp);\n'+
+    '  vec4 b = texture(u_noise, u_hi[i].xy + p*u_hi[i].z + u_drift[i] + warp);\n'+
+    '  float w = u_fade; return 0.5 + ((a-0.5)*(1.0-w) + (b-0.5)*w)*inversesqrt((1.0-w)*(1.0-w) + w*w); }\n'+
+    'vec4 shade(float big, float midg, float fine, vec4 m){\n'+
+    '  float density = smoothstep(0.22, 0.78, big*0.5 + midg*0.32 + fine*0.18);\n'+
+    '  float open = max(m.r, m.g) + ((fine-0.5)*0.8 + (midg-0.5)*0.6)*0.5;\n'+
+    '  float fog = 1.0 - smoothstep(0.38, 0.62, open);\n'+
+    '  vec3 col = mix(vec3(0.03, 0.023, 0.018), vec3(0.225, 0.175, 0.125), density);\n'+
+    '  float rim = 1.0 - abs(density-0.5)*2.0; col += vec3(0.15, 0.095, 0.04)*rim*rim*rim*0.8;\n'+
+    '  col += vec3(0.30, 0.17, 0.05)*fog*(1.0-fog)*1.4;\n'+
+    '  float a = fog*mix(0.93, 0.99, density);\n'+
+    '  return vec4(col*a, a); }\n';
+
   var SHADERS = {
     // A region: its fan (into the stencil), then its box (painted where the stencil says inside).
     regionVs: 'in vec2 a_off; uniform vec2 u_anchor; uniform float u_world; uniform vec2 u_size;\n'+
@@ -284,30 +426,88 @@
     cloudFs: 'in vec2 v_uv; uniform sampler2D u_noise; uniform sampler2D u_mask;\n'+
       'uniform vec2 u_size; uniform vec3 u_lo[3]; uniform vec3 u_hi[3]; uniform vec2 u_drift[3]; uniform float u_fade;\n'+
       'out vec4 color;\n'+
-      'vec4 layer(int i, vec2 p, vec2 warp){\n'+
-      '  vec4 a = texture(u_noise, u_lo[i].xy + p*u_lo[i].z + u_drift[i] + warp);\n'+
-      '  vec4 b = texture(u_noise, u_hi[i].xy + p*u_hi[i].z + u_drift[i] + warp);\n'+
-      '  float w = u_fade; return 0.5 + ((a-0.5)*(1.0-w) + (b-0.5)*w)*inversesqrt((1.0-w)*(1.0-w) + w*w); }\n'+
+      CLOUD_GLSL+
       'void main(){\n'+
       '  vec2 p = vec2(v_uv.x, 1.0-v_uv.y)*u_size;\n'+
       '  vec4 mid = layer(1, p, vec2(0.0));\n'+
       '  vec2 warp = (mid.ba-0.5)*0.16;\n'+
       '  float big = layer(0, p, warp).r, fine = layer(2, p, warp*1.6).a;\n'+
-      '  float density = smoothstep(0.22, 0.78, big*0.5 + mid.g*0.32 + fine*0.18);\n'+
-      '  vec4 m = texture(u_mask, v_uv);\n'+
-      '  float open = max(m.r, m.g) + ((fine-0.5)*0.8 + (mid.g-0.5)*0.6)*0.5;\n'+
-      '  float fog = 1.0 - smoothstep(0.38, 0.62, open);\n'+
-      '  vec3 col = mix(vec3(0.03, 0.023, 0.018), vec3(0.225, 0.175, 0.125), density);\n'+
-      '  float rim = 1.0 - abs(density-0.5)*2.0; col += vec3(0.15, 0.095, 0.04)*rim*rim*rim*0.8;\n'+
-      '  col += vec3(0.30, 0.17, 0.05)*fog*(1.0-fog)*1.4;\n'+
-      '  float a = fog*mix(0.93, 0.99, density);\n'+
-      '  color = vec4(col*a, a); }',
+      '  color = shade(big, mid.g, fine, texture(u_mask, v_uv)); }',
     // Onto the map: the clouds, scaled up smoothly, with a fine grain that
-    // stays still (so it never flickers). Premultiplied, like the map.
-    compositeFs: 'in vec2 v_uv; uniform sampler2D u_fog; out vec4 color;\n'+
+    // stays still (so it never flickers). Premultiplied, like the map. On the
+    // globe (u_globe: its middle and radius in pixels, and how much of a
+    // globe it is), outside it: an amber glow around it and a few still stars.
+    compositeFs: 'in vec2 v_uv; uniform sampler2D u_fog; uniform vec4 u_globe; out vec4 color;\n'+
       'float grain(vec2 p){ uvec2 q = uvec2(p)*uvec2(1597334673u, 3812015801u); uint n = (q.x ^ q.y)*1597334673u; n ^= n >> 15u; return float(n)/4294967296.0; }\n'+
       'void main(){ vec4 f = texture(u_fog, v_uv); float g = grain(gl_FragCoord.xy)-0.5;\n'+
-      '  color = vec4(max(f.rgb + vec3(0.9, 0.72, 0.5)*g*0.06*f.a, 0.0), f.a); }'
+      '  vec4 c = vec4(max(f.rgb + vec3(0.9, 0.72, 0.5)*g*0.06*f.a, 0.0), f.a);\n'+
+      '  if (u_globe.w > 0.0){\n'+
+      '    float d = distance(gl_FragCoord.xy, u_globe.xy)/u_globe.z - 1.0;\n'+
+      '    if (d > 0.0){\n'+
+      '      float glow = (exp(-d*16.0)*0.5 + exp(-d*4.5)*0.14)*smoothstep(0.0, 0.004, d);\n'+
+      '      float star = step(0.9965, grain(floor(gl_FragCoord.xy/2.5)+vec2(7.0, 3.0)))*smoothstep(0.03, 0.12, d)*0.45;\n'+
+      '      vec3 add = vec3(1.0, 0.6, 0.2)*glow + vec3(1.0, 0.82, 0.55)*star;\n'+
+      '      float a = min(glow + star, 1.0)*u_globe.w;\n'+
+      '      c = vec4(c.rgb + add*u_globe.w*(1.0-c.a), c.a + a*(1.0-c.a));\n'+
+      '    }\n'+
+      '  }\n'+
+      '  color = c; }'
+  };
+  // On the globe, MapLibre's projection code goes first (globeShaders()).
+  var GLOBE_SHADERS = {
+    // A region: its fan, then its box cut into a grid (it curves with the globe).
+    regionVs: 'in vec2 a_off; uniform vec2 u_anchor;\n'+
+      'void main(){ gl_Position = projectTile(u_anchor + a_off); }',
+    // A city or pin: a square around it on the 0-1 world (relative to the
+    // view's centre, u_center, so small numbers stay exact), soft across its edge.
+    circleVs: 'in vec2 a_pos; in vec4 a_circle; in float a_px; uniform vec2 u_center;\n'+
+      'out vec2 v_d; out float v_px; out float v_value;\n'+
+      'void main(){ v_d = (a_pos-a_circle.xy)/a_circle.z; v_px = a_px; v_value = a_circle.w; gl_Position = projectTile(u_center + a_pos); }',
+    circleFs: 'in vec2 v_d; in float v_px; in float v_value; out vec4 color;\n'+
+      'void main(){ float soft = max('+CIRCLE_SOFT.toFixed(2)+', 1.5/v_px);\n'+
+      '  color = vec4(0.0, v_value*(1.0-smoothstep(1.0-soft, 1.0+soft, length(v_d))), 0.0, 0.0); }',
+    // A route: as on the flat map, on the 0-1 world (a_half: its half-width there, and in pixels).
+    routeVs: 'in vec2 a_pos; in vec4 a_seg; in vec2 a_half; uniform vec2 u_center; out vec2 v_pos; out vec4 v_seg; out vec2 v_half;\n'+
+      'void main(){ v_pos = a_pos; v_seg = a_seg; v_half = a_half; gl_Position = projectTile(u_center + a_pos); }',
+    routeFs: 'in vec2 v_pos; in vec4 v_seg; in vec2 v_half; out vec4 color;\n'+
+      'void main(){ vec2 a = v_seg.xy, ba = v_seg.zw-a, pa = v_pos-a;\n'+
+      '  float h = clamp(dot(pa, ba)/max(dot(ba, ba), 1e-30), 0.0, 1.0);\n'+
+      '  float d = length(pa-ba*h)/v_half.x, soft = max('+ROUTE_SOFT.toFixed(2)+', 1.5/v_half.y);\n'+
+      '  color = vec4(0.0, 1.0-smoothstep(1.0-soft, 1.0+soft, d), 0.0, 0.0); }',
+    // The clouds on the whole sphere. Each vertex: where it is on the sphere
+    // (for the sphere's noise) and where the flat map would put it (v_px,
+    // for the flat map's noise, as cloudFs reads it).
+    cloudVs: 'in vec2 a_pos; uniform vec2 u_center; uniform float u_world; uniform vec2 u_size;\n'+
+      'out vec3 v_sphere; out vec2 v_px;\n'+
+      'void main(){\n'+
+      '  float lon = a_pos.x*6.2831853 + 3.1415927, t = exp(3.1415927 - a_pos.y*6.2831853), t2 = t*t;\n'+
+      '  float sinLat = (t2-1.0)/(t2+1.0), cosLat = 2.0*t/(t2+1.0);\n'+
+      '  v_sphere = a_pos.y < -32767.5 ? vec3(0.0, 1.0, 0.0) : a_pos.y > 32766.5 ? vec3(0.0, -1.0, 0.0) : vec3(sin(lon)*cosLat, sinLat, cos(lon)*cosLat);\n'+
+      '  vec2 d = vec2(a_pos.x, clamp(a_pos.y, -0.5, 1.5)) - u_center; d.x -= floor(d.x+0.5);\n'+
+      '  v_px = d*u_world + u_size*0.5;\n'+
+      '  gl_Position = projectTile(a_pos, a_pos); }',
+    cloudFs: 'in vec3 v_sphere; in vec2 v_px; uniform sampler2D u_noise; uniform sampler2D u_mask; uniform vec2 u_fbo;\n'+
+      'uniform vec3 u_lo[3]; uniform vec3 u_hi[3]; uniform vec2 u_drift[3]; uniform float u_fade; uniform float u_k[3]; uniform float u_flat;\n'+
+      'out vec4 color;\n'+
+      CLOUD_GLSL+
+      // Read on three planes, weighted by how much the sphere faces each, the
+      // contrast of a single reading kept (n).
+      'vec4 tri(int i, vec3 s, vec3 w, float n, float k, vec2 warp){ vec2 d = u_drift[i] + warp;\n'+
+      '  vec4 v = texture(u_noise, s.yz*k+d)*w.x + texture(u_noise, s.zx*k+d)*w.y + texture(u_noise, s.xy*k+d)*w.z;\n'+
+      '  return 0.5 + (v-0.5)*n; }\n'+
+      'vec4 mixed(vec4 a, vec4 b, float f){ return 0.5 + ((a-0.5)*(1.0-f) + (b-0.5)*f)*inversesqrt((1.0-f)*(1.0-f) + f*f); }\n'+
+      'vec4 sphereLayer(int i, vec3 s, vec3 w, float n, vec2 warp){ return mixed(tri(i, s, w, n, u_k[i], warp), tri(i, s, w, n, u_k[i]*2.0, warp), u_fade); }\n'+
+      'vec4 both(int i, vec3 s, vec3 w, float n, vec2 warp){\n'+
+      '  if (u_flat <= 0.0) return sphereLayer(i, s, w, n, warp);\n'+
+      '  if (u_flat >= 1.0) return layer(i, v_px, warp);\n'+
+      '  return mixed(sphereLayer(i, s, w, n, warp), layer(i, v_px, warp), u_flat); }\n'+
+      'void main(){\n'+
+      '  vec3 s = normalize(v_sphere), w = pow(abs(s), vec3(4.0)); w /= w.x+w.y+w.z;\n'+
+      '  float n = inversesqrt(dot(w, w));\n'+
+      '  vec4 mid = both(1, s, w, n, vec2(0.0));\n'+
+      '  vec2 warp = (mid.ba-0.5)*0.16;\n'+
+      '  float big = both(0, s, w, n, warp).r, fine = both(2, s, w, n, warp*1.6).a;\n'+
+      '  color = shade(big, mid.g, fine, texture(u_mask, gl_FragCoord.xy/u_fbo)); }'
   };
 
   function compile(gl, vs, fs){
@@ -360,6 +560,10 @@
     var reveals = makeReveals(), quality = makeQuality();
     var shown = true, active = true, timer = null;
     var clock = 0, lastFrame = 0, lastBusy = false, moving = false;
+    var globe = null;                 // this frame on the globe: MapLibre's {data, shader} (globeOf), else null
+    var outline = null;               // the globe on the screen (globeOutline) and how much of a globe it is (`strength`)
+    var cam = {zoom:0, lat:0};        // the map's zoom and the latitude at its centre
+    var circleGlobeData = new Float32Array(0), routeGlobeData = new Float32Array(0);
 
     function init(context){
       gl = context;
@@ -402,6 +606,66 @@
       gl = null; prog = null; res = null;
       if (meshes) meshes = new WeakMap();
     }
+    // The globe's programs, made the first time it's drawn: MapLibre's own
+    // projection code first (projectTile()), then each shader.
+    function globePrograms(shader){
+      if (prog.globe && prog.globe.variant===shader.variantName) return prog.globe;
+      var head = (shader.define || '')+'\n'+shader.vertexShaderPrelude+'\n';
+      var g = {
+        variant: shader.variantName,
+        region: compile(gl, head+GLOBE_SHADERS.regionVs, SHADERS.regionFs),
+        circle: compile(gl, head+GLOBE_SHADERS.circleVs, GLOBE_SHADERS.circleFs),
+        route: compile(gl, head+GLOBE_SHADERS.routeVs, GLOBE_SHADERS.routeFs),
+        cloud: compile(gl, head+GLOBE_SHADERS.cloudVs, GLOBE_SHADERS.cloudFs)
+      };
+      var r = {regionVao: gl.createVertexArray(), circleVao: gl.createVertexArray(), circleBuf: gl.createBuffer(),
+        routeVao: gl.createVertexArray(), routeBuf: gl.createBuffer(), cloudVao: gl.createVertexArray()};
+      function attribs(program, list, stride){
+        list.forEach(function(a){
+          var loc = gl.getAttribLocation(program, a[0]);
+          if (loc<0) return;
+          gl.enableVertexAttribArray(loc);
+          gl.vertexAttribPointer(loc, a[1], gl.FLOAT, false, stride, a[2]);
+        });
+      }
+      r.regionLoc = gl.getAttribLocation(g.region.program, 'a_off');
+      gl.bindVertexArray(r.regionVao);
+      gl.enableVertexAttribArray(r.regionLoc);
+      gl.bindVertexArray(r.circleVao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, r.circleBuf);
+      attribs(g.circle.program, [['a_pos', 2, 0], ['a_circle', 4, 8], ['a_px', 1, 24]], 28);
+      gl.bindVertexArray(r.routeVao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, r.routeBuf);
+      attribs(g.route.program, [['a_pos', 2, 0], ['a_seg', 4, 8], ['a_half', 2, 24]], 32);
+      var sphere = globeMesh(GLOBE_COLS, GLOBE_ROWS);
+      gl.bindVertexArray(r.cloudVao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+      gl.bufferData(gl.ARRAY_BUFFER, sphere.vertices, gl.STATIC_DRAW);
+      attribs(g.cloud.program, [['a_pos', 2, 0]], 8);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl.createBuffer());
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, sphere.indices, gl.STATIC_DRAW);
+      r.cloudCount = sphere.indices.length;
+      r.patchVao = gl.createVertexArray();
+      r.patchBuf = gl.createBuffer();
+      gl.bindVertexArray(r.patchVao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, r.patchBuf);
+      attribs(g.cloud.program, [['a_pos', 2, 0]], 8);
+      gl.bindVertexArray(null);
+      res.globe = r;
+      prog.globe = g;
+      return g;
+    }
+    // MapLibre's projection, for one of the globe's programs.
+    function setProjection(p){
+      var u = p.u, d = globe.data;
+      gl.uniformMatrix4fv(u.u_projection_matrix, false, new Float32Array(d.mainMatrix));
+      if (u.u_projection_fallback_matrix) gl.uniformMatrix4fv(u.u_projection_fallback_matrix, false, new Float32Array(d.fallbackMatrix));
+      if (u.u_projection_tile_mercator_coords) gl.uniform4fv(u.u_projection_tile_mercator_coords, d.tileMercatorCoords);
+      if (u.u_projection_clipping_plane) gl.uniform4fv(u.u_projection_clipping_plane, d.clippingPlane);
+      if (u.u_projection_transition) gl.uniform1f(u.u_projection_transition, d.projectionTransition);
+    }
+    // A distance across the 0-1 world, the short way round.
+    function wrapX(dx){ return dx - Math.round(dx); }
     // The noise picture, drawn once (in a frame, where the map expects
     // its drawing state to be changed).
     function makeNoise(){
@@ -577,11 +841,123 @@
       gl.enable(gl.BLEND);
       gl.blendEquation(gl.MAX);
       gl.blendFunc(gl.ONE, gl.ONE);
-      if (drawRegions(regions)) blur();
+      if (globe ? drawRegionsGlobe(regions) : drawRegions(regions)) blur();
       gl.enable(gl.BLEND);
-      drawCircles(circles);
-      drawRoutes(routes);
+      if (globe){ drawCirclesGlobe(circles); drawRoutesGlobe(routes); }
+      else { drawCircles(circles); drawRoutes(routes); }
       gl.blendEquation(gl.FUNC_ADD);
+    }
+
+    // ---------- the mask, on the globe ----------
+    // Each region as on the flat map, projected onto the sphere; its box cut
+    // into a grid, so it still covers the region where the globe curves.
+    function drawRegionsGlobe(regions){
+      var p = prog.globe.region, r = res.globe, drawn = false;
+      gl.useProgram(p.program);
+      setProjection(p);
+      gl.bindVertexArray(r.regionVao);
+      gl.enable(gl.STENCIL_TEST);
+      regions.forEach(function(reg){
+        var m = mesh(reg.item);
+        if (!m.grid){
+          m.grid = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, m.grid);
+          gl.bufferData(gl.ARRAY_BUFFER, gridBox(m.extent, BOX_GRID), gl.STATIC_DRAW);
+        }
+        gl.uniform2f(p.u.u_anchor, m.anchor[0], m.anchor[1]);
+        gl.uniform1f(p.u.u_value, reg.value);
+        gl.bindBuffer(gl.ARRAY_BUFFER, m.buffer);
+        gl.vertexAttribPointer(r.regionLoc, 2, gl.FLOAT, false, 0, 0);
+        gl.colorMask(false, false, false, false);
+        gl.stencilFunc(gl.ALWAYS, 0, 1);
+        gl.stencilOp(gl.KEEP, gl.KEEP, gl.INVERT);
+        gl.drawArrays(gl.TRIANGLES, 0, m.count);
+        gl.bindBuffer(gl.ARRAY_BUFFER, m.grid);
+        gl.vertexAttribPointer(r.regionLoc, 2, gl.FLOAT, false, 0, 0);
+        gl.colorMask(true, false, false, false);
+        gl.stencilFunc(gl.EQUAL, 1, 1);
+        gl.stencilOp(gl.ZERO, gl.ZERO, gl.ZERO);
+        gl.drawArrays(gl.TRIANGLES, 0, BOX_GRID*BOX_GRID*6);
+        drawn = true;
+      });
+      gl.disable(gl.STENCIL_TEST);
+      gl.colorMask(true, true, true, true);
+      return drawn;
+    }
+    // Every city and pin: a square around it on the 0-1 world, relative to
+    // the view's centre; the ones behind the globe are cut off by MapLibre's
+    // projection. 7 numbers a corner: where it is, the centre, the radius,
+    // how clear, the radius in pixels.
+    function drawCirclesGlobe(circles){
+      if (!circles.length) return;
+      var n = circles.length*42;
+      if (circleGlobeData.length < n) circleGlobeData = new Float32Array(n*2);
+      var k = 0;
+      circles.forEach(function(c){
+        var o = globeCircle(c.item, cam.zoom, cam.lat), grow = 0.35+0.65*c.value;
+        var r = o.r*grow, px = Math.max(o.px*grow, 0.5), x = wrapX(o.x-view.x), y = o.y-view.y;
+        var e = r*(1+CIRCLE_SOFT) + 2*r/px;
+        var corners = [x-e, y-e, x+e, y-e, x+e, y+e, x-e, y-e, x+e, y+e, x-e, y+e];
+        for (var i=0;i<12;i+=2){
+          circleGlobeData[k++] = corners[i]; circleGlobeData[k++] = corners[i+1];
+          circleGlobeData[k++] = x; circleGlobeData[k++] = y; circleGlobeData[k++] = r; circleGlobeData[k++] = c.value;
+          circleGlobeData[k++] = px;
+        }
+      });
+      var p = prog.globe.circle;
+      gl.useProgram(p.program);
+      setProjection(p);
+      gl.uniform2f(p.u.u_center, view.x, view.y);
+      gl.bindVertexArray(res.globe.circleVao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, res.globe.circleBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, circleGlobeData.subarray(0, k), gl.DYNAMIC_DRAW);
+      gl.colorMask(false, true, false, false);
+      gl.drawArrays(gl.TRIANGLES, 0, circles.length*6);
+      gl.colorMask(true, true, true, true);
+    }
+    // Every route's corridor, as on the flat map, on the 0-1 world. 8
+    // numbers a corner: where it is, the piece's two ends, the half-width
+    // there and in pixels. A piece keeps its own two ends together where
+    // the world wraps round.
+    function drawRoutesGlobe(routes){
+      var parts = [], count = 0;
+      routes.forEach(function(r){
+        var g = r.item, perUnit = globePxPerUnit(cam.zoom, cam.lat, g.lat);
+        var segs = routeOnGlobe(g, r.value, ROUTE_STEP_PX/perUnit);
+        if (!segs.length) return;
+        var half = Math.max(ROUTE_HALF_M/(2*Math.PI*EARTH_M*Math.cos(g.lat*RAD)), ROUTE_MIN_PX/perUnit);
+        parts.push({segs:segs, half:half, px:half*perUnit});
+        count += segs.length/4;
+      });
+      if (!count) return;
+      if (routeGlobeData.length < count*48) routeGlobeData = new Float32Array(count*48*2);
+      var k = 0;
+      parts.forEach(function(s){
+        var e = s.half*(1+ROUTE_SOFT) + 2*s.half/s.px;
+        for (var i=0;i<s.segs.length;i+=4){
+          var x1 = wrapX(s.segs[i]-view.x), y1 = s.segs[i+1]-view.y;
+          var x2 = x1 + (s.segs[i+2]-s.segs[i]), y2 = y1 + (s.segs[i+3]-s.segs[i+1]);
+          var dx = x2-x1, dy = y2-y1, len = Math.sqrt(dx*dx+dy*dy);
+          var ux = len>0 ? dx/len*e : e, uy = len>0 ? dy/len*e : 0;
+          var corners = [x1-ux-uy, y1-uy+ux, x1-ux+uy, y1-uy-ux, x2+ux+uy, y2+uy-ux,
+            x1-ux-uy, y1-uy+ux, x2+ux+uy, y2+uy-ux, x2+ux-uy, y2+uy+ux];
+          for (var c=0;c<12;c+=2){
+            routeGlobeData[k++] = corners[c]; routeGlobeData[k++] = corners[c+1];
+            routeGlobeData[k++] = x1; routeGlobeData[k++] = y1; routeGlobeData[k++] = x2; routeGlobeData[k++] = y2;
+            routeGlobeData[k++] = s.half; routeGlobeData[k++] = s.px;
+          }
+        }
+      });
+      var p = prog.globe.route;
+      gl.useProgram(p.program);
+      setProjection(p);
+      gl.uniform2f(p.u.u_center, view.x, view.y);
+      gl.bindVertexArray(res.globe.routeVao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, res.globe.routeBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, routeGlobeData.subarray(0, k), gl.DYNAMIC_DRAW);
+      gl.colorMask(false, true, false, false);
+      gl.drawArrays(gl.TRIANGLES, 0, count*6);
+      gl.colorMask(true, true, true, true);
     }
 
     // ---------- the clouds ----------
@@ -615,6 +991,56 @@
       gl.activeTexture(gl.TEXTURE0);
     }
 
+    // The clouds on the globe: the whole sphere's grid, projected by
+    // MapLibre; outside the globe, nothing (cleared).
+    function drawCloudsGlobe(zoom){
+      var p = prog.globe.cloud, lo = new Float32Array(9), hi = new Float32Array(9), drift = new Float32Array(6), k = new Float32Array(3);
+      var level = Math.max(Math.floor(zoom), GLOBE_MIN_LEVEL);
+      LAYERS.forEach(function(layer, i){
+        var a = cloudFrame(view, zoom, level, layer.tile), b = cloudFrame(view, zoom, level+1, layer.tile);
+        lo.set([a.x, a.y, a.step], i*3);
+        hi.set([b.x, b.y, b.step], i*3);
+        var dx = layer.drift[0]*clock, dy = layer.drift[1]*clock;
+        drift.set([dx-Math.floor(dx), dy-Math.floor(dy)], i*2);
+        k[i] = sphereNoiseScale(level, layer.tile);
+      });
+      gl.bindFramebuffer(gl.FRAMEBUFFER, res.fbo.cloud);
+      gl.viewport(0, 0, size.w, size.h);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.disable(gl.BLEND);
+      gl.useProgram(p.program);
+      setProjection(p);
+      gl.uniform2f(p.u.u_center, view.x, view.y);
+      gl.uniform1f(p.u.u_world, view.world);
+      gl.uniform2f(p.u.u_size, view.width, view.height);
+      gl.uniform2f(p.u.u_fbo, size.w, size.h);
+      gl.uniform3fv(p.u.u_lo, lo);
+      gl.uniform3fv(p.u.u_hi, hi);
+      gl.uniform2fv(p.u.u_drift, drift);
+      gl.uniform1fv(p.u.u_k, k);
+      gl.uniform1f(p.u.u_fade, zoom<GLOBE_MIN_LEVEL ? 0 : cloudFade(zoom));
+      gl.uniform1f(p.u.u_flat, flatNoise(zoom));
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, res.noise);
+      gl.uniform1i(p.u.u_noise, 0);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, res.tex.mask);
+      gl.uniform1i(p.u.u_mask, 1);
+      // Far out, the whole sphere; zoomed in, a finer grid over the view only
+      // (the sphere's squares would be flat across the screen there).
+      if (zoom<PATCH_FROM){
+        gl.bindVertexArray(res.globe.cloudVao);
+        gl.drawElements(gl.TRIANGLES, res.globe.cloudCount, gl.UNSIGNED_SHORT, 0);
+      } else {
+        gl.bindVertexArray(res.globe.patchVao);
+        gl.bindBuffer(gl.ARRAY_BUFFER, res.globe.patchBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, gridBox(viewPatch(view), PATCH_GRID), gl.DYNAMIC_DRAW);
+        gl.drawArrays(gl.TRIANGLES, 0, PATCH_GRID*PATCH_GRID*6);
+      }
+      gl.activeTexture(gl.TEXTURE0);
+    }
+
     // ---------- moving ----------
     // After each frame: the next one right away while the map or a reveal
     // moves, else in IDLE_FRAME_MS for the drift. Nothing while the map is
@@ -639,7 +1065,7 @@
         clearTimeout(timer);
         drop();
       },
-      prerender: function(context){
+      prerender: function(context, args){
         if (!gl) init(context);
         if (!res.noise) makeNoise();
         // The clock only runs while the fog moves; frames coming at full
@@ -655,6 +1081,16 @@
         var cssW = gl.drawingBufferWidth/ratio, cssH = gl.drawingBufferHeight/ratio;
         var c = map.getCenter(), zoom = map.getZoom();
         view = viewOf(c.lng, c.lat, zoom, cssW, cssH);
+        cam = {zoom:zoom, lat:c.lat};
+        // On the globe this frame? Its programs are made the first time (a
+        // phone that can't make them keeps the flat fog).
+        globe = globeOf(args);
+        if (globe){
+          try{ globePrograms(globe.shader); }
+          catch(e){ globe = null; }
+        }
+        outline = globe ? globeOutline(cssW, cssH, zoom, c.lat, (args.fov || 0.6435)/RAD) : null;
+        if (outline) outline.strength = clamp(globe.data.projectionTransition, 0, 1);
         fit(Math.max(1, Math.round(cssW*scale)), Math.max(1, Math.round(cssH*scale)));
         var what = places(), entries = [];
         what.circles.forEach(function(c){ entries.push({key:c.key, item:{lat:c.lat, lon:c.lon, radius:c.radius}}); });
@@ -665,14 +1101,15 @@
         gl.disable(gl.DEPTH_TEST);
         gl.disable(gl.CULL_FACE);
         drawMask(state.list);
-        drawClouds(zoom);
+        if (globe) drawCloudsGlobe(zoom); else drawClouds(zoom);
         gl.bindVertexArray(null);
       },
+      // MapLibre's depth test stays on: the style's layers over the fog
+      // (the oceans, from BEFORE on), drawn first as opaque, keep it off them.
       render: function(){
         if (!res || !size.w) return;
         var p = prog.composite;
         gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-        gl.disable(gl.DEPTH_TEST);
         gl.disable(gl.STENCIL_TEST);
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -680,6 +1117,9 @@
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, res.tex.cloud);
         gl.uniform1i(p.u.u_fog, 0);
+        var ratio = map.getPixelRatio();
+        if (outline) gl.uniform4f(p.u.u_globe, outline.x*ratio, outline.y*ratio, outline.r*ratio, outline.strength);
+        else gl.uniform4f(p.u.u_globe, 0, 0, 1, 0);
         gl.bindVertexArray(res.screenVao);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
         gl.bindVertexArray(null);
@@ -724,6 +1164,22 @@
     makeReveals: makeReveals,
     QUALITY: QUALITY,
     makeQuality: makeQuality,
-    createLayer: createLayer
+    createLayer: createLayer,
+    BEFORE: BEFORE,
+    POLE_N: POLE_N,
+    POLE_S: POLE_S,
+    GLOBE_MIN_LEVEL: GLOBE_MIN_LEVEL,
+    globeOf: globeOf,
+    globeMesh: globeMesh,
+    gridBox: gridBox,
+    viewPatch: viewPatch,
+    PATCH_FROM: PATCH_FROM,
+    globePxPerUnit: globePxPerUnit,
+    globeCircle: globeCircle,
+    routeOnGlobe: routeOnGlobe,
+    globeOutline: globeOutline,
+    facing: facing,
+    sphereNoiseScale: sphereNoiseScale,
+    flatNoise: flatNoise
   };
 })(window.StatusTerminal);

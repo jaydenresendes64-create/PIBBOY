@@ -1568,6 +1568,9 @@ canvas.item-model{
   border:1px solid var(--line); border-radius:3px; background:var(--bg); color:var(--phosphor);
   padding:7px; font-size:0.85rem; min-height:40px; color-scheme:dark;
 }
+/* The player's own streaks (vitals.js): a name box (16px: no zoom on iPhone), "+ New streak". */
+.date-input.name-input{ flex:1 1 140px; min-width:0; font-size:1rem; }
+.own-add{ margin:-4px 0 14px; }
 .urge-tip{ font-size:0.86rem; line-height:1.45; margin:8px 0 2px; }
 .urge-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
 .urge-grid .wide{ grid-column:1 / -1; }

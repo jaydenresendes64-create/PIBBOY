@@ -125,12 +125,21 @@
     if (btn){ btn.classList.toggle('active', on); btn.setAttribute('aria-pressed', String(on)); }
     if (canvas) canvas.hidden = !on;
   }
+  // On the globe, a city behind it isn't in range: the view's centre and
+  // its horizon (js/fog.js globeOutline; on the flat map, far wider than
+  // the screen), and whether a city faces the screen.
+  function sight(){
+    var c = map.getCenter(), box = map.getContainer();
+    var fov = map.getVerticalFieldOfView ? map.getVerticalFieldOfView() : 36.87;
+    return {lat:c.lat, lon:c.lng, horizon:ST.fog.globeOutline(box.clientWidth, box.clientHeight, map.getZoom(), c.lat, fov).horizon};
+  }
+  function inSight(view, c){ return ST.fog.facing(view.lat, view.lon, c.lat, c.lon) > view.horizon; }
   function findBlips(){
     var db = P.data();
     if (!db || !map) return;
-    var b = map.getBounds();
+    var b = map.getBounds(), view = sight();
     var box = [[b.getWest(), b.getSouth()], [b.getEast(), b.getNorth()]];
-    blips = candidates(db.cities, box, covered, MAX_BLIPS).map(function(c){
+    blips = candidates(db.cities, box, function(c){ return !inSight(view, c) || covered(c); }, MAX_BLIPS).map(function(c){
       return {city:c, x:0, y:0, angle:0, glow:0.14};
     });
   }
@@ -180,10 +189,11 @@
     }
     // The blips, where their cities are now. A name shows only where it
     // doesn't cover another (the biggest cities come first, so they win).
-    var pinged = false, labels = [];
+    var pinged = false, labels = [], view = sight();
     g.font = '15px VT323, monospace';
     g.textBaseline = 'middle';
     blips.forEach(function(b){
+      if (!inSight(view, b.city)){ b.x = b.y = -1e5; return; }      // turned behind the globe
       var p = map.project([b.city.lon, b.city.lat]);
       b.x = p.x; b.y = p.y;
       b.angle = Math.atan2(p.y-cy, p.x-cx);
@@ -260,7 +270,7 @@
 
   ST.radar = {
     MAX_BLIPS: MAX_BLIPS, PERIOD_S: PERIOD_S,
-    candidates: candidates, covered: covered, wrap: wrap, glow: glow, nearestKnown: nearestKnown, popText: popText,
+    candidates: candidates, covered: covered, wrap: wrap, glow: glow, nearestKnown: nearestKnown, popText: popText, inSight: inSight,
     // for js/map.js
     attach: attach, html: html, onAction: onAction, isOn: function(){ return on; },
     refresh: function(){ if (on) findBlips(); }      // a place revealed or removed elsewhere

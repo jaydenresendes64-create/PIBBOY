@@ -15,6 +15,10 @@
  * due, else the daily quest left longest). Until it's logged, QUESTS,
  * ITEMS, MAP and LOG wait (Settings: Check-in first).
  *
+ * Under the chem-free streak, the player's own streaks (state.streaks: a
+ * name they type, same milestones): a card each, "+ New streak" or its
+ * form (app.ownForm), a lapse or a removal asked first (app.ownConfirm).
+ *
  * The words of the readings and of the urge decoder's messages come from
  * js/insight.js (readings(), urgeMessages(), urgeReflection(), resetLine(),
  * urgeHint()); "Another angle" walks down the messages (app.urgeAngle).
@@ -94,19 +98,7 @@
         '<div class="vital-btns"><button class="vital-btn hot" data-vital="goto-urge">Urge? Decode it</button>'+
         '<button class="vital-btn quiet" data-vital="streak-edit">Edit start</button></div>';
     } else {
-      var done = day-1, next = ST.nextCleanMilestone(), best = num(c.best);
-      html += '<div class="streak-big">DAY '+pad2(day)+'</div>';
-      var soon = milestoneTomorrow();
-      if (soon) html += '<p class="vital-sub streak-soon">Day '+day+'. Tomorrow: +'+soon.xp+' XP.</p>';
-      if (next){
-        var prev = 0;
-        ST.CLEAN_MILESTONES.forEach(function(m){ if (m.days<next.days) prev = m.days; });
-        html += '<p class="vital-sub">'+plural(done, 'full day')+' done. Next: '+next.days+' days, +'+next.xp+' XP, '+
-            (next.days-done)+' to go.'+(best>0 ? ' Best run: '+best+'.' : '')+'</p>'+
-          '<div class="streak-bar"><div class="streak-fill" style="width:'+clamp((done-prev)/(next.days-prev)*100, 0, 100)+'%"></div></div>';
-      } else {
-        html += '<p class="vital-sub">'+done+' full days done. Every milestone cleared.</p>';
-      }
+      html += runHtml(null);
       if (app.confirmLapse){
         html += '<p class="vital-sub">Log a lapse today? The count restarts tomorrow. Days already done stay in your total and no XP is lost.</p>'+
           '<div class="vital-btns"><button class="vital-btn warn" data-vital="lapse-yes">Yes, log it</button>'+
@@ -118,6 +110,82 @@
       }
     }
     return html+'</div>';
+  }
+  // A run under way (`id`: one of the player's own streaks, null: the
+  // chem-free one): its day, tomorrow's milestone, the next one and the bar.
+  function runHtml(id){
+    var c = ST.streakById(id), day = ST.cleanDay(id), done = day-1, next = ST.nextCleanMilestone(id), best = num(c.best);
+    var html = '<div class="streak-big">DAY '+pad2(day)+'</div>';
+    var soon = milestoneTomorrow(id);
+    if (soon) html += '<p class="vital-sub streak-soon">Day '+day+'. Tomorrow: +'+soon.xp+' XP.</p>';
+    if (next){
+      var prev = 0;
+      ST.CLEAN_MILESTONES.forEach(function(m){ if (m.days<next.days) prev = m.days; });
+      html += '<p class="vital-sub">'+plural(done, 'full day')+' done. Next: '+next.days+' days, +'+next.xp+' XP, '+
+          (next.days-done)+' to go.'+(best>0 ? ' Best run: '+best+'.' : '')+'</p>'+
+        '<div class="streak-bar"><div class="streak-fill" style="width:'+clamp((done-prev)/(next.days-prev)*100, 0, 100)+'%"></div></div>';
+    } else {
+      html += '<p class="vital-sub">'+done+' full days done. Every milestone cleared.</p>';
+    }
+    return html;
+  }
+
+  // ---------- the player's own streaks ----------
+  // One of them by id, never the chem-free one.
+  function own(id){ return id ? ST.streakById(id) : null; }
+  function asking(id, what){ return !!app.ownConfirm && app.ownConfirm.id===id && app.ownConfirm.what===what; }
+  function ownKey(x){ return ' data-key="'+escapeHtml(x.id)+'"'; }
+  // A card each, then "+ New streak" (or the form for one).
+  function ownStreaksHtml(){
+    var list = app.state.streaks || [];
+    var html = list.map(function(x){ return app.ownForm===x.id ? ownFormHtml(x) : ownCardHtml(x); }).join('');
+    if (app.ownForm==='new') html += ownFormHtml(null);
+    else if (list.length<ST.STREAKS_MAX) html += '<div class="vital-btns own-add"><button class="vital-btn quiet" data-vital="own-new">+ New streak</button></div>';
+    return html;
+  }
+  function ownCardHtml(x){
+    var day = ST.cleanDay(x.id), k = ownKey(x);
+    var html = '<div class="vital-card streak-card own-streak"><div class="vital-head">'+escapeHtml(x.name)+'</div>';
+    if (day===null){
+      html += '<p class="vital-sub">Set the first day of this run.</p>'+
+        '<div class="vital-btns"><button class="vital-btn hot" data-vital="own-edit"'+k+'>Edit</button></div>';
+    } else if (day<=0){
+      html += '<div class="streak-big">RESTART // TOMORROW</div>'+
+        '<p class="vital-sub">Stop for today. The '+plural(num(x.totalClean), 'day')+' behind you still count.</p>'+
+        (ST.insight ? insightLine(ST.insight.resetLine({best:ST.cleanBest(x.id)}, 2), 'vital-sub reading') : '')+
+        '<div class="vital-btns"><button class="vital-btn hot" data-vital="goto-urge">Urge? Decode it</button>'+
+        '<button class="vital-btn quiet" data-vital="own-edit"'+k+'>Edit</button></div>';
+    } else {
+      html += runHtml(x.id);
+      if (asking(x.id, 'lapse')){
+        html += '<p class="vital-sub">Log a lapse today? The count restarts tomorrow. Days already done stay in your total and no XP is lost.</p>'+
+          '<div class="vital-btns"><button class="vital-btn warn" data-vital="own-lapse-yes"'+k+'>Yes, log it</button>'+
+          '<button class="vital-btn quiet" data-vital="own-lapse-no"'+k+'>Cancel</button></div>';
+      } else {
+        html += '<div class="vital-btns"><button class="vital-btn hot" data-vital="goto-urge">Urge? Decode it</button>'+
+          '<button class="vital-btn quiet" data-vital="own-edit"'+k+'>Edit</button>'+
+          '<button class="vital-btn quiet" data-vital="own-lapse-ask"'+k+'>Log a lapse</button></div>';
+      }
+    }
+    return html+'</div>';
+  }
+  // A new streak's form (x null), or one's own: its name, its first day; Remove asked first.
+  function ownFormHtml(x){
+    var k = x ? ownKey(x) : '';
+    var html = '<div class="vital-card streak-card own-streak"><div class="vital-head">'+(x ? escapeHtml(x.name) : 'New streak')+'</div>'+
+      (x ? '' : '<p class="vital-sub">A name only you will see, and the first day of the run.</p>')+
+      '<div class="vital-btns">'+
+        '<input type="text" class="date-input name-input" id="own-name" maxlength="'+ST.STREAK_NAME_MAX+'" autocomplete="off" placeholder="Name" aria-label="Streak name" value="'+(x ? escapeHtml(x.name) : '')+'">'+
+        '<input type="date" class="date-input" id="own-date" max="'+todayBox()+'" value="'+(boxDate(x && x.cleanSince) || todayBox())+'" aria-label="First day of the run">'+
+      '</div>';
+    if (x && asking(x.id, 'remove')){
+      return html+'<p class="vital-sub">Remove '+escapeHtml(x.name)+'? Its count is gone for good. The XP it gave stays.</p>'+
+        '<div class="vital-btns"><button class="vital-btn warn" data-vital="own-remove-yes"'+k+'>Yes, remove it</button>'+
+        '<button class="vital-btn quiet" data-vital="own-remove-no"'+k+'>Keep it</button></div></div>';
+    }
+    return html+'<div class="vital-btns"><button class="vital-btn hot" data-vital="own-save"'+k+'>'+(x ? 'Save' : 'Start')+'</button>'+
+      '<button class="vital-btn quiet" data-vital="own-cancel"'+k+'>Cancel</button>'+
+      (x ? '<button class="vital-btn quiet" data-vital="own-remove-ask"'+k+'>Remove</button>' : '')+'</div></div>';
   }
 
   // ---------- the urge decoder ----------
@@ -234,17 +302,21 @@
     if (e && e.logged) return num(e.craving)>=CRAVING_HIGH;
     return !!last && last.ago===1 && num(last.craving)>=CRAVING_HIGH;
   }
-  // The next chem-free milestone when it's reached tomorrow, else null.
-  function milestoneTomorrow(){
-    var day = ST.cleanDay(), next = ST.nextCleanMilestone();
-    return day!==null && day>0 && next && next.days-ST.cleanFullDays()===1 ? next : null;
+  // A streak's next milestone when it's reached tomorrow, else null (`id`:
+  // one of the player's own, none: the chem-free one).
+  function milestoneTomorrow(id){
+    var day = ST.cleanDay(id), next = ST.nextCleanMilestone(id);
+    return day!==null && day>0 && next && next.days-ST.cleanFullDays(id)===1 ? next : null;
+  }
+  function anyMilestoneTomorrow(){
+    return !!milestoneTomorrow() || (app.state.streaks || []).some(function(x){ return !!milestoneTomorrow(x.id); });
   }
   // The CHECK-IN view's three cards, the one that matters most today first:
-  // the urge decoder (a timer, or a high craving), the streak (a milestone
-  // tomorrow), else the check-in; the others after it in their usual order
+  // the urge decoder (a timer, or a high craving), the streaks (a milestone
+  // tomorrow, on any of them), else the check-in; the others after it in their usual order
   // (check-in, streak, urge). They're always all there.
   function order(){
-    var first = app.state.urges.active || cravingHigh() ? 'urge' : milestoneTomorrow() ? 'streak' : 'checkin';
+    var first = app.state.urges.active || cravingHigh() ? 'urge' : anyMilestoneTomorrow() ? 'streak' : 'checkin';
     return [first].concat(['checkin', 'streak', 'urge'].filter(function(b){ return b!==first; }));
   }
   // "INT 4 · TRAIN 150/300", as on STATUS ("INT 10 · MAX" at 10).
@@ -298,7 +370,7 @@
 
   // ---------- the CHECK-IN view ----------
   function checkInViewHtml(){
-    var cards = {urge:urgeCardHtml, streak:streakCardHtml, checkin:checkInCardHtml};
+    var cards = {urge:urgeCardHtml, streak:function(){ return streakCardHtml()+ownStreaksHtml(); }, checkin:checkInCardHtml};
     return order().map(function(c){ return cards[c](); }).join('')+
       '<div class="panel-title">Last 7 entries</div>'+tableHtml();
   }
@@ -501,6 +573,43 @@
       app.confirmLapse = false;
       if (ST.logLapse()) save(true);
       redraw('[data-vital="goto-urge"]');
+    },
+    // The player's own streaks: a new one, one edited (name, first day), a lapse, a removal.
+    'own-new': function(){ app.ownForm = 'new'; app.ownConfirm = null; redraw('#own-name'); },
+    'own-edit': function(btn, id){ if (!own(id)) return; app.ownForm = id; app.ownConfirm = null; redraw('#own-name'); },
+    'own-cancel': function(btn, id){
+      app.ownForm = null; app.ownConfirm = null;
+      redraw(id ? '[data-vital="own-edit"][data-key="'+id+'"]' : '[data-vital="own-new"]');
+    },
+    'own-save': function(btn, id){
+      var name = el('own-name'), date = el('own-date'), x = own(id);
+      if (!name || !date || (id && !x)) return;
+      if (!name.value.trim()){ name.focus(); return; }
+      if (!x){
+        x = ST.addStreak(name.value, date.value);
+        if (!x){ date.focus(); return; }
+      } else {
+        // The first day only when it was changed (after a lapse it's tomorrow, and stays so).
+        if (date.value!==boxDate(x.cleanSince) && !ST.setCleanStart(date.value, x.id)){ date.focus(); return; }
+        ST.renameStreak(x.id, name.value);
+      }
+      app.ownForm = null;
+      redraw('[data-vital="own-edit"][data-key="'+x.id+'"]');
+      save(true);                 // the milestones it reached are paid just after (events.js)
+    },
+    'own-lapse-ask': function(btn, id){ if (!own(id)) return; app.ownConfirm = {id:id, what:'lapse'}; redraw('[data-vital="own-lapse-no"]'); },
+    'own-lapse-no': function(btn, id){ app.ownConfirm = null; redraw('[data-vital="own-lapse-ask"][data-key="'+id+'"]'); },
+    'own-lapse-yes': function(btn, id){
+      app.ownConfirm = null;
+      if (own(id) && ST.logLapse(id)) save(true);
+      redraw('[data-vital="own-edit"][data-key="'+id+'"]');
+    },
+    'own-remove-ask': function(btn, id){ if (!own(id)) return; app.ownConfirm = {id:id, what:'remove'}; redraw('[data-vital="own-remove-no"]'); },
+    'own-remove-no': function(){ app.ownConfirm = null; redraw('#own-name'); },
+    'own-remove-yes': function(btn, id){
+      app.ownConfirm = null; app.ownForm = null;
+      if (own(id) && ST.removeStreak(id)) save(true);
+      redraw('[data-vital="own-new"]');
     },
     // The streak card's "Urge? Decode it": the decoder, on the same screen.
     'goto-urge': function(){

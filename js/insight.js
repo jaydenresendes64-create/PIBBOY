@@ -30,8 +30,8 @@
  * tip for the need named (vitals.js TIPS), messages in several styles:
  * DECODER (what might be behind it), REALITY CHECK, DIRECT, INNER DIALOGUE,
  * STRATEGY (space between the urge and a decision), WHY (the chem-free
- * run: the goal the owner set), REFLECTION (at zero) and RESET (after a
- * lapse). What's known comes first, as questions, never as facts about the
+ * run and the owner's own streaks: the goals they set), REFLECTION (at
+ * zero) and RESET (after a lapse). What's known comes first, as questions, never as facts about the
  * owner: today's check-in (low sleep, high hunger or tension, asked about,
  * not assumed), the urges ridden out before (the same need: how many, the
  * last one's rounds), a second round, a late hour. Then the general ones,
@@ -288,7 +288,12 @@
       lastSame: lastSame ? {ago:ST.daysSince(lastSame.date), date:lastSame.date, rounds:Math.max(1, num(lastSame.rounds))} : null,
       streak: day!==null && day>0 ? {day:day, done:ST.cleanFullDays(), next:next} : null,
       best: ST.cleanBest(), totalClean: ST.cleanTotal(),
-      lapseToday: lapses.length>0 && lapses[lapses.length-1]===ST.todayStr(),
+      // The player's own streaks under way: the same, with the name they gave it.
+      own: (s.streaks || []).map(function(x){
+        var d = ST.cleanDay(x.id);
+        return d!==null && d>0 ? {id:x.id, name:x.name, day:d, done:ST.cleanFullDays(x.id), next:ST.nextCleanMilestone(x.id), best:ST.cleanBest(x.id)} : null;
+      }).filter(Boolean),
+      lapseToday: ST.lapsedToday ? ST.lapsedToday() : lapses.length>0 && lapses[lapses.length-1]===ST.todayStr(),
       seed: log.length + (a ? Math.floor(num(a.start)/60000) : dayNumber(ST.todayStr()))
     };
   }
@@ -371,12 +376,15 @@
       ' here. The last one passed in '+plural(ctx.lastSame.rounds, 'round')+', '+agoText(ctx.lastSame.ago, ctx.lastSame.date)+'.'});
     else if (ctx.total>0) out.push({style:'REALITY CHECK', id:'ctx-total', text:plural(ctx.total, 'urge')+' ridden out here so far. Each one passed.'});
     if (ctx.hour>=NIGHT_FROM || ctx.hour<NIGHT_TO) out.push({style:'REALITY CHECK', id:'ctx-late', text:'It’s late. Everything is louder at this hour; part of this may just be the time.'});
-    if (ctx.streak){
-      var s = ctx.streak, why = 'Chem-free day '+s.day+'.';
-      if (s.next) why += ' '+(s.next.days-s.done)+' to the '+s.next.days+'-day milestone (+'+s.next.xp+' XP).';
-      if (ctx.best>s.done) why += ' Best run so far: '+ctx.best+' days.';
-      out.push({style:'WHY', id:'ctx-streak', text:why});
+    // The streaks under way: the goals the owner set (each own streak by the name they gave it).
+    function why(label, s, best){
+      var text = label+' day '+s.day+'.';
+      if (s.next) text += ' '+(s.next.days-s.done)+' to the '+s.next.days+'-day milestone (+'+s.next.xp+' XP).';
+      if (best>s.done) text += ' Best run so far: '+best+' days.';
+      return text;
     }
+    if (ctx.streak) out.push({style:'WHY', id:'ctx-streak', text:why('Chem-free', ctx.streak, ctx.best)});
+    (ctx.own || []).forEach(function(o){ out.push({style:'WHY', id:'ctx-streak-'+o.id, text:why(String(o.name), o, o.best)}); });
     // The general ones, the styles taking turns.
     var styles = ORDER[need], lists = styles.map(function(st){ return forNeed(st, need); });
     var start = ctx.seed % styles.length, longest = Math.max.apply(null, lists.map(function(l){ return l.length; }));
@@ -408,13 +416,13 @@
   }
 
   // After a lapse logged today, and on the decoder that day: a way back, no
-  // blame. `shift` picks another of the lines (the decoder's, under the
-  // streak card's, isn't the same one).
+  // blame. `shift` picks another of the lines, always as many (the
+  // decoder's, the chem-free card's and an own streak's card differ).
   function resetLine(ctx, shift){
     ctx = ctx || urgeContext();
     var list = ['A lapse is a day, not a direction. Tomorrow is day 1.', 'What was different today? Name it once, then let it go.',
-      'One day doesn’t undo the days behind it.'];
-    if (ctx.best>0) list.push('Best run: '+plural(ctx.best, 'day')+'. You’ve done it before.');
+      'One day doesn’t undo the days behind it.',
+      ctx.best>0 ? 'Best run: '+plural(ctx.best, 'day')+'. You’ve done it before.' : 'Rest, eat, sleep. Tomorrow starts fresh.'];
     return {style:'RESET', id:'reset', text:pick(list, dayNumber(ST.todayStr()) + (shift || 0))};
   }
 

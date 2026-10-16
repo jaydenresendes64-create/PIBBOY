@@ -181,3 +181,93 @@ test('makeQuality: slow frames lower the fog resolution, a long quick run raises
   for (let i = 0; i < 1000; i++) fine.sample(16.7);                    // 60 a second: stays sharp
   assert.equal(fine.scale(), 1);
 });
+
+// ---------- on the globe ----------
+test('globeOf: the globe only when MapLibre says it draws one this frame', () => {
+  const data = { mainMatrix: [], fallbackMatrix: [], tileMercatorCoords: [0, 0, 1, 1], clippingPlane: [0, 0, 1, 0], projectionTransition: 0.6 };
+  const shader = { variantName: 'globe', vertexShaderPrelude: 'x', define: '#define GLOBE' };
+  assert.ok(F.globeOf({ defaultProjectionData: data, shaderData: shader }));
+  assert.equal(F.globeOf({ defaultProjectionData: Object.assign({}, data, { projectionTransition: 0 }), shaderData: shader }), null, 'flattened out');
+  assert.equal(F.globeOf({ defaultProjectionData: data, shaderData: { variantName: 'mercator' } }), null);
+  assert.equal(F.globeOf(undefined), null);
+  assert.equal(F.globeOf({}), null);
+});
+
+test('globeMesh: the whole 0-1 world in squares, a row of triangles to each pole', () => {
+  const m = F.globeMesh(8, 4), v = m.vertices;
+  assert.equal(v.length / 2, 9 * 7);                                  // 9 columns, 5 lines of the grid + 2 poles
+  assert.equal(m.indices.length, 6 * 8 * 6);
+  assert.ok(Math.max(...m.indices) < v.length / 2);
+  for (let c = 0; c <= 8; c++) {
+    assert.equal(v[c * 2 + 1], F.POLE_N);
+    assert.equal(v[(6 * 9 + c) * 2 + 1], F.POLE_S);
+  }
+  assert.deepEqual([v[9 * 2], v[9 * 2 + 1], v[17 * 2], v[17 * 2 + 1]], [0, 0, 1, 0]);   // the grid's first line: the world's top edge
+  for (let i = 0; i < m.indices.length; i += 3) {
+    const [a, b, c] = [m.indices[i], m.indices[i + 1], m.indices[i + 2]];
+    assert.ok(a !== b && b !== c && a !== c);
+  }
+});
+
+test('gridBox: a box cut into n x n squares, covering it exactly', () => {
+  const g = F.gridBox([-0.1, 0.2, 0.3, 0.4], 4);
+  assert.equal(g.length, 4 * 4 * 6 * 2);
+  const xs = g.filter((_, i) => i % 2 === 0), ys = g.filter((_, i) => i % 2 === 1);
+  near(Math.min(...xs), -0.1, 1e-7); near(Math.max(...xs), 0.3, 1e-7);
+  near(Math.min(...ys), 0.2, 1e-7); near(Math.max(...ys), 0.4, 1e-7);
+});
+
+test('on the globe, sizes follow MapLibre: the flat map\'s scale at the centre of the view', () => {
+  near(F.globePxPerUnit(0, 0, 0), 512, 1e-9);
+  near(F.globePxPerUnit(0, 60, 0), 1024, 1e-6);                        // centred up north, the globe is drawn bigger
+  near(F.globePxPerUnit(0, 0, 60), 256, 1e-6);                         // a parallel up north is shorter
+  // A city's radius in pixels: real metres, wherever it is on the globe; never under 3 pixels.
+  const world = 512 * Math.pow(2, 6), metres = r => r * world / (2 * Math.PI * 6371008.8);
+  [0, 45, 70].forEach(lat => near(F.globeCircle({ lat, lon: 10, radius: 50000 }, 6, 0).px, metres(50000), 1e-6));
+  const far = F.globeCircle({ lat: 45.5, lon: -73.57, radius: 14000 }, 1, 45.5);
+  near(far.px, 3, 1e-9);
+  near(far.x, P.mercX(-73.57), 1e-12); near(far.y, P.mercY(45.5), 1e-12);
+});
+
+test('routeOnGlobe: the road up to how much is shown, points closer than a step merged', () => {
+  const g = { merc: Float64Array.from([0.1, 0.1, 0.10001, 0.1, 0.2, 0.1, 0.3, 0.1]), cum: Float64Array.from([0, 0.00001, 0.1, 0.2]), lat: 60 };
+  assert.deepEqual(Array.from(F.routeOnGlobe(g, 1, 0.001)), [0.1, 0.1, 0.2, 0.1, 0.2, 0.1, 0.3, 0.1]);   // the second point merged
+  const half = Array.from(F.routeOnGlobe(g, 0.5, 0.001));
+  near(half[half.length - 2], 0.2, 1e-9);                              // half the road: to the middle
+  assert.deepEqual(Array.from(F.routeOnGlobe(g, 0, 0.001)), []);
+  assert.deepEqual(Array.from(F.routeOnGlobe({ merc: Float64Array.from([0.1, 0.1]), cum: Float64Array.from([0]), lat: 0 }, 1, 0.001)), []);
+});
+
+test('globeOutline: the globe in the middle of the screen, smaller far out, its horizon', () => {
+  const far = F.globeOutline(390, 600, 0, 0, 36.87), closer = F.globeOutline(390, 600, 2, 0, 36.87);
+  assert.deepEqual([far.x, far.y], [195, 300]);
+  assert.ok(far.r > 60 && far.r < 90, far.r);                          // a little under its 81.5-pixel radius at the surface
+  assert.ok(closer.r > far.r * 3 && closer.r < far.r * 4.5);
+  assert.ok(far.horizon > 0 && far.horizon < closer.horizon && closer.horizon < 1);
+  // The radius is where the camera's line of sight grazes the sphere.
+  const toCenter = 0.5 / Math.tan(36.87 * Math.PI / 360) * 600, R = 512 / (2 * Math.PI), d = 1 + toCenter / R;
+  near(far.r, toCenter * Math.tan(Math.asin(1 / d)), 1e-9);
+  near(far.horizon, 1 / d, 1e-12);
+});
+
+test('facing: how directly a place faces the centre of the view', () => {
+  near(F.facing(45, -73, 45, -73), 1, 1e-12);
+  near(F.facing(0, 0, 0, 180), -1, 1e-12);
+  near(F.facing(0, 0, 0, 90), 0, 1e-12);
+  near(F.facing(90, 0, 0, 37), 0, 1e-12);
+});
+
+test('the clouds on the globe: the sphere\'s noise far out, the flat map\'s from zoom 8, a grid over the view zoomed in', () => {
+  near(F.sphereNoiseScale(3, 1500), 512 * 8 / (2 * Math.PI * 1500), 1e-12);
+  near(F.sphereNoiseScale(4, 700) / F.sphereNoiseScale(3, 700), 2, 1e-12);
+  assert.equal(F.flatNoise(0), 0);
+  assert.equal(F.flatNoise(5), 0);
+  assert.equal(F.flatNoise(8), 1);
+  assert.equal(F.flatNoise(14), 1);
+  assert.ok(F.flatNoise(6) < F.flatNoise(7));
+  const view = F.viewOf(-73.57, 45.5, 9, 390, 600), box = F.viewPatch(view);
+  const [x0, y0] = F.toScreen(view, box[0], box[1]), [x1, y1] = F.toScreen(view, box[2], box[3]);
+  assert.ok(x0 < -0.3 * 390 && y0 < -0.3 * 600 && x1 > 1.3 * 390 && y1 > 1.3 * 600, 'the whole view and more');
+  const top = F.viewPatch(F.viewOf(0, 85, 6, 390, 600));
+  assert.ok(top[1] >= 0 && top[3] <= 1);
+});

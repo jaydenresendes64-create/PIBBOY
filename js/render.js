@@ -961,9 +961,16 @@
     toast('levelup-banner quest-banner', 'NEW RECORD: ', 3200).appendChild(what);
   }
   // A chem-free milestone reached (its XP comes in its own toast).
-  function showMilestone(days){
+  // A streak's milestone: the chem-free one, or one of the player's own (its name).
+  function showMilestone(days, name){
     sound('quest', 0.25);
-    toast('levelup-banner quest-banner', 'CHEM-FREE — '+num(days)+' DAYS', 3600);
+    if (!name){ toast('levelup-banner quest-banner', 'CHEM-FREE — '+num(days)+' DAYS', 3600); return; }
+    var banner = toast('levelup-banner quest-banner', '', 3600);
+    var streakName = document.createElement('span'), rest = document.createElement('span');
+    streakName.textContent = String(name).toUpperCase();
+    rest.textContent = '\u00a0— '+num(days)+' DAYS';     // a space a flex banner keeps
+    banner.appendChild(streakName);
+    banner.appendChild(rest);
   }
   function showBookRead(title){
     var bookTitle = document.createElement('span');

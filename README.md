@@ -65,6 +65,14 @@ the next milestone and the days to go. Milestones at **7, 14, 30, 60 and 90 days
 never pays one twice. **Log a lapse** asks first: the run's days stay in your totals (and best run),
 no XP is lost, and the count starts again tomorrow. **Urge? Decode it** opens the urge decoder.
 
+**Your own streaks** (VITALS, under the chem-free one): **+ New streak**, then a name only you will
+see and the run's first day. Each one works like the chem-free streak: the same milestones and XP
+(7, 14, 30, 60 and 90 days: +150 to +1,500 XP, each once a run), **Log a lapse** asked first (the
+days stay in its total and best run, no XP is lost). **Edit** renames it, moves its first day, or
+removes it (asked first; the XP it gave stays). Up to 10. The name lives only in your data (on the
+device and in your backups), never in the app's code; it's not on the RobCo boot, in the field
+report or on STATUS. While a run is under way, the urge decoder's WHY lines include it.
+
 **TRIALS** (VITALS tab, second button at the top): physical tests to repeat about **once a week**, to
 see yourself get stronger. Built in: **Push-ups** (most in one set, trains STR), **Plank** (longest
 hold, END), **Squats** (most in 60 seconds, AGI) and **1 km** (fastest, walking or running, END).
@@ -165,7 +173,7 @@ js/weather.js       the real weather (Open-Meteo), read the Pip-Boy way
 js/boot.js          the RobCo boot: the startup typed with your real status, once a day
 js/sfx-custom.js    "Custom sounds": your own clips, cut from a video or audio file, kept on the device
 js/places.js        the MAP tab's logic: positions, city and region lists, finding and revealing places
-js/fog.js           MAP: the fog of war, drawn with WebGL in the same frame as the map
+js/fog.js           MAP: the fog of war (flat map and globe), the globe's glow, drawn with WebGL in the map's frame
 js/map.js           the MAP tab (loads MapLibre the first time it's opened)
 js/bulk.js          MAP: "Add several places" (paste a list, review it, reveal it all)
 js/routes.js        MAP: routes (road trips): stops, the road traced once (OSRM), its line and card
@@ -310,8 +318,10 @@ in backups.
 
 A crisp vector map of the whole world, down to street level (street names, buildings, shops and
 places, train and metro lines and stations), drawn in the app's own amber Pip-Boy style. Drag and
-pinch on the phone (drag and the mouse wheel on a computer); the map always stays north up and flat,
-and goes from the whole world to zoom 19 (a few houses). It opens on Montréal. The round buttons on the
+pinch on the phone (drag and the mouse wheel on a computer); the map always stays north up (never
+rotated or tilted), and goes from the whole world to zoom 19 (a few houses). **Zoomed out, it's a
+globe**: a round Earth you turn with your finger, in space, with an amber glow around it and a few
+still stars; zooming in, it flattens out into the usual map (fully flat from zoom 12). It opens on Montréal. The round buttons on the
 map: **⌖** recenters on your latest place (Montréal when there's none yet), **⛶** zooms to show all
 your places. Each city is an amber diamond and each pin a dot, sized by the zoom so they never cover
 the map: small points over the whole world (about 6 px), their usual size at a city (as the map opens
@@ -344,14 +354,19 @@ shrink), and the place that's open keeps its full size.
   top.
 - With 3D tilt on, the map holds still while your finger is on it, so drags and pinches land exactly.
 
-**Fog of war:** dark, smoky amber-grey clouds cover the whole world: three layers of cloud of
+**Fog of war:** dark, smoky amber-grey clouds cover all the land: three layers of cloud of
 different sizes, each drifting slowly its own way, a little brighter on their edges, with a fine
 grain. They're stuck to the world, so they move with the map when you drag and grow with it when you
 pinch. Only the exact places you've been are cut out of it: a circle around each city and pin, the
 exact shape of each region, a corridor along each route's road, with soft edges that billow gently
 like smoke pulling back. Sizes are
 real distances, so a 5 km circle stays 5 km whatever the zoom. A newly revealed place clears in
-over about a second and a half; a removed one fogs over again.
+over about a second and a half; a removed one fogs over again. **The oceans and seas always show**,
+over the fog, with their names (Pacific, Atlantic, Indian, Arctic, Southern, Mediterranean...), and
+so do the continents' names when the whole globe is in view; lakes and rivers stay under the fog
+until you reveal them. On the globe the same fog wraps the sphere (the clouds turn with it, with no
+seam), and it hands over smoothly to the flat map's as you zoom in. The scanner only finds places on
+the side of the globe facing you.
 
 The fog is drawn with WebGL (`js/fog.js`) in the same frame as the map, with the map's own camera, so
 it can't lag or slide while you drag and pinch. It only moves while the map is on the screen and the
@@ -458,7 +473,7 @@ next to a commit means a test failed.
 - **History:** everything that happens is recorded as an event, in order: quests, dailies, bonus
   objectives, check-ins, journal entries, sales, places discovered, routes, bobbleheads, level-ups,
   perks, S.P.E.C.I.A.L. points (spent or trained), backups, holotapes, VITALS check-ins, chem-free
-  milestones, urges ridden out, TRIALS (with the XP each gave, perks included). The
+  milestones and your own streaks' (with their name), urges ridden out, TRIALS (with the XP each gave, perks included). The
   latest 2,000 are kept, in the save and in backups. Nothing shows it yet: it's the base for a weekly
   summary, quests that progress by themselves, and statistics. A save from before it starts empty.
 

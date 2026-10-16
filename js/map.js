@@ -9,8 +9,12 @@
  * offline use. A tile that can't load (offline, never seen) shows the faint
  * grid instead (places.noDataTile), and everything else still works.
  *
+ * Zoomed out it's a globe you turn with a finger (the style's projection:
+ * a globe until zoom 11, flat from 12), with the oceans and seas named over
+ * the fog; zoomed in, the flat map as before.
+ *
  * Gestures: drag and pinch on a phone, drag and the wheel on a computer;
- * always north up and flat (no rotating, no tilting). A long press (or a
+ * always north up and never tilted (no rotating, no tilting). A long press (or a
  * right click) drops a pin. While a finger is on the map, 3D tilt holds
  * still (ST.tilt.hold), so the map stays under it. Nothing is drawn while
  * the map is still, hidden, or the app is in the background.
@@ -140,10 +144,12 @@
     });
     map.on('load', function(){
       status('');
-      if (ST.routes) ST.routes.attach(map);      // the routes' lines, under the fog
+      // The fog goes under the style's oceans and their names (ST.fog.BEFORE), over the rest.
+      var before = map.getLayer(ST.fog.BEFORE) ? ST.fog.BEFORE : undefined;
+      if (ST.routes) ST.routes.attach(map, before);   // the routes' lines, under the fog
       if (ST.radar) ST.radar.attach(map);        // the scanner (its own canvas, over the map)
       fog = ST.fog.createLayer(map, revealed);
-      map.addLayer(fog);
+      map.addLayer(fog, before);
       fog.setActive(onScreen);
       if (pendingFocus){ focusPlace(pendingFocus.type, pendingFocus.place); pendingFocus = null; }
     });
