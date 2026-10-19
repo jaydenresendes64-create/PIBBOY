@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
-State as of the own streaks + globe PR (2026-10-15, after PR #31). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-320/320 tests pass locally. `sw.js` cache: `v30`.
+State as of the swinging arms PR (2026-10-19, after PR #32). Live: https://jaydenresendes64-create.github.io/PIBBOY/
+320/320 tests pass locally. `sw.js` cache: `v31`.
 
 ## 1. What it is
 
@@ -360,6 +360,30 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   leg comes in front, as in the next drawing); a hidden far thigh is filled in its own blue. The
   in-between stands halfway between the two drawings' places. The tests read the frame count from
   `tools/vaultboy-walk.json`.
+  **Swinging arms (2026-10-19, owner tried Grok for a new walk sheet; it drew one pose 8 times, so
+  "fais les bras toi-même"):** Gemini's arms never moved. `tools/vaultboy-walk.py` `with_arms()` now
+  swings them on every frame of the strip (drawn and in-between), after the steps are measured: the
+  chest is drawn almost from the front, an arm each side, so each arm swings on its own side, in
+  turn with the steps (phase k/16: the front arm hangs along the body at frame 0, the back one is
+  out behind; half a cycle later the other way round). `ARMS[tier]`: each arm's zone (cut from the
+  chest along the shoulder and armpit, `cut`, which holds still so no gap opens), `shoulder`, and
+  `down` (the shoulder-to-wrist direction when hanging; the turn is down minus the drawn angle,
+  measured per drawing, so the four drawings' slightly different arms all end alike). `swung()` is
+  `bent()` with the arm's bones (shoulder-wrist, wrist-fist); the back arm goes under the body, the
+  front one over it, composited with alpha after `transparent()` (else the gap an arm closes against
+  the hip stayed white). `walk-lvl05.png` 100 → 143 KB. Checked frame by frame in the app.
+  **The turn (2026-10-19, owner's sheet from Gemini with guide-turn stick figures):**
+  `images/vaultboy/turn-lvl05-source.webp` (4 cells in a row of 516 px: side view, three-quarters,
+  front with a wave, front thumbs-up; thin grey lines between cells, `trim` 4). `vaultboy-walk.py`
+  `TURNS` appends them to `walk-lvl05.png` after the 16 walk drawings (`turn: 4` in the JSON):
+  each made transparent, as tall as the outfit, belt over its belt, boots on GROUND; the thumbs-up
+  is then fitted onto lvl05.png (the parts' rest pose) by `fit_onto()` (best overlap of scale ±10%
+  and offset; −40 px, ×0.99), and the drawings between get that correction part of the way (the
+  side view none), so nothing jumps either end. `vaultboy-moves.py`: a drawn walk now starts with
+  the turn backwards (thumbs-up → side, `TURN_FRAME` 70 ms each) and ends with it forwards before
+  the parts come back (`TURN_TIME` taken off the drawn timeline's waits); `background-size` and
+  positions count all `frames + turn`. Mirrored with .vb-move when he goes left, like the walk.
+  Tests: the strip's size and the shown order per walk (turn back, 16 + landing, turn).
   **Levels 1-4 walk with the drawings too (same day; the owner is level 2: "revoir tout le taff et
   refaire en mieux"):** the original Vault Boy is the same man in the same suit, so tier '00' borrows
   level 5's drawings (`BORROW` in vaultboy-moves.py): `drawn_css()` fits them to his frame (288×408,

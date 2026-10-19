@@ -332,7 +332,8 @@ const heldAt = (kf, t) => kf.filter(k => k.at <= t + 1e-9).pop();
 test('level 5 walks with its drawings: in the walker, hidden until he walks, the parts hidden while he does', () => {
   const walkData = JSON.parse(read('tools/vaultboy-walk.json'))['05'];
   assert.equal(walkData.frames, 16, 'two steps: Gemini\'s 8 drawings and an in-between after each');
-  assert.deepEqual(pngSize('images/vaultboy/walk-lvl05.png'), [walkData.width * walkData.frames, 420]);
+  assert.equal(walkData.turn, 4, 'then the turn: side, three-quarters, wave, thumbs-up');
+  assert.deepEqual(pngSize('images/vaultboy/walk-lvl05.png'), [walkData.width * (walkData.frames + walkData.turn), 420]);
   assert.match(read('sw.js'), /'images\/vaultboy\/walk-lvl05\.png'/);
   const html = read('index.html');
   assert.match(html, /<div class="vb-body"><div class="vb-breathe">[\s\S]*?<\/div><span class="vb-walk"><\/span><\/div><\/div><\/div>/);   // inside .vb-move: it turns with him
@@ -345,7 +346,7 @@ test('level 5 walks with its drawings: in the walker, hidden until he walks, the
   assert.match(rule(t + ' .vb-body'), /animation:none;/);
   assert.match(rule(t + ' .vb-breathe'), /animation:mascotBreathe 4\.2s ease-in-out infinite, vbParts05 11s linear infinite;/);
   const walk = rule(t + ' .vb-walk');
-  assert.match(walk, /background-image:url\(\.\.\/images\/vaultboy\/walk-lvl05\.png\); background-size:1600% 100%; animation:vbWalk05 11s linear infinite;/);
+  assert.match(walk, /background-image:url\(\.\.\/images\/vaultboy\/walk-lvl05\.png\); background-size:2000% 100%; animation:vbWalk05 11s linear infinite;/);
   assert.ok(Math.abs(parseFloat(walk.match(/width:([\d.]+)%/)[1]) - walkData.width / 308 * 100) < 0.01, 'his frame as wide as the drawings');
   assert.match(css, /\.vaultboy\[data-tier="05"\] \.vb-leg-front, [^{]*\.vb-shin-back\{ animation:none; \}/);
   ['10', '20', '30', '50'].forEach(other => assert.doesNotMatch(css, new RegExp('\\.vaultboy\\[data-tier="' + other + '"\\] \\.vb-walk'), 'no drawings yet for ' + other));
@@ -355,7 +356,7 @@ test('levels 1-4 walk with level 5\'s drawings: as big on the page, the front so
   const walkData = JSON.parse(read('tools/vaultboy-walk.json'))['05'];
   const t = '.vaultboy[data-tier="00"]';
   const walk = rule(t + ' .vb-walk');
-  assert.match(walk, /background-image:url\(\.\.\/images\/vaultboy\/walk-lvl05\.png\); background-size:1600% 100%; animation:vbWalk05 11s linear infinite;/);
+  assert.match(walk, /background-image:url\(\.\.\/images\/vaultboy\/walk-lvl05\.png\); background-size:2000% 100%; animation:vbWalk05 11s linear infinite;/);
   const pc = k => parseFloat(walk.match(new RegExp('(?:^|[ ;])' + k + ':(-?[\\d.]+)%'))[1]) / 100;
   const h00 = parseFloat(rule(t).match(/--vb-h:([\d.]+)px;/)[1]), feet = +rule(t).match(/--vb-feet:([\d.]+);/)[1], ratio = +rule(t).match(/--vb-ratio:([\d.]+);/)[1];
   const h05 = parseFloat(rule('.vaultboy').match(/--vb-h:([\d.]+)px;/)[1]);
@@ -377,7 +378,7 @@ test('levels 1-4 walk with level 5\'s drawings: as big on the page, the front so
   assert.ok(Math.abs(span - Math.max(...b.map(k => k.x))) < 1e-9, '--vb-span: as far as he goes');
 });
 
-test('the drawn walk: the drawings in order, one at a time, the parts exactly when they aren\'t; he moves on at each drawing, never back, as far as --vb-span', () => {
+test('the drawn walk: he turns to the side, the drawings in order, he turns back to us; one at a time, the parts exactly when they aren\'t; he moves on at each drawing, never back, as far as --vb-span', () => {
   const walkData = JSON.parse(read('tools/vaultboy-walk.json'))['05'];
   const shows = held('vbWalk05'), parts = held('vbParts05');
   const track = held('vbTrack05').map(k => ({ at: k.at, x: +k.css.match(/\* (-?[\d.]+)\)\);$/)[1] }));
@@ -389,17 +390,15 @@ test('the drawn walk: the drawings in order, one at a time, the parts exactly wh
     assert.equal(/opacity:1;/.test(p), !shown, 'the parts or the drawings, never both or neither (' + ms + 'ms)');
     if (shown) {
       const pos = s.match(/background-position:(\S+) 0;/)[1];
-      const frame = pos === '0' ? 0 : Math.round(parseFloat(pos) / 100 * (walkData.frames - 1));
+      const frame = pos === '0' ? 0 : Math.round(parseFloat(pos) / 100 * (walkData.frames + walkData.turn - 1));
       if (lastFrame === null) { walks++; seen = []; }
-      if (frame !== lastFrame) {
-        if (lastFrame !== null) assert.equal(frame, (lastFrame + 1) % walkData.frames, 'the drawings in order (' + ms + 'ms)');
-        seen.push(frame);
-      }
+      if (frame !== lastFrame) seen.push(frame);
       lastFrame = frame;
       if (out) { assert.ok(x >= most - 1e-9, 'never a step back (' + ms + 'ms)'); most = x; }
       else { assert.ok(x <= least + 1e-9, 'never a step back (' + ms + 'ms)'); least = x; }
     } else if (lastFrame !== null) {
-      assert.deepEqual(seen, [...Array(walkData.frames).keys(), 0], 'two steps and the landing');
+      const n = walkData.frames, turn = [...Array(walkData.turn).keys()].map(i => n + i);
+      assert.deepEqual(seen, [...turn].reverse().concat([...Array(n).keys()], [0], turn), 'turned to the side, two steps and the landing, turned back to us');
       lastFrame = null;
       out = !out;
     }
