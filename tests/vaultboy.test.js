@@ -332,7 +332,7 @@ const heldAt = (kf, t) => kf.filter(k => k.at <= t + 1e-9).pop();
 test('level 5 walks with its drawings: in the walker, hidden until he walks, the parts hidden while he does', () => {
   const walkData = JSON.parse(read('tools/vaultboy-walk.json'))['05'];
   assert.equal(walkData.frames, 16, 'two steps: Gemini\'s 8 drawings and an in-between after each');
-  assert.equal(walkData.turn, 8, 'then the turn: side twice, three-quarters twice, front, the hand up, the thumb, the thumbs-up');
+  assert.equal(walkData.turn, 7, 'then the turn: three-quarters twice, front twice, the hand up, the fist, the thumbs-up');
   assert.deepEqual(pngSize('images/vaultboy/walk-lvl05.png'), [walkData.width * (walkData.frames + walkData.turn), 420]);
   assert.match(read('sw.js'), /'images\/vaultboy\/walk-lvl05\.png'/);
   const html = read('index.html');
@@ -346,23 +346,80 @@ test('level 5 walks with its drawings: in the walker, hidden until he walks, the
   assert.match(rule(t + ' .vb-body'), /animation:none;/);
   assert.match(rule(t + ' .vb-breathe'), /animation:mascotBreathe 4\.2s ease-in-out infinite, vbParts05 11s linear infinite;/);
   const walk = rule(t + ' .vb-walk');
-  assert.match(walk, /background-image:url\(\.\.\/images\/vaultboy\/walk-lvl05\.png\); background-size:2400% 100%; animation:vbWalk05 11s linear infinite;/);
+  assert.match(walk, /background-image:url\(\.\.\/images\/vaultboy\/walk-lvl05\.png\); background-size:2300% 100%; animation:vbWalk05 11s linear infinite, mascotBreathe 4\.2s ease-in-out infinite;/);
   assert.ok(Math.abs(parseFloat(walk.match(/width:([\d.]+)%/)[1]) - walkData.width / 308 * 100) < 0.01, 'his frame as wide as the drawings');
+  assert.match(rule('.vb-move, .vb-body, .vb-breathe'), /transform-origin:55% 97\.9%;/);
+  assert.equal(walk.match(/transform-origin:[\d.]+% ([\d.]+)%;/)[1], '97.9', 'the drawings breathe from the parts\' point: the parts take over without growing');
   assert.match(css, /\.vaultboy\[data-tier="05"\] \.vb-leg-front, [^{]*\.vb-shin-back\{ animation:none; \}/);
   ['10', '20', '30', '50'].forEach(other => assert.doesNotMatch(css, new RegExp('\\.vaultboy\\[data-tier="' + other + '"\\] \\.vb-walk'), 'no drawings yet for ' + other));
+});
+
+// A PNG's pixels (8-bit, not interlaced; palette, RGB or RGBA), as RGBA.
+function pngPixels(f) {
+  const png = fs.readFileSync(path.join(ROOT, f)), idat = [];
+  let pos = 8, w, h, type, plte, trns;
+  while (pos < png.length) {
+    const len = png.readUInt32BE(pos), kind = png.toString('ascii', pos + 4, pos + 8), data = png.subarray(pos + 8, pos + 8 + len);
+    if (kind === 'IHDR') { w = data.readUInt32BE(0); h = data.readUInt32BE(4); type = data[9]; assert.equal(data[8], 8); assert.equal(data[12], 0); }
+    else if (kind === 'PLTE') plte = data;
+    else if (kind === 'tRNS') trns = data;
+    else if (kind === 'IDAT') idat.push(data);
+    pos += 12 + len;
+  }
+  const bpp = { 2: 3, 3: 1, 6: 4 }[type], stride = w * bpp;
+  const raw = require('zlib').inflateSync(Buffer.concat(idat)), px = Buffer.alloc(h * stride);
+  for (let y = 0; y < h; y++) {
+    const filter = raw[y * (stride + 1)], at = y * (stride + 1) + 1;
+    for (let x = 0; x < stride; x++) {
+      const a = x >= bpp ? px[y * stride + x - bpp] : 0, b = y ? px[(y - 1) * stride + x] : 0, c = x >= bpp && y ? px[(y - 1) * stride + x - bpp] : 0;
+      const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c);
+      px[y * stride + x] = (raw[at + x] + [0, a, b, (a + b) >> 1, pa <= pb && pa <= pc ? a : pb <= pc ? b : c][filter]) & 255;
+    }
+  }
+  const rgba = Buffer.alloc(w * h * 4);
+  for (let i = 0; i < w * h; i++) {
+    if (type === 3) { const k = px[i]; plte.copy(rgba, 4 * i, 3 * k, 3 * k + 3); rgba[4 * i + 3] = trns && k < trns.length ? trns[k] : 255; }
+    else { px.copy(rgba, 4 * i, bpp * i, bpp * i + 3); rgba[4 * i + 3] = type === 6 ? px[4 * i + 3] : 255; }
+  }
+  return { w, h, rgba };
+}
+
+test('the drawn walk and turn are cleanly cut out (the owner: "mal découpé, tout autour de lui"): solid inside, no pale rim', () => {
+  const { w, h, rgba } = pngPixels('images/vaultboy/walk-lvl05.png');
+  const alpha = i => rgba[4 * i + 3], Y = i => 0.299 * rgba[4 * i] + 0.587 * rgba[4 * i + 1] + 0.114 * rgba[4 * i + 2];
+  let near = new Uint8Array(w * h);                                // the clear ground and 2px round it
+  for (let i = 0; i < w * h; i++) near[i] = alpha(i) === 0 ? 1 : 0;
+  for (let k = 0; k < 2; k++) {
+    const next = near.slice();
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      if (!near[i] && ((x && near[i - 1]) || (x < w - 1 && near[i + 1]) || (y && near[i - w]) || (y < h - 1 && near[i + w]))) next[i] = 1;
+    }
+    near = next;
+  }
+  let rim = 0, pale = 0, inside = 0, seeThrough = 0;
+  for (let i = 0; i < w * h; i++) {
+    if (!alpha(i)) continue;
+    if (near[i]) { rim++; if (alpha(i) >= 128 && Y(i) > 140) pale++; }
+    else { inside++; if (alpha(i) < 255) seeThrough++; }
+  }
+  assert.ok(pale <= rim / 1000, 'his rim is his outline\'s dark, not a pale dotted edge: ' + pale + ' pale of ' + rim);
+  assert.ok(seeThrough <= inside / 100, 'he is solid inside: ' + seeThrough + ' see-through of ' + inside);
 });
 
 test('levels 1-4 walk with level 5\'s drawings: as big on the page, the front sole on the gauge, the belt over the original\'s; his own track, the same drawings and timing', () => {
   const walkData = JSON.parse(read('tools/vaultboy-walk.json'))['05'];
   const t = '.vaultboy[data-tier="00"]';
   const walk = rule(t + ' .vb-walk');
-  assert.match(walk, /background-image:url\(\.\.\/images\/vaultboy\/walk-lvl05\.png\); background-size:2400% 100%; animation:vbWalk05 11s linear infinite;/);
+  assert.match(walk, /background-image:url\(\.\.\/images\/vaultboy\/walk-lvl05\.png\); background-size:2300% 100%; animation:vbWalk05 11s linear infinite, mascotBreathe 4\.2s ease-in-out infinite;/);
   const pc = k => parseFloat(walk.match(new RegExp('(?:^|[ ;])' + k + ':(-?[\\d.]+)%'))[1]) / 100;
+  assert.match(css, /\.vaultboy\[data-tier="00"\] \.vb-breathe\{ transform-origin:52% 96\.3%; \}/);
+  assert.ok(Math.abs(pc('top') + pc('height') * parseFloat(walk.match(/transform-origin:[\d.]+% ([\d.]+)%;/)[1]) / 100 - 0.963) < 0.0005, 'the drawings breathe from his parts\' point');
   const h00 = parseFloat(rule(t).match(/--vb-h:([\d.]+)px;/)[1]), feet = +rule(t).match(/--vb-feet:([\d.]+);/)[1], ratio = +rule(t).match(/--vb-ratio:([\d.]+);/)[1];
   const h05 = parseFloat(rule('.vaultboy').match(/--vb-h:([\d.]+)px;/)[1]);
   assert.ok(Math.abs(pc('height') * h00 - h05) < 0.05, 'the drawings as tall on the page as at level 5');
   assert.ok(Math.abs(pc('top') + pc('height') * 411 / 420 - feet) < 0.0005, 'their ground on his front sole');
-  const tool = read('tools/vaultboy-moves.py'), belt = +tool.match(/BORROW = \{'00': dict\([^)]*belt=([\d.]+)\)/)[1];
+  const tool = read('tools/vaultboy-moves.py'), belt = +tool.match(/BORROW = \{'00': dict\([^)]*belt=([\d.]+)/)[1];
   const W = 408 * ratio, scale = pc('width') * W / walkData.width;
   assert.ok(Math.abs(pc('left') * W + (walkData.belt - walkData.left) * scale - belt) < 0.5, 'the drawings\' belt over his');
   assert.match(rule(t + ' .vb-track'), /animation-name:vbTrack00;/);
@@ -400,7 +457,11 @@ test('the drawn walk: he turns to the side, the drawings in order, he turns back
     } else if (lastFrame !== null) {
       const n = walkData.frames, turn = [...Array(walkData.turn).keys()].map(i => n + i);
       assert.deepEqual(seen, [...turn].reverse().concat([...Array(n).keys()], [0], turn), 'turned to the side, two steps and the landing, turned back to us');
-      durs.slice(0, turn.length).concat(durs.slice(-turn.length)).forEach(d => assert.ok(d >= 80 && d <= 95, 'each turn drawing about 90 ms, not too fast (' + d + 'ms)'));
+      const beats = read('tools/vaultboy-moves.py').match(/TURN_BEATS = \(([\d, ]+)\)/)[1].split(',').map(b => +b * 35);
+      assert.equal(beats.length, turn.length);
+      [beats.slice().reverse(), beats].forEach((want, way) => (way ? durs.slice(-turn.length) : durs.slice(0, turn.length)).forEach((d, i) =>
+        assert.ok(Math.abs(d - want[i]) <= 2, 'turn drawing ' + i + ': ' + d + 'ms, not ' + want[i])));
+      assert.ok(beats.reduce((a, b) => a + b) >= 600, 'the turn not too fast (the owner)');
       lastFrame = null;
       out = !out;
     }

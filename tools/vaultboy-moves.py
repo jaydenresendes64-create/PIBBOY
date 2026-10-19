@@ -63,8 +63,15 @@ assert all(w['frames'] == 2 * PER_STEP for w in WALKS.values()), 'a drawn walk: 
 FRAME = STEP / PER_STEP     # seconds a drawing shows: the parts' pace
 DRAWN_FRAMES = PER_STEP * DRAWN_STEPS + 1   # the steps' drawings, and the first one again: he lands
 TURN_FRAMES = max([w.get('turn', 0) for w in WALKS.values()] or [0])   # the drawn turn after them (tools/vaultboy-walk.py)
-TURN_FRAME = 2.5 * FRAME    # seconds each of the turn's drawings shows: 8 drawings in 0.7 s (the owner: 4 in 0.28 s was too fast, in 0.56 s not smooth)
-TURN_TIME = TURN_FRAMES * TURN_FRAME   # facing us to the side before a drawn walk, the other way after it
+# How long each of the turn's drawings shows, in FRAMEs, as he stops (the
+# other way round before he sets off): longer on the first (he settles from
+# the walk), on the front view and on the fist (the beat before the
+# thumbs-up), quicker between; 0.63 s in all. The owner: 4 drawings in
+# 0.28 s was too fast, in 0.56 s not smooth enough.
+TURN_BEATS = (3, 2, 2, 3, 2, 3, 3)[:TURN_FRAMES]
+assert len(TURN_BEATS) == TURN_FRAMES, 'a beat for each of the turn\'s drawings'
+TURN_AT = [FRAME * sum(TURN_BEATS[:i]) for i in range(TURN_FRAMES + 1)]   # when each starts, from the stop
+TURN_TIME = TURN_AT[-1]     # facing us to the side before a drawn walk, the other way after it
 RATE = 250                  # samples a second (STEP and 0.12 s fall on it)
 RIGHT, LEFT = 1, -1         # scale x to go that way
 AHEAD = 1                   # his front along the picture's x: right, the hand on his hip
@@ -93,7 +100,11 @@ RIGS = [
 # frame (288x408 picture px, --vb-h 117px): its front sole (393) on the
 # gauge, the drawings' belt over his (its middle at x 163.5, measured on
 # images/mascot.png: the belt from 120 to 207, the fist after it).
-BORROW = {'00': dict(of='05', W=288, H=408, tall=117, sole=393, belt=163.5)}
+BORROW = {'00': dict(of='05', W=288, H=408, tall=117, sole=393, belt=163.5, origin=(0.52 * 288, 0.963 * 408))}
+# The drawings breathe as the parts do (css/terminal.css mascotBreathe, from
+# the same point on the page): the parts take over from the turn's thumbs-up
+# without growing (the owner: "mal découpé"; they were up to 2.5% taller).
+BREATHE = 'mascotBreathe 4.2s ease-in-out infinite'
 
 def turned(p, c, deg):
     """Point p turned around c by deg, the way CSS's rotate() turns (clockwise on screen)."""
@@ -471,14 +482,14 @@ def drawn_css(tier, data):
     for start, end, face in walks:
         sign = 1 if face == RIGHT else -1
         for i in range(turn):                                      # facing us to the side (the turn backwards)
-            show.append((start - TURN_TIME + i * TURN_FRAME, (1, N - 1 - i)))
+            show.append((start - TURN_AT[turn - i], (1, N - 1 - i)))
         for j in range(DRAWN_FRAMES):
             track.append((start + j * FRAME, base + sign * ((j // n) * cycle + pos[j % n]) / H))
             show.append((start + j * FRAME, (1, j % n)))
         for i in range(turn):                                      # stopped, he turns to us
-            show.append((end + i * TURN_FRAME, (1, n + i)))
-        show.append((end + turn * TURN_FRAME, (0, 0)))
-        parts_ += [(start - turn * TURN_FRAME, 0), (end + turn * TURN_FRAME, 1)]
+            show.append((end + TURN_AT[i], (1, n + i)))
+        show.append((end + TURN_TIME, (0, 0)))
+        parts_ += [(start - TURN_TIME, 0), (end + TURN_TIME, 1)]
         base += sign * DRAWN_STEPS * cycle / 2 / H
     assert abs(base) < 1e-9, 'he comes back to where he started'
     track.append((LOOP, 0.0)); show.append((LOOP, (0, 0))); parts_.append((LOOP, 1))
@@ -497,9 +508,10 @@ def drawn_css(tier, data):
             '%s .vb-head{ animation-name:vbHeadDrawn; }' % t,
             '%s{ animation:none; }' % legs_,
             '%s .vb-breathe{ animation:mascotBreathe 4.2s ease-in-out infinite, vbParts%s %s linear infinite; }' % (t, src, length),
-            '%s .vb-walk{ left:%s%%; right:auto; width:%s%%; top:%s%%; bottom:auto; height:%s%%; background-image:url(../images/vaultboy/walk-lvl%s.png); background-size:%d%% 100%%; animation:vbWalk%s %s linear infinite; }'
+            '%s .vb-walk{ left:%s%%; right:auto; width:%s%%; top:%s%%; bottom:auto; height:%s%%; background-image:url(../images/vaultboy/walk-lvl%s.png); background-size:%d%% 100%%; animation:vbWalk%s %s linear infinite, %s; transform-origin:%s%% %s%%; }'
             % (t, num(100.0 * box[0] / fit['W'], 3), num(100.0 * box[2] / fit['W'], 3), num(100.0 * box[1] / fit['H'], 3),
-               num(100.0 * box[3] / fit['H'], 3), src, 100 * N, src, length),
+               num(100.0 * box[3] / fit['H'], 3), src, 100 * N, src, length, BREATHE,
+               num(100.0 * (fit['origin'][0] - box[0]) / box[2], 3), num(100.0 * (fit['origin'][1] - box[1]) / box[3], 3)),
             '%s{ --vb-span:%s; }' % (t, num(span, 4)),
             track_css,
         ]
@@ -511,8 +523,9 @@ def drawn_css(tier, data):
         '%s .vb-head{ animation-name:vbHeadDrawn; }' % t,
         '%s{ animation:none; }' % legs_,
         '%s .vb-breathe{ animation:mascotBreathe 4.2s ease-in-out infinite, vbParts%s %s linear infinite; }' % (t, tier, length),
-        '%s .vb-walk{ left:%s%%; right:auto; width:%s%%; background-image:url(../images/vaultboy/walk-lvl%s.png); background-size:%d%% 100%%; animation:vbWalk%s %s linear infinite; }'
-        % (t, num(100.0 * data['left'] / 308, 3), num(100.0 * data['width'] / 308, 3), tier, 100 * N, tier, length),
+        '%s .vb-walk{ left:%s%%; right:auto; width:%s%%; background-image:url(../images/vaultboy/walk-lvl%s.png); background-size:%d%% 100%%; animation:vbWalk%s %s linear infinite, %s; transform-origin:%s%% %s%%; }'
+        % (t, num(100.0 * data['left'] / 308, 3), num(100.0 * data['width'] / 308, 3), tier, 100 * N, tier, length, BREATHE,
+           num(100.0 * (own['origin'][0] - data['left']) / data['width'], 3), num(100.0 * own['origin'][1] / own['H'], 3)),
         '%s{ --vb-span:%s; }' % (t, num(span, 4)),
         track_css,
         held_css('vbWalk' + tier, [(at_, 'opacity:%d; background-position:%s 0;' % (o, '%s%%' % num(100.0 * k / (N - 1), 4) if k else '0'))
