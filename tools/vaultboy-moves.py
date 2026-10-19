@@ -62,6 +62,9 @@ PER_STEP = 8                # drawings a step: Gemini's 4 and an in-between afte
 assert all(w['frames'] == 2 * PER_STEP for w in WALKS.values()), 'a drawn walk: two steps of PER_STEP drawings'
 FRAME = STEP / PER_STEP     # seconds a drawing shows: the parts' pace
 DRAWN_FRAMES = PER_STEP * DRAWN_STEPS + 1   # the steps' drawings, and the first one again: he lands
+TURN_FRAMES = max([w.get('turn', 0) for w in WALKS.values()] or [0])   # the drawn turn after them (tools/vaultboy-walk.py)
+TURN_FRAME = 2 * FRAME      # seconds each of the turn's drawings shows
+TURN_TIME = TURN_FRAMES * TURN_FRAME   # facing us to the side before a drawn walk, the other way after it
 RATE = 250                  # samples a second (STEP and 0.12 s fall on it)
 RIGHT, LEFT = 1, -1         # scale x to go that way
 AHEAD = 1                   # his front along the picture's x: right, the hand on his hip
@@ -197,7 +200,8 @@ def walk(start, face, drawn=False):
     DRAWN_STEPS steps of drawings shown in turn, the parts hidden (drawn_css())."""
     start = round(start * RATE) / RATE
     if drawn:
-        end = start + DRAWN_FRAMES * FRAME
+        draws = start + TURN_TIME                                  # first he turns to the side (drawn_css())
+        end = draws + DRAWN_FRAMES * FRAME
         at(start, IO, sx=face, sy=1, ty=0, rot=0)
         at(end, OUT, sx=face, sy=1, rot=0)
         key('Arm', start, 0); key('Arm', end + 0.12, 0)
@@ -205,8 +209,8 @@ def walk(start, face, drawn=False):
         at(end + 0.08, IO, sx=face, sy=0.97, rot=-AHEAD)           # brakes, the parts back: leans back, squashes
         at(end + 0.18, IO, sx=face, sy=1.01, rot=0.3 * AHEAD)
         at(end + 0.26, IO, sx=face, sy=1, rot=0)
-        walks.append((start, end, face))
-        return end + 0.26
+        walks.append((draws, end, face))
+        return end + max(0.26, TURN_TIME)                          # and turns back to us
     at(start, IO, sx=face, sy=1, ty=0, rot=0)
     at(start + 0.08, IO, sx=face, sy=0.98, rot=-1.5 * AHEAD)      # wind-up: leans back, dips
     c0 = start + 0.12
@@ -364,7 +368,8 @@ def timeline(drawn=False):
     global ch, legs, mover, steps, walks
     ch, legs = {k: [] for k, _ in PARTS}, {name: {k: [] for k in LEGS} for name, _ in RIGS}
     mover, steps, walks = [], [], []
-    wait = (0.12 + STEPS * STEP - DRAWN_FRAMES * FRAME) / 2 if drawn else 0
+    wait = (0.12 + STEPS * STEP - DRAWN_FRAMES * FRAME) / 2 - TURN_TIME if drawn else 0
+    assert wait >= 0, 'the drawn walk and its turns take longer than the parts\' walk'
     t = walk(0, RIGHT, drawn)                                       # to the right end
     t = look(t + 0.35 + wait)
     t = thumbs(t + 0.3 + wait, RIGHT)
@@ -455,7 +460,8 @@ def drawn_css(tier, data):
     and the parts hidden (.vb-breathe); where he is moves on at each drawing,
     as far as tools/vaultboy-walk.py measured; the rest of the loop as for the
     parts, from the drawn timeline (vbMoveDrawn, vbArmDrawn, vbHeadDrawn)."""
-    n, pos = data['frames'], data['position']
+    n, pos, turn = data['frames'], data['position'], data.get('turn', 0)
+    N = n + turn                                                   # the strip: the walk's drawings, then the turn's
     own = RIGS[0][1]                                               # the drawings' frame: the outfits'
     fit = BORROW.get(tier)
     k = (own['tall'] / own['H']) / (fit['tall'] / fit['H']) if fit else 1.0   # this frame's px a drawing px
@@ -464,11 +470,15 @@ def drawn_css(tier, data):
     base = 0.0
     for start, end, face in walks:
         sign = 1 if face == RIGHT else -1
+        for i in range(turn):                                      # facing us to the side (the turn backwards)
+            show.append((start - TURN_TIME + i * TURN_FRAME, (1, N - 1 - i)))
         for j in range(DRAWN_FRAMES):
             track.append((start + j * FRAME, base + sign * ((j // n) * cycle + pos[j % n]) / H))
             show.append((start + j * FRAME, (1, j % n)))
-        show.append((end, (0, 0)))
-        parts_ += [(start, 0), (end, 1)]
+        for i in range(turn):                                      # stopped, he turns to us
+            show.append((end + i * TURN_FRAME, (1, n + i)))
+        show.append((end + turn * TURN_FRAME, (0, 0)))
+        parts_ += [(start - turn * TURN_FRAME, 0), (end + turn * TURN_FRAME, 1)]
         base += sign * DRAWN_STEPS * cycle / 2 / H
     assert abs(base) < 1e-9, 'he comes back to where he started'
     track.append((LOOP, 0.0)); show.append((LOOP, (0, 0))); parts_.append((LOOP, 1))
@@ -489,7 +499,7 @@ def drawn_css(tier, data):
             '%s .vb-breathe{ animation:mascotBreathe 4.2s ease-in-out infinite, vbParts%s %s linear infinite; }' % (t, src, length),
             '%s .vb-walk{ left:%s%%; right:auto; width:%s%%; top:%s%%; bottom:auto; height:%s%%; background-image:url(../images/vaultboy/walk-lvl%s.png); background-size:%d%% 100%%; animation:vbWalk%s %s linear infinite; }'
             % (t, num(100.0 * box[0] / fit['W'], 3), num(100.0 * box[2] / fit['W'], 3), num(100.0 * box[1] / fit['H'], 3),
-               num(100.0 * box[3] / fit['H'], 3), src, 100 * n, src, length),
+               num(100.0 * box[3] / fit['H'], 3), src, 100 * N, src, length),
             '%s{ --vb-span:%s; }' % (t, num(span, 4)),
             track_css,
         ]
@@ -502,10 +512,10 @@ def drawn_css(tier, data):
         '%s{ animation:none; }' % legs_,
         '%s .vb-breathe{ animation:mascotBreathe 4.2s ease-in-out infinite, vbParts%s %s linear infinite; }' % (t, tier, length),
         '%s .vb-walk{ left:%s%%; right:auto; width:%s%%; background-image:url(../images/vaultboy/walk-lvl%s.png); background-size:%d%% 100%%; animation:vbWalk%s %s linear infinite; }'
-        % (t, num(100.0 * data['left'] / 308, 3), num(100.0 * data['width'] / 308, 3), tier, 100 * n, tier, length),
+        % (t, num(100.0 * data['left'] / 308, 3), num(100.0 * data['width'] / 308, 3), tier, 100 * N, tier, length),
         '%s{ --vb-span:%s; }' % (t, num(span, 4)),
         track_css,
-        held_css('vbWalk' + tier, [(at_, 'opacity:%d; background-position:%s 0;' % (o, '%s%%' % num(100.0 * k / (n - 1), 4) if k else '0'))
+        held_css('vbWalk' + tier, [(at_, 'opacity:%d; background-position:%s 0;' % (o, '%s%%' % num(100.0 * k / (N - 1), 4) if k else '0'))
                                    for at_, (o, k) in show]),
         held_css('vbParts' + tier, [(at_, 'opacity:%d;' % o) for at_, o in parts_]),
     ]

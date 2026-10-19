@@ -60,6 +60,14 @@ there smoothly like the legs (the cut holds still, so no gap opens at the
 shoulder), the back arm under the body, the front one over it. The steps are
 measured before the arms move.
 
+The turn (the owner's sheet from Gemini, images/vaultboy/turn-lvl05-source.webp:
+4 cells in a row, side view, three-quarters, front with a wave, front with
+the thumbs-up): after the walk's drawings, the same strip holds these 4
+(`turn` in the JSON), each as tall as the outfit, its boots on the ground
+and its belt over the outfit's, so the last one sits where the parts' front
+pose is. tools/vaultboy-moves.py shows them in turn as he stops (and the
+other way before he sets off).
+
 After a change: python tools/vaultboy-walk.py (Python 3 with Pillow and numpy),
 then python tools/vaultboy-moves.py, then node --test.
 """
@@ -88,6 +96,10 @@ CYCLES = {'05': [5, 6, -7, -8, -5, -6, 7, 8]}
 # where it is in the first drawing and in the second (front, under him, back).
 PLANTED = [('front', 'front'), ('front', 'under'), ('under', 'back'), ('back', 'back')] * 2
 PLANT = 0.5                          # 0: an even pace (the boots slip), 1: the boot held exactly (the body lurches)
+# Each outfit with a drawn turn: its sheet, 4 cells in a row (side view to the
+# thumbs-up), and the few pixels at each cell's sides to leave out (the
+# generator drew thin grey lines between the cells).
+TURNS = {'05': dict(sheet='turn-lvl05-source.webp', cells=4, trim=4)}
 
 def belt_rows(a):
     """The belt: the widest band of yellow (the collar and the stripe are narrower)."""
@@ -435,6 +447,29 @@ def with_arms(tier, rgba, source, phase):
     rgb = np.where(alpha > 0, out[..., :3] / np.maximum(alpha, 1e-6), 255.0)
     return np.dstack([np.clip(rgb, 0, 255), np.clip(alpha * 255, 0, 255)])
 
+def fit_onto(rgba, s, belt, ref_belt, target):
+    """How to scale (k) and move (dx, dy) a drawing, scaled by s with its belt's
+    middle (`belt`, px of the drawing) over `ref_belt` and its boots on
+    GROUND, so that it covers `target` (a mask of the parts' frame) best: the
+    most pixels in common over the pixels of either."""
+    th, tw = target.shape
+    mask = Image.fromarray(((rgba[..., 3] > 128) * 255).astype(np.uint8))
+    best = (-1.0, 1.0, 0, 0)
+    for k in np.arange(0.9, 1.101, 0.01):
+        m = np.asarray(mask.resize((round(mask.width * s * k), round(mask.height * s * k)), Image.BILINEAR)) > 127
+        x0, y0 = ref_belt - belt * s * k, GROUND - np.nonzero(m)[0].max()
+        for dy in range(-12, 13, 2):
+            for dx in range(-50, 51, 2):
+                ox, oy = int(round(x0 + dx)), int(round(y0 + dy))
+                ys0, xs0, ys1, xs1 = max(0, oy), max(0, ox), min(th, oy + m.shape[0]), min(tw, ox + m.shape[1])
+                if ys1 <= ys0 or xs1 <= xs0: continue
+                canvas = np.zeros((th, tw), bool)
+                canvas[ys0:ys1, xs0:xs1] = m[ys0 - oy:ys1 - oy, xs0 - ox:xs1 - ox]
+                score = (canvas & target).sum() / float((canvas | target).sum())
+                if score > best[0]: best = (score, k, dx, dy)
+    assert best[0] > 0.75, 'the thumbs-up fits the outfit\'s picture (%.2f)' % best[0]
+    return best[1:]
+
 def make(tier):
     sheet = np.asarray(Image.open(os.path.join(DIR, 'walk-lvl%s-source.webp' % tier)).convert('RGB'))
     H, W = sheet.shape[:2]
@@ -467,19 +502,45 @@ def make(tier):
     top, ground, belt = np.median(tops), np.median(grounds), np.median(belts)
     s = (GROUND - rys.min()) / float(ground - top)                    # as tall as the outfit
     ox, oy = ref_belt - belt * s, GROUND - ground * s
-    scaled = []
-    for rgba in frames:
+    def lit_scaled(rgba, k):
         lit = parts.amber(rgba.astype(float))
         im = Image.fromarray(lit.astype(np.uint8), 'RGBA').convert('RGBa')
-        scaled.append(im.resize((round(cw * s), round(ch * s)), Image.LANCZOS).convert('RGBA'))
-    # Walking, he's wider than the parts' frame (his fists): his own frame,
-    # from `left` (px of the 308 frame) and `width` wide, as high.
-    cols = np.nonzero(np.any([np.asarray(im)[..., 3].max(axis=0) > 0 for im in scaled], axis=0))[0]
-    left = min(0, int(np.floor(ox + cols[0])) - 2)
-    width = max(FW, int(np.ceil(ox + cols[-1])) + 3) - left
-    strip = Image.new('RGBA', (width * len(frames), FH), (0, 0, 0, 0))
-    for i, im in enumerate(scaled):
-        strip.alpha_composite(im, (i * width + int(round(ox - left)), int(round(oy))))
+        return im.resize((round(rgba.shape[1] * k), round(rgba.shape[0] * k)), Image.LANCZOS).convert('RGBA')
+    scaled = [lit_scaled(rgba, s) for rgba in frames]
+    places = [(ox, oy)] * len(frames)
+    walk_frames = len(frames)
+    if tier in TURNS:                                               # then the turn's drawings
+        t = TURNS[tier]
+        tsheet = np.asarray(Image.open(os.path.join(DIR, t['sheet'])).convert('RGB'))
+        tw = tsheet.shape[1] // t['cells']
+        cells = [tsheet[:, c * tw + t['trim']:(c + 1) * tw - t['trim']] for c in range(t['cells'])]
+        turn = [transparent(cell) for cell in cells]
+        heights = [np.ptp(np.nonzero(rgba[..., 3] > 128)[0]) for rgba in turn]
+        ts = (GROUND - rys.min()) / float(np.median(heights))      # as tall as the outfit, like the walk
+        # Placed by the belt's middle and the boots; the last one (the
+        # thumbs-up) then fitted onto the outfit's own picture, which the
+        # parts show next (fit_onto()); the ones between moved part of the
+        # way, so he shifts a little as he turns rather than jumping.
+        base = []
+        for cell, rgba in zip(cells, turn):
+            b0, b1, yellow = belt_rows(cell.astype(float))
+            bx = np.nonzero(yellow[b0:b1 + 1].any(axis=0))[0]
+            base.append(((bx[0] + bx[-1]) / 2.0, float(np.nonzero(rgba[..., 3] > 128)[0].max())))
+        k, dx, dy = fit_onto(turn[-1], ts, base[-1][0], ref_belt, ref[..., 3] > 128)
+        for i, (rgba, (bxm, bot)) in enumerate(zip(turn, base)):
+            u = i / float(len(turn) - 1)                            # the first as the walk left him, the last onto the parts
+            im = lit_scaled(rgba, ts * (1 + (k - 1) * u))
+            scaled.append(im)
+            places.append((ref_belt - bxm * ts * (1 + (k - 1) * u) + dx * u, GROUND - np.nonzero(np.asarray(im)[..., 3] > 127)[0].max() + dy * u))
+        print('  the turn: x%.3f, fitted onto the outfit\'s picture by x%.3f, %+.1f, %+.1f px' % (ts, k, dx, dy))
+    # Walking (and turning), he's wider than the parts' frame (his fists):
+    # his own frame, from `left` (px of the 308 frame) and `width` wide, as high.
+    spans = [(x + c[0], x + c[-1]) for (x, y), im in zip(places, scaled) for c in [np.nonzero(np.asarray(im)[..., 3].max(axis=0) > 0)[0]]]
+    left = min(0, int(np.floor(min(a for a, b in spans))) - 2)
+    width = max(FW, int(np.ceil(max(b for a, b in spans))) + 3) - left
+    strip = Image.new('RGBA', (width * len(scaled), FH), (0, 0, 0, 0))
+    for i, (im, (x, y)) in enumerate(zip(scaled, places)):
+        strip.alpha_composite(im, (i * width + int(round(x - left)), int(round(y))))
     out = os.path.join(DIR, 'walk-lvl%s.png' % tier)
     strip.quantize(colors=256, method=Image.Quantize.FASTOCTREE).save(out, optimize=True)   # amber: 256 colours are plenty
     # Where the belt's middle lands (px of the parts' frame), for a frame that
@@ -487,7 +548,7 @@ def make(tier):
     # of the bright amber between the chest and the hips.
     lit = np.asarray(strip).astype(int)
     middles = []
-    for i in range(len(frames)):
+    for i in range(walk_frames):
         f = lit[:, i * width:(i + 1) * width]
         bright = (f[..., 3] > 200) & (f[..., 0] > 200) & (f[..., 1] > 120)
         row = max(range(200, 300), key=lambda y: bright[y].sum())
@@ -506,11 +567,12 @@ def make(tier):
     at = even + PLANT * (held - even)
     slip = np.abs(at - held).max()
     position = np.interp(np.arange(len(frames) + 1) * n / len(frames), np.arange(n + 1), at)
-    print('wrote %s (%d frames, x%.3f, each %dx%d from x %d of the parts\' frame)' % (os.path.relpath(out, ROOT), len(frames), s, width, FH, left))
+    print('wrote %s (%d frames and %d of the turn, x%.3f, each %dx%d from x %d of the parts\' frame)'
+          % (os.path.relpath(out, ROOT), len(frames), len(scaled) - walk_frames, s, width, FH, left))
     print('  the boot on the ground moves back (px of 420):', [round(float(a), 1) for a in advance], '= %.1f for two steps' % cycle)
     print('  where he is at each frame:', [round(float(p), 1) for p in position], '| the boot slips at most %.1f px of 420' % slip)
     assert cycle > 0 and all(b > a for a, b in zip(position, position[1:])), 'always forward'
-    return dict(frames=len(frames), left=left, width=width, belt=round(belt_x, 1), advance=[round(float(a), 2) for a in np.diff(position)],
+    return dict(frames=len(frames), turn=len(scaled) - walk_frames, left=left, width=width, belt=round(belt_x, 1), advance=[round(float(a), 2) for a in np.diff(position)],
                 position=[round(float(p), 2) for p in position])
 
 if __name__ == '__main__':
