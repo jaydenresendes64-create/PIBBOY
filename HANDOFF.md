@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
 State as of the swinging arms PR (2026-10-19, after PR #32). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-320/320 tests pass locally. `sw.js` cache: `v31`.
+320/320 tests pass locally. `sw.js` cache: `v32`.
 
 ## 1. What it is
 
@@ -380,7 +380,7 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   is then fitted onto lvl05.png (the parts' rest pose) by `fit_onto()` (best overlap of scale ±10%
   and offset; −40 px, ×0.99), and the drawings between get that correction part of the way (the
   side view none), so nothing jumps either end. `vaultboy-moves.py`: a drawn walk now starts with
-  the turn backwards (thumbs-up → side, `TURN_FRAME` 70 ms each) and ends with it forwards before
+  the turn backwards (thumbs-up → side, `TURN_FRAME` 140 ms each (70 ms was too fast for the owner)) and ends with it forwards before
   the parts come back (`TURN_TIME` taken off the drawn timeline's waits); `background-size` and
   positions count all `frames + turn`. Mirrored with .vb-move when he goes left, like the walk.
   Tests: the strip's size and the shown order per walk (turn back, 16 + landing, turn).
