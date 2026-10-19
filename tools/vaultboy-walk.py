@@ -60,12 +60,13 @@ there smoothly like the legs (the cut holds still, so no gap opens at the
 shoulder), the back arm under the body, the front one over it. The steps are
 measured before the arms move.
 
-The turn (the owner's sheet from Gemini, images/vaultboy/turn-lvl05-source.webp:
-4 cells in a row, side view, three-quarters, front with a wave, front with
-the thumbs-up): after the walk's drawings, the same strip holds these 4
-(`turn` in the JSON), each as tall as the outfit, its boots on the ground
-and its belt over the outfit's, so the last one sits where the parts' front
-pose is. tools/vaultboy-moves.py shows them in turn as he stops (and the
+The turn (images/vaultboy/turn-lvl05-source.webp: 8 of the owner's drawings
+from Gemini in a row, picked from two 4x3 sheets, the winks left out: side
+view twice, the head turning, three-quarters twice, front with a hand on his
+hip, raising the other, its thumb by his shoulder, the thumbs-up): after the
+walk's drawings, the same strip holds these 8 (`turn` in the JSON), each as
+tall as the outfit, its boots on the ground and its belt over the outfit's,
+so the last one sits where the parts' front pose is. tools/vaultboy-moves.py shows them in turn as he stops (and the
 other way before he sets off).
 
 After a change: python tools/vaultboy-walk.py (Python 3 with Pillow and numpy),
@@ -96,10 +97,10 @@ CYCLES = {'05': [5, 6, -7, -8, -5, -6, 7, 8]}
 # where it is in the first drawing and in the second (front, under him, back).
 PLANTED = [('front', 'front'), ('front', 'under'), ('under', 'back'), ('back', 'back')] * 2
 PLANT = 0.5                          # 0: an even pace (the boots slip), 1: the boot held exactly (the body lurches)
-# Each outfit with a drawn turn: its sheet, 4 cells in a row (side view to the
-# thumbs-up), and the few pixels at each cell's sides to leave out (the
-# generator drew thin grey lines between the cells).
-TURNS = {'05': dict(sheet='turn-lvl05-source.webp', cells=4, trim=4)}
+# Each outfit with a drawn turn: its sheet, its cells in a row (side view to
+# the thumbs-up), each on white.
+TURNS = {'05': dict(sheet='turn-lvl05-source.webp', cells=8)}
+FACE = 0.4                           # in a turn's drawing, his eyes and teeth are in the top 40% of him: white inside his outline lower down is background
 
 def belt_rows(a):
     """The belt: the widest band of yellow (the collar and the stripe are narrower)."""
@@ -145,6 +146,16 @@ def transparent(rgb):
             if 0 <= yy < h and 0 <= xx < w and white[yy, xx] and not bg[yy, xx]:
                 bg[yy, xx] = True; todo.append((yy, xx))
     return np.dstack([rgb, np.where(bg, 0, 255)])
+
+def crooks_cleared(rgba):
+    """A turn's drawing (transparent()) with the white left inside its outline
+    cleared too below his face (FACE): an arm's crook against his side."""
+    ys = np.nonzero(rgba[..., 3] > 128)[0]
+    white = (rgba[..., :3].min(axis=2) > 215) & (rgba[..., 3] > 0)
+    white[:int(ys.min() + FACE * np.ptp(ys))] = False
+    out = rgba.copy()
+    out[white, 3] = 0
+    return out
 
 def components(mask):
     """Each 4-connected piece of the mask: (labels, how many)."""
@@ -513,8 +524,8 @@ def make(tier):
         t = TURNS[tier]
         tsheet = np.asarray(Image.open(os.path.join(DIR, t['sheet'])).convert('RGB'))
         tw = tsheet.shape[1] // t['cells']
-        cells = [tsheet[:, c * tw + t['trim']:(c + 1) * tw - t['trim']] for c in range(t['cells'])]
-        turn = [transparent(cell) for cell in cells]
+        cells = [tsheet[:, c * tw:(c + 1) * tw] for c in range(t['cells'])]
+        turn = [crooks_cleared(transparent(cell)) for cell in cells]
         heights = [np.ptp(np.nonzero(rgba[..., 3] > 128)[0]) for rgba in turn]
         ts = (GROUND - rys.min()) / float(np.median(heights))      # as tall as the outfit, like the walk
         # Placed by the belt's middle and the boots; the last one (the

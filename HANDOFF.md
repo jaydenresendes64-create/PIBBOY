@@ -372,18 +372,28 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   `bent()` with the arm's bones (shoulder-wrist, wrist-fist); the back arm goes under the body, the
   front one over it, composited with alpha after `transparent()` (else the gap an arm closes against
   the hip stayed white). `walk-lvl05.png` 100 → 143 KB. Checked frame by frame in the app.
-  **The turn (2026-10-19, owner's sheet from Gemini with guide-turn stick figures):**
-  `images/vaultboy/turn-lvl05-source.webp` (4 cells in a row of 516 px: side view, three-quarters,
-  front with a wave, front thumbs-up; thin grey lines between cells, `trim` 4). `vaultboy-walk.py`
-  `TURNS` appends them to `walk-lvl05.png` after the 16 walk drawings (`turn: 4` in the JSON):
-  each made transparent, as tall as the outfit, belt over its belt, boots on GROUND; the thumbs-up
-  is then fitted onto lvl05.png (the parts' rest pose) by `fit_onto()` (best overlap of scale ±10%
-  and offset; −40 px, ×0.99), and the drawings between get that correction part of the way (the
-  side view none), so nothing jumps either end. `vaultboy-moves.py`: a drawn walk now starts with
-  the turn backwards (thumbs-up → side, `TURN_FRAME` 140 ms each (70 ms was too fast for the owner)) and ends with it forwards before
-  the parts come back (`TURN_TIME` taken off the drawn timeline's waits); `background-size` and
+  **The turn (2026-10-19, owner's sheets from Gemini with guide-turn stick figures):**
+  `images/vaultboy/turn-lvl05-source.webp`: 8 drawings in a row of 264 px, each on white, picked
+  from the owner's two 4×3 Gemini sheets (cells counted row by row from 0; the second sheet is the
+  first one cleaned up): sheet 2 cells 0, 1 (side, the head turning), 2, 3 (three-quarters, then a
+  hand on his hip), 6 (front), sheet 1 cells 6 (the other hand raised), 10 (the thumb by his
+  shoulder), sheet 2 cell 11 (thumbs-up). Left out: the winks (sheet 1 cells 3 and 11) and the
+  repeated poses. Sheet 1's black grid lines were whitened and each figure cut out as its whole
+  outline (the thumbs-up's hand crosses into the next cell), by a one-off script, not in the repo.
+  The first turn (4 drawings, 2026-10-19 morning) was too fast at 70 ms each, then not smooth at
+  140 ms. `vaultboy-walk.py` `TURNS` appends them to `walk-lvl05.png` after the 16 walk drawings
+  (`turn: 8` in the JSON): each made transparent (`crooks_cleared()` also clears white left inside
+  the outline below his face, `FACE`: an arm's crook; the eyes and teeth stay), as tall as the
+  outfit, belt over its belt, boots on GROUND; the thumbs-up is then fitted onto lvl05.png (the
+  parts' rest pose) by `fit_onto()` (best overlap of scale ±10% and offset; now +4 px, ×0.99), and
+  the drawings between get that correction part of the way (the side view none), so nothing jumps
+  either end. `vaultboy-moves.py`: a drawn walk starts with the turn backwards (thumbs-up → side)
+  and ends with it forwards before the parts come back, `TURN_FRAME` 87.5 ms a drawing (0.7 s the
+  turn); `TURN_TIME` is taken off the drawn timeline's pauses before the look and the thumbs-up
+  (`wait`, may be a little negative: those pauses must stay 0.15 s or more). `background-size` and
   positions count all `frames + turn`. Mirrored with .vb-move when he goes left, like the walk.
-  Tests: the strip's size and the shown order per walk (turn back, 16 + landing, turn).
+  Tests: the strip's size, the shown order per walk (turn back, 16 + landing, turn) and each turn
+  drawing's time (80-95 ms).
   **Levels 1-4 walk with the drawings too (same day; the owner is level 2: "revoir tout le taff et
   refaire en mieux"):** the original Vault Boy is the same man in the same suit, so tier '00' borrows
   level 5's drawings (`BORROW` in vaultboy-moves.py): `drawn_css()` fits them to his frame (288×408,
