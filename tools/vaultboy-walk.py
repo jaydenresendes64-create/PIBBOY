@@ -49,6 +49,17 @@ drawing that shows more of that leg; the far leg's thigh, where the near leg
 hides it, filled in its own blue. It stands halfway between the two
 drawings' places.
 
+The arms (the owner: "fais les bras toi-même"): Gemini drew them still, the
+front fist forward and the back one behind, the chest seen almost from the
+front, an arm each side. So each swings on its own side, in turn with the
+steps: the front arm comes down along the body while the back one is out
+behind, then the back one comes down while the front one reaches forward
+(with_arms()). Each arm is cut from the chest along the shoulder and the
+armpit (ARMS: where it may be, that cut, the shoulder it turns on), turned
+there smoothly like the legs (the cut holds still, so no gap opens at the
+shoulder), the back arm under the body, the front one over it. The steps are
+measured before the arms move.
+
 After a change: python tools/vaultboy-walk.py (Python 3 with Pillow and numpy),
 then python tools/vaultboy-moves.py, then node --test.
 """
@@ -325,6 +336,105 @@ def inbetween(tier, sheet, na, nb):
     out[la['upper']] = la['rgb'][la['upper']]
     return out
 
+# ---------- the arms swing (with_arms) ----------
+# For each outfit with a drawn walk, each arm in the source cell's pixels:
+# `zone`, where the arm may be (cut from the chest along `cut`, the shoulder
+# down to the armpit, which holds still); `shoulder`, the point it turns on;
+# `down`, the direction from the shoulder to the wrist when it hangs along
+# the body (degrees on the screen: 0 to the right, 90 straight down);
+# ARM_SWING, how much of the way from as drawn to hanging it goes.
+ARMS = {'05': {
+    'back': dict(zone=[(40, 150), (205, 186), (222, 198), (233, 248), (212, 262), (196, 300), (200, 380), (40, 380)],
+                 cut=((222, 198), (233, 248)), shoulder=(224, 224), down=108),
+    'front': dict(zone=[(300, 196), (318, 212), (321, 300), (326, 318), (330, 380), (480, 380), (480, 160), (330, 170)],
+                  cut=((318, 212), (321, 300)), shoulder=(321, 240), down=80),
+}}
+ARM_SWING = 1.0
+ARM_BONES = (('shoulder', 'wrist'), ('wrist', 'fist'))
+
+def polygon(points, h, w):
+    from PIL import ImageDraw
+    im = Image.new('L', (w, h), 0)
+    ImageDraw.Draw(im).polygon(points, fill=1)
+    return np.asarray(im).astype(bool)
+
+def arms_of(tier, rgb):
+    """Each arm's pixels (the biggest piece of ink in its zone), and its
+    joints: the shoulder as measured, the fist's middle (its skin), the
+    wrist (the sleeve's end round the fist)."""
+    a = rgb.astype(float)
+    h, w = a.shape[:2]
+    ink = a.min(axis=2) < 215
+    out = {}
+    for name, arm in ARMS[tier].items():
+        lab, n = components(ink & polygon(arm['zone'], h, w))
+        mask = lab == 1 + int(np.argmax([(lab == k).sum() for k in range(1, n + 1)]))
+        skin = mask & (a[..., 0] > 150) & (a[..., 0] > a[..., 2] + 30) & (a[..., 0] > a[..., 1] + 25)   # not the collar's yellow
+        cuff = grown(skin, 14) & ~grown(skin, 6) & mask & ~skin
+        out[name] = dict(mask=mask, joints={'shoulder': np.array(arm['shoulder'], float),
+            'fist': np.argwhere(skin).mean(axis=0)[::-1], 'wrist': np.argwhere(cuff).mean(axis=0)[::-1]})
+    return out
+
+def turned(js, deg):
+    """The arm's joints turned round its shoulder."""
+    th = math.radians(deg)
+    c, s, p = math.cos(th), math.sin(th), js['shoulder']
+    return {k: p + np.array([c * (v - p)[0] - s * (v - p)[1], s * (v - p)[0] + c * (v - p)[1]]) for k, v in js.items()}
+
+def swung(rgb, mask, js, jd, cut):
+    """An arm (rgb where mask) turned from joints js to jd, smoothly, as
+    bent() bends a leg; the cut at the shoulder holds still."""
+    h, w = mask.shape
+    ys, xs = np.mgrid[0:h, 0:w].astype(float)
+    weights, src = [], []
+    for a, b in ARM_BONES:
+        weights.append(1.0 / (to_segment(xs, ys, jd[a], jd[b]) + 4.0) ** 4)
+        th = angle(js[a], js[b]) - angle(jd[a], jd[b])
+        c, s = math.cos(th), math.sin(th)
+        dx, dy = xs - jd[a][0], ys - jd[a][1]
+        src.append((js[a][0] + c * dx - s * dy, js[a][1] + s * dx + c * dy))
+    weights.append(2.0 / (to_segment(xs, ys, np.array(cut[0], float), np.array(cut[1], float)) + 4.0) ** 4)
+    src.append((xs, ys))
+    total = np.sum(weights, axis=0)
+    sx = sum(k * p[0] for k, p in zip(weights, src)) / total
+    sy = sum(k * p[1] for k, p in zip(weights, src)) / total
+    ring = grown(mask, 2) & ~mask
+    alpha = np.where(mask, 1.0, np.where(ring, 1 - rgb.min(axis=2) / 255.0, 0.0))
+    layer = np.dstack([rgb * mask[..., None], alpha])
+    x0, y0 = np.floor(sx).astype(int), np.floor(sy).astype(int)
+    fx, fy = (sx - x0)[..., None], (sy - y0)[..., None]
+    at = lambda y, x: layer[np.clip(y, 0, h - 1), np.clip(x, 0, w - 1)]
+    return (at(y0, x0) * (1 - fx) * (1 - fy) + at(y0, x0 + 1) * fx * (1 - fy)
+            + at(y0 + 1, x0) * (1 - fx) * fy + at(y0 + 1, x0 + 1) * fx * fy)
+
+def with_arms(tier, rgba, source, phase):
+    """A frame (transparent ground) with its arms (as in `source`, the drawing
+    its upper body comes from, on white) swung for `phase` of the cycle (0 to
+    1; 0: the first drawing, the near leg ahead): the front arm down along
+    the body and the back one out behind, half a cycle later the other way
+    round. Made transparent before the arms move, so the gap an arm closes
+    against the body stays see-through."""
+    f = math.cos(2 * math.pi * phase)
+    turn = {'front': (1 + f) / 2, 'back': (1 - f) / 2}
+    arms = arms_of(tier, source)
+    a = rgba[..., :3].astype(float)
+    ink = a.min(axis=2) < 215
+    body_a = rgba[..., 3:4].astype(float) / 255.0
+    for arm in arms.values():
+        gone = arm['mask'] | (grown(arm['mask'], 2) & ~ink)       # the arm and its soft edge, not the chest next to it
+        body_a[gone] = 0.0
+    layer = {}
+    for name, arm in arms.items():
+        js = arm['joints']
+        reach = ARMS[tier][name]['down'] - math.degrees(angle(js['shoulder'], js['wrist']))
+        layer[name] = swung(source.astype(float), arm['mask'], js, turned(js, reach * ARM_SWING * turn[name]), ARMS[tier][name]['cut'])
+    out = layer['back']                                             # premultiplied, back to front
+    out = np.dstack([a * body_a, body_a]) + out * (1 - body_a)
+    out = layer['front'] + out * (1 - layer['front'][..., 3:4])
+    alpha = out[..., 3:4]
+    rgb = np.where(alpha > 0, out[..., :3] / np.maximum(alpha, 1e-6), 255.0)
+    return np.dstack([np.clip(rgb, 0, 255), np.clip(alpha * 255, 0, 255)])
+
 def make(tier):
     sheet = np.asarray(Image.open(os.path.join(DIR, 'walk-lvl%s-source.webp' % tier)).convert('RGB'))
     H, W = sheet.shape[:2]
@@ -334,20 +444,26 @@ def make(tier):
     rb0, rb1, ryellow = belt_rows(ref[..., :3] * (ref[..., 3:] > 128))
     rbx = np.nonzero(ryellow[rb0:rb1 + 1].any(axis=0))[0]
     ref_belt = (rbx[0] + rbx[-1]) / 2.0
-    frames, belts, tops, grounds = [], [], [], []
+    frames, belts, tops, grounds, rgbs = [], [], [], [], []
     entries = CYCLES[tier]
+    cell = lambda n: sheet[(abs(n) - 1) // 4 * ch:((abs(n) - 1) // 4 + 1) * ch, (abs(n) - 1) % 4 * cw:((abs(n) - 1) % 4 + 1) * cw]
     for i, n in enumerate(entries):
-        r, c = divmod(abs(n) - 1, 4)
-        rgb, belt = drawing(sheet[r * ch:(r + 1) * ch, c * cw:(c + 1) * cw], n < 0)
+        rgb, belt = drawing(cell(n), n < 0)
         rgba = transparent(rgb)
-        frames.append(rgba); belts.append(belt)
+        frames.append(rgba); belts.append(belt); rgbs.append(rgb)
         ys = np.nonzero(rgba[..., 3] > 128)[0]
         tops.append(ys.min()); grounds.append(ys.max())
-    drawn = list(frames)
+    drawn = list(frames)                                            # the steps are measured on these
     if tier in TWEEN_JOINTS:                                        # and one of mine after each
-        frames = []
+        pairs = []
         for i, n in enumerate(entries):
-            frames += [drawn[i], transparent(inbetween(tier, sheet, n, entries[(i + 1) % len(entries)]))]
+            pairs += [(rgbs[i], n), (inbetween(tier, sheet, n, entries[(i + 1) % len(entries)]), n)]
+    else:
+        pairs = [(rgbs[i], n) for i, n in enumerate(entries)]
+    if tier in ARMS:                                                # the arms swing, in turn with the steps
+        frames = [with_arms(tier, transparent(rgb), drawing(cell(n), False)[0], k / float(len(pairs))) for k, (rgb, n) in enumerate(pairs)]
+    else:
+        frames = [transparent(rgb) for rgb, n in pairs]
     top, ground, belt = np.median(tops), np.median(grounds), np.median(belts)
     s = (GROUND - rys.min()) / float(ground - top)                    # as tall as the outfit
     ox, oy = ref_belt - belt * s, GROUND - ground * s

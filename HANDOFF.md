@@ -1,7 +1,7 @@
 # PIBBOY — technical handoff
 
-State as of the own streaks + globe PR (2026-10-15, after PR #31). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-320/320 tests pass locally. `sw.js` cache: `v30`.
+State as of the swinging arms PR (2026-10-19, after PR #32). Live: https://jaydenresendes64-create.github.io/PIBBOY/
+320/320 tests pass locally. `sw.js` cache: `v31`.
 
 ## 1. What it is
 
@@ -360,6 +360,18 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   leg comes in front, as in the next drawing); a hidden far thigh is filled in its own blue. The
   in-between stands halfway between the two drawings' places. The tests read the frame count from
   `tools/vaultboy-walk.json`.
+  **Swinging arms (2026-10-19, owner tried Grok for a new walk sheet; it drew one pose 8 times, so
+  "fais les bras toi-même"):** Gemini's arms never moved. `tools/vaultboy-walk.py` `with_arms()` now
+  swings them on every frame of the strip (drawn and in-between), after the steps are measured: the
+  chest is drawn almost from the front, an arm each side, so each arm swings on its own side, in
+  turn with the steps (phase k/16: the front arm hangs along the body at frame 0, the back one is
+  out behind; half a cycle later the other way round). `ARMS[tier]`: each arm's zone (cut from the
+  chest along the shoulder and armpit, `cut`, which holds still so no gap opens), `shoulder`, and
+  `down` (the shoulder-to-wrist direction when hanging; the turn is down minus the drawn angle,
+  measured per drawing, so the four drawings' slightly different arms all end alike). `swung()` is
+  `bent()` with the arm's bones (shoulder-wrist, wrist-fist); the back arm goes under the body, the
+  front one over it, composited with alpha after `transparent()` (else the gap an arm closes against
+  the hip stayed white). `walk-lvl05.png` 100 → 143 KB. Checked frame by frame in the app.
   **Levels 1-4 walk with the drawings too (same day; the owner is level 2: "revoir tout le taff et
   refaire en mieux"):** the original Vault Boy is the same man in the same suit, so tier '00' borrows
   level 5's drawings (`BORROW` in vaultboy-moves.py): `drawn_css()` fits them to his frame (288×408,
