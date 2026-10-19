@@ -1,9 +1,9 @@
 {
  "05": {
   "frames": 16,
-  "turn": 4,
-  "left": -34,
-  "width": 359,
+  "turn": 8,
+  "left": 0,
+  "width": 325,
   "belt": 184.0,
   "advance": [
    5.93,

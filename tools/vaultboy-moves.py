@@ -63,7 +63,7 @@ assert all(w['frames'] == 2 * PER_STEP for w in WALKS.values()), 'a drawn walk: 
 FRAME = STEP / PER_STEP     # seconds a drawing shows: the parts' pace
 DRAWN_FRAMES = PER_STEP * DRAWN_STEPS + 1   # the steps' drawings, and the first one again: he lands
 TURN_FRAMES = max([w.get('turn', 0) for w in WALKS.values()] or [0])   # the drawn turn after them (tools/vaultboy-walk.py)
-TURN_FRAME = 4 * FRAME      # seconds each of the turn's drawings shows (the owner: 2 frames was too fast)
+TURN_FRAME = 2.5 * FRAME    # seconds each of the turn's drawings shows: 8 drawings in 0.7 s (the owner: 4 in 0.28 s was too fast, in 0.56 s not smooth)
 TURN_TIME = TURN_FRAMES * TURN_FRAME   # facing us to the side before a drawn walk, the other way after it
 RATE = 250                  # samples a second (STEP and 0.12 s fall on it)
 RIGHT, LEFT = 1, -1         # scale x to go that way
@@ -363,13 +363,13 @@ def turn(t0, t1, sx_from, sx_to):
 # ---------- the loop: from the left end, going right ----------
 def timeline(drawn=False):
     """The whole loop's keys, for the parts' walk or a drawn one: the same
-    moves at the same moments, a drawn walk being shorter, he waits longer
-    between them."""
+    moves, the pauses between them making up for the drawn walk and its turns
+    being shorter or longer (`wait`)."""
     global ch, legs, mover, steps, walks
     ch, legs = {k: [] for k, _ in PARTS}, {name: {k: [] for k in LEGS} for name, _ in RIGS}
     mover, steps, walks = [], [], []
     wait = (0.12 + STEPS * STEP - DRAWN_FRAMES * FRAME) / 2 - TURN_TIME if drawn else 0
-    assert wait >= 0, 'the drawn walk and its turns take longer than the parts\' walk'
+    assert 0.3 + wait >= 0.15, 'the drawn walk and its turns leave too short a pause before the look and the thumbs-up'
     t = walk(0, RIGHT, drawn)                                       # to the right end
     t = look(t + 0.35 + wait)
     t = thumbs(t + 0.3 + wait, RIGHT)
