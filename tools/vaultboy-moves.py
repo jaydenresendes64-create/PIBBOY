@@ -63,7 +63,7 @@ assert all(w['frames'] == 2 * PER_STEP for w in WALKS.values()), 'a drawn walk: 
 FRAME = STEP / PER_STEP     # seconds a drawing shows: the parts' pace
 DRAWN_FRAMES = PER_STEP * DRAWN_STEPS + 1   # the steps' drawings, and the first one again: he lands
 TURN_FRAMES = max([w.get('turn', 0) for w in WALKS.values()] or [0])   # the drawn turn after them (tools/vaultboy-walk.py)
-TURN_FRAME = 2 * FRAME      # seconds each of the turn's drawings shows
+TURN_FRAME = 4 * FRAME      # seconds each of the turn's drawings shows (the owner: 2 frames was too fast)
 TURN_TIME = TURN_FRAMES * TURN_FRAME   # facing us to the side before a drawn walk, the other way after it
 RATE = 250                  # samples a second (STEP and 0.12 s fall on it)
 RIGHT, LEFT = 1, -1         # scale x to go that way
