@@ -373,27 +373,52 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   front one over it, composited with alpha after `transparent()` (else the gap an arm closes against
   the hip stayed white). `walk-lvl05.png` 100 → 143 KB. Checked frame by frame in the app.
   **The turn (2026-10-19, owner's sheets from Gemini with guide-turn stick figures):**
-  `images/vaultboy/turn-lvl05-source.webp`: 8 drawings in a row of 264 px, each on white, picked
+  `images/vaultboy/turn-lvl05-source.webp`: 7 drawings in a row of 264 px, each on white, picked
   from the owner's two 4×3 Gemini sheets (cells counted row by row from 0; the second sheet is the
-  first one cleaned up): sheet 2 cells 0, 1 (side, the head turning), 2, 3 (three-quarters, then a
-  hand on his hip), 6 (front), sheet 1 cells 6 (the other hand raised), 10 (the thumb by his
-  shoulder), sheet 2 cell 11 (thumbs-up). Left out: the winks (sheet 1 cells 3 and 11) and the
-  repeated poses. Sheet 1's black grid lines were whitened and each figure cut out as its whole
-  outline (the thumbs-up's hand crosses into the next cell), by a one-off script, not in the repo.
-  The first turn (4 drawings, 2026-10-19 morning) was too fast at 70 ms each, then not smooth at
-  140 ms. `vaultboy-walk.py` `TURNS` appends them to `walk-lvl05.png` after the 16 walk drawings
-  (`turn: 8` in the JSON): each made transparent (`crooks_cleared()` also clears white left inside
-  the outline below his face, `FACE`: an arm's crook; the eyes and teeth stay), as tall as the
-  outfit, belt over its belt, boots on GROUND; the thumbs-up is then fitted onto lvl05.png (the
-  parts' rest pose) by `fit_onto()` (best overlap of scale ±10% and offset; now +4 px, ×0.99), and
-  the drawings between get that correction part of the way (the side view none), so nothing jumps
-  either end. `vaultboy-moves.py`: a drawn walk starts with the turn backwards (thumbs-up → side)
-  and ends with it forwards before the parts come back, `TURN_FRAME` 87.5 ms a drawing (0.7 s the
-  turn); `TURN_TIME` is taken off the drawn timeline's pauses before the look and the thumbs-up
-  (`wait`, may be a little negative: those pauses must stay 0.15 s or more). `background-size` and
-  positions count all `frames + turn`. Mirrored with .vb-move when he goes left, like the walk.
-  Tests: the strip's size, the shown order per walk (turn back, 16 + landing, turn) and each turn
-  drawing's time (80-95 ms).
+  first one cleaned up): sheet 2 cells 2, 3 (three-quarters, then a hand on his hip), sheet 1 cell 4
+  and sheet 2 cell 6 (front), sheet 1 cells 6 (the other hand raised) and 9 (its fist), sheet 2
+  cell 11 (thumbs-up). Left out: the winks (sheet 1 cells 3 and 11), the side views (sheet 2 cells
+  0, 1: he walks in three-quarters, so turning through the side view sent his head there and back),
+  sheet 1 cell 10 (the thumb by his shoulder: its other hand hangs instead of staying on the hip, a
+  flicker) and the repeated poses. Sheet 1's black grid lines were whitened and each figure cut out
+  as its whole outline (the thumbs-up's hand crosses into the next cell), by a one-off script, not
+  in the repo. History: 4 drawings at 70 ms were too fast, at 140 ms not smooth; 8 at 87.5 ms (PR
+  #35, with the side views) "c'est bon mais meilleur". `vaultboy-walk.py` `TURNS` appends them to
+  `walk-lvl05.png` after the 16 walk drawings (`turn: 7` in the JSON): each made transparent
+  (`crooks_cleared()` also clears white left inside the outline below his face, `FACE`: an arm's
+  crook; the eyes and teeth stay), then placed by his head (`skull()`: the middle of the widest run
+  of him in his forehead rows, a raised fist being narrower, and the top of his hair): its middle
+  and top go evenly (u = (i+1)/7) from the walk's last drawing to lvl05.png's (the parts' rest
+  pose), boots on GROUND, so the thumbs-up stands where the parts' does. (Placed by the belt, as in
+  PR #35, his head jumped ~18 px of 420 between three-quarters and front: the belt's middle moves as
+  the body turns.) `vaultboy-moves.py`: a drawn walk starts with the turn backwards and ends with it
+  forwards; `TURN_BEATS` (3, 2, 2, 3, 2, 3, 3) FRAMEs each, 0.63 s: longer on the first (settling
+  from the walk), the front view and the fist (the beat before the thumbs-up). `TURN_TIME` is taken
+  off the drawn timeline's pauses before the look and the thumbs-up (`wait`, may be a little
+  negative: those pauses must stay 0.15 s or more). The drawings breathe like the parts (`BREATHE`:
+  `mascotBreathe` on `.vb-walk` too, from the same point on the page, `transform-origin` worked out
+  per tier): the parts were up to 2.5% taller than the last drawing when they took over.
+  `background-size` and positions count all `frames + turn`. Mirrored with .vb-move when he goes
+  left, like the walk. Tests: the strip's size, the shown order per walk (turn back, 16 + landing,
+  turn), each turn drawing's time (`TURN_BEATS` ±2 ms, 0.6 s or more in all) and the breathing's
+  origin.
+  **The cut-out (2026-10-19 evening, owner: "le truc mal découpé quand le perso marche… pas juste
+  des taches, l'image est mal découpée en tant que tel, arrange-moi le perso, tout autour de
+  lui"):** four faults, all fixed in `vaultboy-walk.py`: (1) the soft edge between his black outline
+  and the white page (light grey) stayed opaque and the amber lit it into a pale dotted rim:
+  `matted()` turns it into the outline's dark, see-through as it was white (`INK`, `PAPER`, at most
+  `SOFT` px in from the clear ground, the outline stopping the way in); (2) Pillow's FASTOCTREE RGBA
+  quantizer made his whole inside alpha 254 and speckled the rim: `paletted()` writes the PNG's
+  palette itself (clear; `EDGE_TONES` × `EDGE_LEVELS` edge entries, the fainter half the outline's
+  dark; `AMBERS` solid ambers): 263 → 346 KB, for clean edges; (3) the swinging arms (and the
+  in-between legs) drew their soft edge over the body where they meet, a dark seam down the
+  sleeve: `swung()`/`bent()` keep that ring only on the page side; (4) the swapped legs' blues were
+  exchanged pixel by pixel by saturation, leaving a light line along the swapped leg's outline:
+  `drawing()` now shifts each leg as a whole (`legs_of()`), weighted by how much of a pixel is
+  trouser rather than ink. Test: `the drawn walk and turn are cleanly cut out` decodes the PNG
+  (palette or RGBA) and checks that his rim is never pale (≤ 0.1%; it was 1.9%) and his inside is
+  solid (≤ 1% see-through; it was 99.5% at alpha 254). The parts (rest pose, levels 10+) were already
+  clean (cut from the owner's transparent PNGs).
   **Levels 1-4 walk with the drawings too (same day; the owner is level 2: "revoir tout le taff et
   refaire en mieux"):** the original Vault Boy is the same man in the same suit, so tier '00' borrows
   level 5's drawings (`BORROW` in vaultboy-moves.py): `drawn_css()` fits them to his frame (288×408,
@@ -496,6 +521,27 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
    Holotapes and custom sounds are not in backups nor erased by Reset, and the UI says so.
 10. **Personal content stays out of the public repo**: the code holds generic features; the owner's own
    habits, health notes and quests live only in their data (on the phone, in backups).
+11. **The Vault Boy: everything the owner asked for** (2026-10-19, owner: "double check tout ce que je
+   t'ai dit sur le Vault Boy pour que ça ne se reproduise pas"). After any change to him, check each
+   one in the app, at level 2 (the owner's level: the original outfit with level 5's drawings) and
+   level 5, before pushing:
+   - The amber look, the same colour and feel as the first mascot (2026-10-10).
+   - A clean cut-out all round him: no pale or dotted rim, no seam, no spots (2026-10-19; test
+     "cleanly cut out").
+   - The hand on his hip shows; the thumbs-up fist sits well (2026-09-28). Sharp on the phone.
+   - His outfit follows the level (00/05/10/20/30/50, never past 50), and levels 1-4 walk with
+     drawings too.
+   - He really walks on the 3D gauge: boots planted, no sliding, arms and legs in turn (2026-10-11);
+     drawn poses rather than CSS tricks ("les poses dessinées c mieux"), in-betweens made by us.
+   - He walks toward the hand on his hip, not the thumbs-up side (2026-10-11).
+   - Hips and knees smooth, never square (2026-10-11).
+   - Fluid and cartoon-like, like Fallout's Vault Boy (2026-09-30); precise, even moves (2026-10-11:
+     "il marche comme un infirme" was a bug).
+   - The turn: 0.6 s or more, enough drawings to be smooth, no head jump, and the parts take over
+     without a pop (2026-10-19).
+   - Taps go through him; Reduce Motion: he stands still, centred; he never covers the name or level.
+   - Bump `CACHE` in sw.js with every change, or the phone keeps the old one ("je ne vois aucun
+     changement", 2026-10-11).
 
 ## 5. Workflow
 

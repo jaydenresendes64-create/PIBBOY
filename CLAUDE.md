@@ -14,5 +14,7 @@ DATA MODEL comment at the top of `js/state.js`.
 - Bump `CACHE` in `sw.js` and update `APP_SHELL` when app files are added or removed.
 - Keep the amber terminal look; decorations must never block taps and must respect
   `prefers-reduced-motion`.
+- Vault Boy: before and after any change to him, go through the owner's list in HANDOFF.md §4
+  ("The Vault Boy: everything the owner asked for") and check him in the app at levels 2 and 5.
 - The owner writes in French or English; reply in the language of their latest message, simply
   (they are a beginner).

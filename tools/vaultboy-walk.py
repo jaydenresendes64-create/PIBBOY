@@ -60,14 +60,25 @@ there smoothly like the legs (the cut holds still, so no gap opens at the
 shoulder), the back arm under the body, the front one over it. The steps are
 measured before the arms move.
 
-The turn (images/vaultboy/turn-lvl05-source.webp: 8 of the owner's drawings
-from Gemini in a row, picked from two 4x3 sheets, the winks left out: side
-view twice, the head turning, three-quarters twice, front with a hand on his
-hip, raising the other, its thumb by his shoulder, the thumbs-up): after the
-walk's drawings, the same strip holds these 8 (`turn` in the JSON), each as
-tall as the outfit, its boots on the ground and its belt over the outfit's,
-so the last one sits where the parts' front pose is. tools/vaultboy-moves.py shows them in turn as he stops (and the
-other way before he sets off).
+The turn (images/vaultboy/turn-lvl05-source.webp: 7 of the owner's drawings
+from Gemini in a row, picked from two 4x3 sheets: three-quarters, then with
+a hand on his hip, front twice, the other hand raised, its fist, the
+thumbs-up; left out: the winks, the side views (he walks in three-quarters:
+turning through the side view, his head went there and back) and a thumb
+whose other hand hung instead of staying on the hip): after the walk's
+drawings, the same strip holds these 7 (`turn` in the JSON), placed by his
+head (skull()): its middle and top go evenly from the walk's last drawing to
+the outfit's own picture, the boots on the ground, so the last one stands
+where the parts' thumbs-up does. tools/vaultboy-moves.py shows them in turn
+as he stops (and the other way before he sets off).
+
+The cut-out (the owner: "mal découpé, tout autour de lui"): every frame is
+matted (matted(): the light soft edge round his outline, which the amber lit
+into a pale dotted rim, becomes the outline's dark, see-through as it was
+white), an arm's or leg's soft edge is kept off the body where they meet (no
+dark seam), the legs' blues are exchanged leg by leg (legs_of(): no light
+line along their outline), and the strip keeps its edges in its 256 colours
+(paletted()). tests/vaultboy.test.js reads the PNG back and checks his rim.
 
 After a change: python tools/vaultboy-walk.py (Python 3 with Pillow and numpy),
 then python tools/vaultboy-moves.py, then node --test.
@@ -99,7 +110,7 @@ PLANTED = [('front', 'front'), ('front', 'under'), ('under', 'back'), ('back', '
 PLANT = 0.5                          # 0: an even pace (the boots slip), 1: the boot held exactly (the body lurches)
 # Each outfit with a drawn turn: its sheet, its cells in a row (side view to
 # the thumbs-up), each on white.
-TURNS = {'05': dict(sheet='turn-lvl05-source.webp', cells=8)}
+TURNS = {'05': dict(sheet='turn-lvl05-source.webp', cells=7)}
 FACE = 0.4                           # in a turn's drawing, his eyes and teeth are in the top 40% of him: white inside his outline lower down is background
 
 def belt_rows(a):
@@ -117,19 +128,21 @@ def blues(a, where):
 def drawing(cell, swap):
     a = cell.astype(float)
     h, w = a.shape[:2]
-    ys, xs = np.mgrid[0:h, 0:w]
+    ys = np.mgrid[0:h, 0:w][0]
     b0, b1, yellow = belt_rows(a)
     bx = np.nonzero(yellow[b0:b1 + 1].any(axis=0))[0]
     blue = a[blues(a, ys >= 0)[0]].mean(axis=0)                    # the near leg's and sleeves' blue
     jacket_grey = blues(a, ys < b0)[1]
     if jacket_grey.sum() > 2000:
         a[jacket_grey] += blue - a[jacket_grey].mean(axis=0)
-    if swap:
-        legs = (ys > b1 + 2) & ~((ys < b1 + 60) & ((xs < bx[0] - 10) | (xs > bx[-1] + 10)))   # not the hands
-        near, far = blues(a, legs)
-        mn, mf = a[near].mean(axis=0), a[far].mean(axis=0)
-        a[near] += mf - mn
-        a[far] += mn - mf
+    if swap:                                                       # each leg as a whole (legs_of()), its soft edge with it
+        legs = legs_of(a)[0]
+        mn, mf = a[blues(a, legs['near'])[0]].mean(axis=0), a[blues(a, legs['far'])[1]].mean(axis=0)
+        bluish = a[..., 2] - a[..., 0] > 8                         # the trousers and their edge, not the boots
+        for leg, shift, fill in (('near', mf - mn, mn), ('far', mn - mf, mf)):
+            cover = np.clip((a.max(axis=2) - INK) / (0.6 * (fill.max() - INK)), 0, 1)   # the outline's black stays
+            where = legs[leg] & bluish
+            a[where] += shift * cover[where][:, None]
     return np.clip(a, 0, 255), (bx[0] + bx[-1]) / 2.0
 
 def transparent(rgb):
@@ -146,6 +159,29 @@ def transparent(rgb):
             if 0 <= yy < h and 0 <= xx < w and white[yy, xx] and not bg[yy, xx]:
                 bg[yy, xx] = True; todo.append((yy, xx))
     return np.dstack([rgb, np.where(bg, 0, 255)])
+
+INK, PAPER = 20.0, 250.0             # the outline's black and the page's white, as drawn (mean of r, g, b)
+SOFT = 4                             # px: at most this wide, the soft edge between them round his outline
+
+def matted(rgba):
+    """A frame's cut-out cleaned (the owner: "mal découpé, tout autour de
+    lui"): the soft edge round his outline, a mix of its black and the white
+    page, is light grey, and the amber lit it up into a pale dotted rim.
+    Those pixels (light, at most SOFT px in from the see-through ground, the
+    outline's dark stopping the way in) become the outline's black, as
+    see-through as they were white."""
+    a = np.asarray(rgba, float).copy()
+    light = a[..., :3].mean(axis=2)
+    clear = a[..., 3] < 8
+    soft = (light > 100) & ~clear
+    edge = np.zeros_like(clear)
+    for _ in range(SOFT):
+        new = grown(clear | edge) & soft & ~edge
+        if not new.any(): break
+        edge |= new
+    a[edge, 3] *= 1 - np.clip((light[edge] - INK) / (PAPER - INK), 0, 1)
+    a[edge, :3] = INK
+    return a
 
 def crooks_cleared(rgba):
     """A turn's drawing (transparent()) with the white left inside its outline
@@ -329,7 +365,7 @@ def bent(rgb, mask, js, jd):
     total = np.sum(weights, axis=0)
     sx = sum(k * p[0] for k, p in zip(weights, src)) / total
     sy = sum(k * p[1] for k, p in zip(weights, src)) / total
-    ring = grown(mask, 2) & ~mask
+    ring = grown(mask, 2) & ~mask & (rgb.min(axis=2) >= 215)      # its soft edge on the page, not by the hips (a dark seam there)
     alpha = np.where(mask, 1.0, np.where(ring, 1 - rgb.min(axis=2) / 255.0, 0.0))
     layer = np.dstack([rgb * mask[..., None], alpha])
     x0, y0 = np.floor(sx).astype(int), np.floor(sy).astype(int)
@@ -421,7 +457,7 @@ def swung(rgb, mask, js, jd, cut):
     total = np.sum(weights, axis=0)
     sx = sum(k * p[0] for k, p in zip(weights, src)) / total
     sy = sum(k * p[1] for k, p in zip(weights, src)) / total
-    ring = grown(mask, 2) & ~mask
+    ring = grown(mask, 2) & ~mask & (rgb.min(axis=2) >= 215)      # its soft edge on the page, not along the cut (a dark seam there)
     alpha = np.where(mask, 1.0, np.where(ring, 1 - rgb.min(axis=2) / 255.0, 0.0))
     layer = np.dstack([rgb * mask[..., None], alpha])
     x0, y0 = np.floor(sx).astype(int), np.floor(sy).astype(int)
@@ -458,28 +494,55 @@ def with_arms(tier, rgba, source, phase):
     rgb = np.where(alpha > 0, out[..., :3] / np.maximum(alpha, 1e-6), 255.0)
     return np.dstack([np.clip(rgb, 0, 255), np.clip(alpha * 255, 0, 255)])
 
-def fit_onto(rgba, s, belt, ref_belt, target):
-    """How to scale (k) and move (dx, dy) a drawing, scaled by s with its belt's
-    middle (`belt`, px of the drawing) over `ref_belt` and its boots on
-    GROUND, so that it covers `target` (a mask of the parts' frame) best: the
-    most pixels in common over the pixels of either."""
-    th, tw = target.shape
-    mask = Image.fromarray(((rgba[..., 3] > 128) * 255).astype(np.uint8))
-    best = (-1.0, 1.0, 0, 0)
-    for k in np.arange(0.9, 1.101, 0.01):
-        m = np.asarray(mask.resize((round(mask.width * s * k), round(mask.height * s * k)), Image.BILINEAR)) > 127
-        x0, y0 = ref_belt - belt * s * k, GROUND - np.nonzero(m)[0].max()
-        for dy in range(-12, 13, 2):
-            for dx in range(-50, 51, 2):
-                ox, oy = int(round(x0 + dx)), int(round(y0 + dy))
-                ys0, xs0, ys1, xs1 = max(0, oy), max(0, ox), min(th, oy + m.shape[0]), min(tw, ox + m.shape[1])
-                if ys1 <= ys0 or xs1 <= xs0: continue
-                canvas = np.zeros((th, tw), bool)
-                canvas[ys0:ys1, xs0:xs1] = m[ys0 - oy:ys1 - oy, xs0 - ox:xs1 - ox]
-                score = (canvas & target).sum() / float((canvas | target).sum())
-                if score > best[0]: best = (score, k, dx, dy)
-    assert best[0] > 0.75, 'the thumbs-up fits the outfit\'s picture (%.2f)' % best[0]
-    return best[1:]
+def skull(rgba):
+    """His head in a drawing (px of it): the middle of his skull, from the
+    widest run of him in rows just under the top of him (his forehead: a
+    raised fist is narrower), and the top of his hair above it."""
+    him = np.asarray(rgba)[..., 3] > 128
+    ys = np.nonzero(him)[0]
+    top, height = ys.min(), np.ptp(ys)
+    mids = []
+    for y in range(int(top + 0.06 * height), int(top + 0.13 * height)):
+        xs = np.nonzero(him[y])[0]
+        runs = np.split(xs, np.nonzero(np.diff(xs) > 1)[0] + 1)
+        run = max(runs, key=len)
+        mids.append((run[0] + run[-1]) / 2.0)
+    cx = float(np.median(mids))
+    return cx, float(np.nonzero(him[:, int(cx) - 15:int(cx) + 16].any(axis=1))[0].min())
+
+EDGE_LEVELS, EDGE_TONES = 16, 4     # the palette's see-through edge: levels of see-through, ambers of each
+AMBERS = 64                          # the solid ambers, spread over his brightness (some coincide): more, and only the PNG grows
+
+def paletted(strip):
+    """The strip in at most 256 colours (a PNG a quarter the size), its
+    edges kept clean: Pillow's own RGBA quantizer rounds the see-through edge
+    and the opaque inside together, so his inside came out a little
+    see-through and his rim speckled. Every colour here is an amber of the
+    ramp (parts.amber()): the ground clear; the soft edge one of EDGE_TONES
+    ambers (by brightness; its fainter half the outline's dark) at one of
+    EDGE_LEVELS see-through levels; the rest the nearest of AMBERS."""
+    a = np.asarray(strip).astype(float)
+    alpha, y = a[..., 3], parts.Y(a)
+    clear, solid = alpha < 255 / (2 * EDGE_LEVELS), alpha >= 255 * (1 - 1 / (2 * EDGE_LEVELS))
+    edge = ~clear & ~solid
+    tones = np.linspace(0, 255, 2 * EDGE_TONES + 1)[1::2]          # the middles of EDGE_TONES bands
+    levels = np.unique(np.percentile(y[solid], np.linspace(0, 100, AMBERS)).round())
+    ramp = lambda v: parts.PALETTE[int(np.clip(round(v), 0, 255))]   # the amber that bright
+    pal = [(0, 0, 0, 0)]
+    pal += [tuple(int(round(c)) for c in ramp(v)) + (255,) for v in levels]
+    for t in tones:
+        for k in range(1, EDGE_LEVELS + 1):
+            pal.append(tuple(int(round(c)) for c in ramp(t)) + (round(255 * (k - 0.5) / EDGE_LEVELS),))
+    idx = np.zeros(alpha.shape, np.uint8)
+    idx[solid] = 1 + np.abs(y[solid][:, None] - levels[None, :]).argmin(axis=1)
+    tone = np.where(alpha[edge] < 128, 0, np.abs(y[edge][:, None] - tones[None, :]).argmin(axis=1))   # his rim: the outline's dark
+    level = np.clip((alpha[edge] / 255 * EDGE_LEVELS).astype(int), 0, EDGE_LEVELS - 1)
+    idx[edge] = 1 + len(levels) + tone * EDGE_LEVELS + level
+    im = Image.fromarray(idx, 'P')
+    flat = [c for rgba in pal for c in rgba[:3]]
+    im.putpalette(flat + [0] * (768 - len(flat)))
+    im.info['transparency'] = bytes([rgba[3] for rgba in pal])
+    return im
 
 def make(tier):
     sheet = np.asarray(Image.open(os.path.join(DIR, 'walk-lvl%s-source.webp' % tier)).convert('RGB'))
@@ -514,7 +577,7 @@ def make(tier):
     s = (GROUND - rys.min()) / float(ground - top)                    # as tall as the outfit
     ox, oy = ref_belt - belt * s, GROUND - ground * s
     def lit_scaled(rgba, k):
-        lit = parts.amber(rgba.astype(float))
+        lit = parts.amber(matted(rgba))
         im = Image.fromarray(lit.astype(np.uint8), 'RGBA').convert('RGBa')
         return im.resize((round(rgba.shape[1] * k), round(rgba.shape[0] * k)), Image.LANCZOS).convert('RGBA')
     scaled = [lit_scaled(rgba, s) for rgba in frames]
@@ -526,24 +589,24 @@ def make(tier):
         tw = tsheet.shape[1] // t['cells']
         cells = [tsheet[:, c * tw:(c + 1) * tw] for c in range(t['cells'])]
         turn = [crooks_cleared(transparent(cell)) for cell in cells]
-        heights = [np.ptp(np.nonzero(rgba[..., 3] > 128)[0]) for rgba in turn]
-        ts = (GROUND - rys.min()) / float(np.median(heights))      # as tall as the outfit, like the walk
-        # Placed by the belt's middle and the boots; the last one (the
-        # thumbs-up) then fitted onto the outfit's own picture, which the
-        # parts show next (fit_onto()); the ones between moved part of the
-        # way, so he shifts a little as he turns rather than jumping.
-        base = []
-        for cell, rgba in zip(cells, turn):
-            b0, b1, yellow = belt_rows(cell.astype(float))
-            bx = np.nonzero(yellow[b0:b1 + 1].any(axis=0))[0]
-            base.append(((bx[0] + bx[-1]) / 2.0, float(np.nonzero(rgba[..., 3] > 128)[0].max())))
-        k, dx, dy = fit_onto(turn[-1], ts, base[-1][0], ref_belt, ref[..., 3] > 128)
-        for i, (rgba, (bxm, bot)) in enumerate(zip(turn, base)):
-            u = i / float(len(turn) - 1)                            # the first as the walk left him, the last onto the parts
-            im = lit_scaled(rgba, ts * (1 + (k - 1) * u))
+        # Placed by his head: its middle and its top go evenly from where the
+        # walk left them to where the outfit's own picture has them (the
+        # parts show it next), his boots on the ground; so the last one
+        # stands just where the parts' thumbs-up does. (By the belt, as first,
+        # his head jumped as his body turned, and the parts' thumbs-up was a
+        # little bigger when it took over.)
+        bottom = lambda im: np.nonzero(np.asarray(im)[..., 3] > 127)[0].max()
+        cx0, top0 = (a + b for a, b in zip(places[0], skull(scaled[0])))
+        cx1, top1 = skull(ref)
+        n = len(turn)
+        for i, rgba in enumerate(turn):
+            u = (i + 1) / float(n)                                  # after the walk's last drawing, the last one onto the parts
+            cx, top = skull(rgba)
+            k = (GROUND - (top0 + (top1 - top0) * u)) / float(bottom(rgba) - top)
+            im = lit_scaled(rgba, k)
             scaled.append(im)
-            places.append((ref_belt - bxm * ts * (1 + (k - 1) * u) + dx * u, GROUND - np.nonzero(np.asarray(im)[..., 3] > 127)[0].max() + dy * u))
-        print('  the turn: x%.3f, fitted onto the outfit\'s picture by x%.3f, %+.1f, %+.1f px' % (ts, k, dx, dy))
+            places.append((cx0 + (cx1 - cx0) * u - cx * k, GROUND - bottom(im)))
+        print('  the turn: his head from (%.1f, %.1f) to (%.1f, %.1f), as the parts\' picture' % (cx0, top0, cx1, top1))
     # Walking (and turning), he's wider than the parts' frame (his fists):
     # his own frame, from `left` (px of the 308 frame) and `width` wide, as high.
     spans = [(x + c[0], x + c[-1]) for (x, y), im in zip(places, scaled) for c in [np.nonzero(np.asarray(im)[..., 3].max(axis=0) > 0)[0]]]
@@ -553,7 +616,7 @@ def make(tier):
     for i, (im, (x, y)) in enumerate(zip(scaled, places)):
         strip.alpha_composite(im, (i * width + int(round(x - left)), int(round(y))))
     out = os.path.join(DIR, 'walk-lvl%s.png' % tier)
-    strip.quantize(colors=256, method=Image.Quantize.FASTOCTREE).save(out, optimize=True)   # amber: 256 colours are plenty
+    paletted(strip).save(out, optimize=True)
     # Where the belt's middle lands (px of the parts' frame), for a frame that
     # borrows these drawings (tools/vaultboy-moves.py BORROW): the widest band
     # of the bright amber between the chest and the hips.
