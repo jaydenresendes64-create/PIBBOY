@@ -3,9 +3,8 @@
 ## State
 - PR #39 was merged by the owner (2026-10-22 16:08, `ae17ebf`) and deployed (Pages run green): the
   urge decoder record, places quests, instant open and the data-format guard are live.
-- Branch `claude/laughing-dijkstra-14x4dd` now sits on that merge with the commits pushed after it
-  (Undo last replace, places form on narrow phones, these notes): PR #40, open, **not merged**
-  (merging deploys; only with the owner's explicit OK). Everything is pushed.
+- PR #40 (Undo last replace, places form on narrow phones) was merged by the owner too (`d5d7299`,
+  Tests and Pages green). Everything from this campaign is in `main` and live; nothing is pending.
 - `node --test`: 365 pass, 0 fail. GitHub "Tests" workflow green on the pushed commits checked.
 - `sw.js` VERSION is a hash of the app files: after any app file change run `node tools/stamp-sw.js`
   (the tests fail otherwise). `DATA_SCHEMA` (js/state.js) is 1: raise it when a version saves fields
@@ -26,7 +25,7 @@
   urge screen, check-in anchors, places quests, Undo last replace.
 
 ## Waiting on the owner
-1. Merge PR #40 (deploys), ideally after a look on the iPhone at what #39 put live.
+1. Try the new version on the iPhone (it shows after leaving the app once) and report anything odd.
 2. French caps goals: "not yet". Opt-in plan in HANDOFF §8 step 3, not built.
 3. MAP clouds (30 fps) and ITEMS model copies (30 fps): GPU cost vs looks (HANDOFF §4).
 
