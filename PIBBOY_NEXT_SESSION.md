@@ -7,7 +7,8 @@
   no app file added or removed, APP_SHELL unchanged).
 - Done this campaign (details in `PIBBOY_OPTIMIZATION_LOG.md`, status in `PIBBOY_OPTIMIZATION_PLAN.md`):
   urge record (outcomes, intensity, trigger, copes, notes, patterns, Undo, YOUR WORDS, trigger tips,
-  logged at the round's start, history paging, intensity anchors); backup import comparison and an
+  logged at the round's start, history paging, notes on earlier urges, intensity anchors); places
+  quests that follow the MAP; backup import comparison and an
   all-features round-trip test (also Export → Import in Chromium); Last 7 days on STATUS and in the
   boot; check-in levels defined on screen; ITEMS 3D recovery after GPU context loss; no stale weather.
 - Known failures: none. Last sweep: every tab and Settings at 320 px, no sideways scroll, no errors.
@@ -18,7 +19,9 @@
 3. Service-worker instant-open / version-consistent opens: not started; needs a clear yes.
 
 ## Next candidates
-1. The owner's feedback on the new urge screen and check-in anchors.
+1. The owner's feedback on the new urge screen, the check-in anchors and places quests.
+2. Known limitations left as they are (HANDOFF §6): scroll ticks only on window scroll; MAP opens on
+   Montréal; routes need a connection when added.
 
 ## Resume
 ```
