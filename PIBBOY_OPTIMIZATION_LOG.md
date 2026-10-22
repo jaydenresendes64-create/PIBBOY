@@ -2,6 +2,14 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-22 — Review since f5087bf; QUESTS country list cached
+- Read every app-code change since the last review (state, vitals, insight, events, render, items3d,
+  weather, css). One inefficiency: the QUESTS form rebuilt and sorted the 250-country list on every
+  QUESTS redraw. `js/render.js` makes it once. Chromium, 50 redraws: 2.38 ms → 1.68 ms each.
+- Checked, no change: urge ids (`t`) stay unique per tap; Undo restores the snapshot; places count and
+  `mainReady` with a bad target; new 3D canvases while lost are hidden; offline weather shows only a
+  recent reading. `node --test` → 355 pass, 0 fail.
+
 ## 2026-10-22 — Places quests (plan task 20)
 - New main quest type `places` (data model updated; sanitizer validates `placesTarget`, `placesCc`; no
   migrate step: old saves have no such quest). `js/state.js` count/progress/sync; `mainReady` via

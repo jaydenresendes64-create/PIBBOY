@@ -546,10 +546,12 @@
       return regionNames.of(cc) || cc;
     }catch(e){ return cc; }
   }
+  // The form's country list, sorted by name: made once (QUESTS is drawn often).
+  var countryOptions = null;
   function countryOptionsHtml(){
-    return '<option value="">anywhere</option>'+ST.COUNTRY_CODES.map(function(cc){ return {cc:cc, name:countryLabel(cc)}; })
+    return countryOptions || (countryOptions = '<option value="">anywhere</option>'+ST.COUNTRY_CODES.map(function(cc){ return {cc:cc, name:countryLabel(cc)}; })
       .sort(function(a, b){ return a.name.localeCompare(b.name); })
-      .map(function(c){ return '<option value="'+c.cc+'">'+escapeHtml(c.name)+'</option>'; }).join('');
+      .map(function(c){ return '<option value="'+c.cc+'">'+escapeHtml(c.name)+'</option>'; }).join(''));
   }
 
   // A side quest's skill gains, under its XP: "+3 KNOWLEDGE".
