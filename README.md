@@ -75,24 +75,27 @@ report or on STATUS. While a run is under way, the urge decoder's WHY lines incl
 
 **TRIALS** (VITALS tab, second button at the top): physical tests to repeat about **once a week**, to
 see yourself get stronger. Built in: **Push-ups** (most in one set, trains STR), **Plank** (longest
-hold, END), **Squats** (most in 60 seconds, AGI) and **1 km** (fastest, walking or running, END).
+hold, END), **Squats** (most in 60 seconds, AGI), **1 km** (fastest, walking or running, END) and
+**Distance** (your longest walk or run, END: you type the km yourself, `5.4`).
 **Start** opens the trial: a 3-2-1, then a stopwatch (plank, 1 km) or a 60-second countdown (squats);
 for reps, a big button to tap at each one (or touch it with your chin for push-ups). You can also
 type the result yourself (seconds as `1:30`). Saving asks first: a **new record** gives **+50 XP**
-(a NEW RECORD banner), any other result **+15 XP**, once a trial a day; the XP trains the trial's
-stat. Each card shows the record, the last results as bars, the next goal, and **DUE** when the
+(a NEW RECORD banner), any other result **+15 XP**, once a trial a day; a distance pays by the km
+instead: **+5 XP a km** (at most 100), and +50 more for a new record (6 km: 30 XP, or 80 as a record).
+The XP trains the trial's stat. Each card shows the record, the last results as bars, the next goal, and **DUE** when the
 last try is 7 days old or more. **+ New trial** adds your own (name, kind, stat), **×** hides a
 built-in one (Show brings it back) or deletes yours, and a result can be removed (its XP stays).
 The tab key's light pulses while a trial's timer runs, and the RobCo boot says how many are due.
 
-**1 km with Strava**: the 1 km trial has a **Run with Strava** button. It opens a shortcut of yours
+**1 km with Strava**: the 1 km trial has a **Run with Strava** button (a distance has **Start with
+Strava**, the same shortcut). It opens a shortcut of yours
 in the iPhone's Shortcuts app, named exactly **PIBBOY Run**, which starts the run in Strava (no link
 can start a Strava recording by itself, so the shortcut does it). To make it, once: in Strava, turn
 on its Siri shortcut for starting a run (its settings, or the "Add to Siri" button); then in
 Shortcuts, **+**, add Strava's start-a-run action (if Strava doesn't offer one, **Open App** →
 Strava, and tap Record yourself), and name the shortcut **PIBBOY Run**. The first tap, iOS asks to
 let PIBBOY open Shortcuts. Back in PIBBOY after the run, type your 1 km time from Strava (its
-first split, e.g. `5:42`) and save it.
+first split, e.g. `5:42`), or the distance it shows (`5.4`), and save it.
 Warm up first; stop if you feel chest pain, dizziness or short of breath.
 
 **Training** S.P.E.C.I.A.L.: a daily quest can train a stat (pick it when adding: "Trains STR"...). Its

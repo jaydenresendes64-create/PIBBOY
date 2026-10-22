@@ -89,7 +89,7 @@ test('logged: the check-in folds into one line, a field report from the state an
   });
   // Where the day stands (the levels themselves are read in STATUS, js/insight.js).
   const report = a.ST.vitals.fieldReport();
-  assert.equal(report, 'INT 5 · TRAIN 15/300. 2 dailies left. 4 trials due. Chem-free day 11 (4 to 14).');
+  assert.equal(report, 'INT 5 · TRAIN 15/300. 2 dailies left. 5 trials due. Chem-free day 11 (4 to 14).');
   const html = vitals(a);
   assert.match(html, /CHECK-IN · DONE ✓ · energy 5 · sleep 2 · craving 6/);
   assert.match(html, /STATUS \/\/<\/span> Sleep 2, [^.<]+\. Craving 6, [^.<]+\.<\/p>/);

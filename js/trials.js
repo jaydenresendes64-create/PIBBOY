@@ -1,7 +1,7 @@
 /**
  * TRIALS (VITALS → TRIALS) — physical tests to repeat about once a week,
- * like Fallout's trials: push-ups, a plank, squats in 60 seconds, 1 km, and
- * the player's own. Each card shows the record, the last result, the next
+ * like Fallout's trials: push-ups, a plank, squats in 60 seconds, 1 km, the
+ * longest distance (typed in from Strava), and the player's own. Each card shows the record, the last result, the next
  * goal and the last results as bars; a trial not tried for a week is due.
  *
  * Starting one opens its panel: a 3-2-1, then a stopwatch (a hold, a time)
@@ -19,11 +19,11 @@
 (function(ST){
   'use strict';
 
-  // The 1 km trial can start a Strava run: the button opens the iPhone
-  // Shortcuts app on a shortcut the owner makes once, named SHORTCUT_NAME,
-  // whose action starts a run in Strava (or just opens Strava). There's no
-  // link that starts a Strava recording by itself, and the time comes back
-  // by hand (the 1 km split, typed in).
+  // The 1 km trial and the distances can start a Strava run: the button
+  // opens the iPhone Shortcuts app on a shortcut the owner makes once, named
+  // SHORTCUT_NAME, whose action starts a run in Strava (or just opens
+  // Strava). There's no link that starts a Strava recording by itself, and
+  // the result comes back by hand (the 1 km split, or the distance, typed in).
   var RUN_TRIAL = 'km', SHORTCUT_NAME = 'PIBBOY Run';
   var STRAVA_SHORTCUT = 'shortcuts://run-shortcut?name='+encodeURIComponent(SHORTCUT_NAME);
 
@@ -32,8 +32,8 @@
   function num(v){ var n = Number(v); return isFinite(n) ? n : 0; }
   function sound(name){ if (ST.sfx) ST.sfx.play(name); }
   function save(now){ if (now) ST.storage.saveNow(); else ST.storage.scheduleSave(); }
-  // "32 reps", "1:30".
-  function valueText(t, v){ return ST.trialValueText(t.id, v)+(t.unit==='reps' ? ' reps' : ''); }
+  // "32 reps", "1:30", "5.4 km".
+  function valueText(t, v){ return ST.trialValueText(t.id, v)+(t.unit==='reps' ? ' reps' : t.unit==='m' ? ' km' : ''); }
   function shortDay(day){
     var m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(day || '');
     return m ? new Date(+m[1], +m[2]-1, +m[3]).toLocaleDateString('en-US', {month:'short', day:'numeric'}) : '';
@@ -81,7 +81,7 @@
         '<button data-trial="hide-no">Cancel</button></div>';
     }
     html += open ? panelHtml(t) :
-      '<div class="vital-btns"><button class="vital-btn'+(due ? ' hot' : '')+'" data-trial="open" data-id="'+attr(t.id)+'">Start</button></div>';
+      '<div class="vital-btns"><button class="vital-btn'+(due ? ' hot' : '')+'" data-trial="open" data-id="'+attr(t.id)+'">'+(t.timer==='none' ? 'Log' : 'Start')+'</button></div>';
     return html+'</div>';
   }
 
@@ -95,9 +95,13 @@
     return t.timer==='countdown' ? clock(Math.ceil((t.seconds*1000-ms)/1000)) : clock(Math.floor(ms/1000));
   }
   function panelHtml(t){
-    var id = attr(t.id), on = running(t), reps = t.unit==='reps', strava = t.id===RUN_TRIAL;
+    var id = attr(t.id), on = running(t), reps = t.unit==='reps', km = t.unit==='m', strava = t.id===RUN_TRIAL || km;
     var html = '<div class="trial-panel">';
-    if (t.timer!=='counter'){
+    if (km){                                // typed in: no timer here, Strava keeps the distance
+      html += '<div class="vital-btns"><a class="vital-btn hot trial-strava" href="'+STRAVA_SHORTCUT+'">Start with Strava</a></div>'+
+        '<p class="vital-fine trial-hint">Start with Strava opens your “'+SHORTCUT_NAME+'” shortcut (Shortcuts app), '+
+          'which starts Strava. Back here, type the distance Strava shows (km) and save it.</p>';
+    } else if (t.timer!=='counter'){
       html += '<div class="trial-clock" id="trial-clock" role="timer">'+escapeHtml(clockNow(t))+'</div>'+
         '<div class="vital-btns">'+(on ?
           (t.timer==='stopwatch' ? '<button class="vital-btn hot" data-trial="stop" data-id="'+id+'">Stop</button>' : '')+
@@ -115,9 +119,9 @@
           '<button class="trial-link" data-trial="count-reset" data-id="'+id+'">Reset</button></p>';
     }
     var typed = draft.id===t.id ? draft.text : (counter(t) ? String(counter(t)) : '');
-    html += '<div class="trial-input-row"><label for="trial-value">'+(reps ? 'Reps' : 'Time (m:ss)')+'</label>'+
-      '<input type="text" id="trial-value" data-id="'+id+'" inputmode="'+(reps ? 'numeric' : 'text')+'" autocomplete="off" '+
-        'placeholder="'+(reps ? '0' : '0:00')+'" value="'+escapeHtml(typed)+'"></div>';
+    html += '<div class="trial-input-row"><label for="trial-value">'+(reps ? 'Reps' : km ? 'Distance (km)' : 'Time (m:ss)')+'</label>'+
+      '<input type="text" id="trial-value" data-id="'+id+'" inputmode="'+(reps ? 'numeric' : km ? 'decimal' : 'text')+'" autocomplete="off" '+
+        'placeholder="'+(reps ? '0' : km ? '0.0' : '0:00')+'" value="'+escapeHtml(typed)+'"></div>';
     var asking = app.trialConfirm && app.trialConfirm.id===t.id ? app.trialConfirm : null;
     if (asking){
       var p = ST.trialPreview(t.id, asking.value);
@@ -153,7 +157,8 @@
   function html(){
     var list = ST.trialList(), hidden = app.state.trials.hidden;
     var out = '<p class="vital-sub">Test yourself about once a week. A new record: <b>+'+ST.TRIAL_RECORD_XP+' XP</b>; '+
-        'any other result: +'+ST.TRIAL_XP+' XP (once a trial a day). The XP trains the trial’s stat.</p>'+
+        'any other result: +'+ST.TRIAL_XP+' XP (once a trial a day). A distance: +'+ST.TRIAL_KM_XP+' XP a km '+
+        '(at most '+ST.TRIAL_KM_XP_MAX+'), and +'+ST.TRIAL_RECORD_XP+' more for a record. The XP trains the trial’s stat.</p>'+
       '<p class="vital-fine trial-care">Warm up first and start easy. Stop if you feel chest pain, dizziness or short of breath.</p>';
     out += list.length ? list.map(cardHtml).join('') : '<div class="empty-note">No trials shown.</div>';
     if (hidden.length){
@@ -258,7 +263,7 @@
     'open': function(t){
       app.trialOpen = t.id;
       app.trialConfirm = null;
-      redraw(t.timer==='counter' ? '[data-trial="count"]' : '[data-trial="start"]');
+      redraw(t.timer==='counter' ? '[data-trial="count"]' : t.timer==='none' ? '#trial-value' : '[data-trial="start"]');
     },
     'close': function(){
       app.trialOpen = null;
