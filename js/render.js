@@ -223,7 +223,7 @@
       statsCell(state.quests.side.filter(function(q){return q.done;}).length, 'Side quests done')+
       statsCell(commas(ST.logEntryCount()), 'Log entries')+
       statsCell(commas(ST.cleanTotal()), 'Chem-free days, all runs')+
-      statsCell(state.urges.log.length, 'Urges ridden out')+
+      statsCell(state.urges.log.filter(function(u){ return u.outcome!=='lapsed'; }).length, 'Urges ridden out')+
       statsCell(state.vitals.filter(function(v){ return v.logged; }).length, 'Vitals check-ins')+
     '</div>';
     el('tab-status').innerHTML = html;

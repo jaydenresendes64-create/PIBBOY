@@ -1644,6 +1644,31 @@ canvas.item-model{
 .vital-sub.reading{ color:var(--phosphor); margin:8px 0 4px; }
 .reading .inline-go{ padding:4px 10px; margin-left:4px; font-size:0.7rem; min-height:32px; }
 .urge-angle{ border-left:2px solid var(--amber-dim); padding:2px 0 2px 10px; margin:10px 0 0; }
+/* What's noted while the urge timer runs (vitals.js urgeDetailsHtml): how strong, what set it off,
+   what's being done (the player's own ways); chips toggle (aria-pressed), 36px high at least. */
+.urge-details{ margin-top:12px; padding-top:8px; border-top:1px solid var(--line); }
+.urge-details .vital-row input[type="range"]{ accent-color:var(--amber); }
+.urge-ask{ font-size:0.74rem; color:var(--text-dim); margin:10px 0 6px; letter-spacing:0.03em; }
+.urge-chips{ display:flex; flex-wrap:wrap; gap:6px; }
+.chip{
+  border:1px solid var(--line); border-radius:14px; background:var(--bg); color:var(--text-dim);
+  padding:6px 11px; min-height:36px; font-size:0.74rem; line-height:1.2;
+}
+.chip[aria-pressed="true"]{ border-color:var(--amber); color:var(--amber); box-shadow:0 0 6px rgba(255,154,46,0.25); }
+.chip.add{ border-style:dashed; color:var(--phosphor); }
+.chip.removable{ border-color:var(--danger); color:var(--danger); }
+.chip.quiet{ border-color:transparent; text-decoration:underline; }
+.cope-add .name-input{ flex:1 1 160px; }
+/* After an urge is logged: one optional line; the patterns; the last urges. */
+.urge-reflect{ border:1px solid var(--amber-dim); border-radius:3px; padding:8px 10px; margin:6px 0 10px; }
+.urge-reflect .urge-tip{ margin-top:0; }
+.urge-reflect .name-input{ flex:1 1 180px; }
+.urge-patterns{ border-left:2px solid var(--phosphor-dim); padding-left:10px; margin:10px 0 0; }
+.urge-patterns .reading{ margin:2px 0; }
+.urge-history{ list-style:none; margin:8px 0 0; padding:0; font-size:0.74rem; line-height:1.45; }
+.urge-history li{ padding:5px 0; border-top:1px solid var(--line); color:var(--phosphor); }
+.urge-history li.lapsed{ color:var(--text-dim); }
+.urge-history-note{ display:block; color:var(--text-dim); font-style:italic; }
 .urge-said{ font-size:0.84rem; line-height:1.45; margin:0; }
 .next-step{
   display:flex; align-items:center; justify-content:space-between; gap:10px;

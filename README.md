@@ -26,8 +26,17 @@ comes first, as questions: a short night or high hunger at today's check-in ("Yo
 morning. Could tiredness be part of this?"), the urges of the same kind you rode out before and how
 many rounds the last one took, a second round, a late hour. The rest change from one urge to the next,
 and none comes back until all have shown. Without a check-in or a history, it uses the general ones.
+While the clock runs you can note, if you want: **how strong** it is (0-10), **what set it off**
+(stress, boredom, people around, alone, usual time or place, something I saw, celebrating, pain or
+discomfort) and **what you're doing about it**: your own list of ways (six to start with; **+ Mine**
+adds one, **Edit** removes). The way you've most often ridden urges out with comes first among the
+messages ("“Walk outside”: you rode it out 3 of the 4 times you used it. Worth a go now?").
 At zero: one question to look back with (REFLECTION), then **Rode it out** (**+40 XP
-and +1 SURVIVAL**, 3 times a day; logged every time) or **Still strong** (another round). The day of a
+and +1 SURVIVAL**, 3 times a day; logged every time), **Still strong** (another round) or **I gave in**
+(at any point: logged as it was, no XP lost, no streak reset; a lapse on a streak stays your call).
+Then one line for next time, if you want. Once 3 urges are logged, **patterns** from your own log:
+the way most often ridden out with, what most often sets them off, the time of day most come at,
+the intensity lately, how many were ridden out (counted, never a cause); **Last urges** lists them. The day of a
 lapse, the streak card and the decoder each show a way back (RESET), without blame. The support
 line (1-800-265-2626, 24/7) and when to call 911 are always on the card. When a round ends, the app says so
 whatever tab is open (a sound and a notice). A small light on the **VITALS** tab key shows, from every

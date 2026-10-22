@@ -26,7 +26,7 @@ Plain scripts (not ES modules, so `index.html` still opens from disk) sharing
 | `js/render.js` | Builds every tab's HTML (escapes everything), toasts/banners, `switchTab` |
 | `js/items3d.js` | ITEMS 3D wireframe models (Three.js, dynamic `import()`), one shared WebGLRenderer copied into small 2D canvases |
 | `js/mascot.js` | Mascot gesture scheduling (moves are CSS keyframes, per body part: see §3 Look & feel) |
-| `js/insight.js` | VITALS words, read-only (`ST.insight`): `readings()` (STATUS / TREND / PRIORITY / ACTION / PATTERN from the logged check-ins), `urgeContext()` + `urgeMessages()` (the urge decoder's messages, context first), `urgeReflection()`, `resetLine()`, `urgeHint()`; keeps no data |
+| `js/insight.js` | VITALS words, read-only (`ST.insight`): `readings()` (STATUS / TREND / PRIORITY / ACTION / PATTERN from the logged check-ins), `urgeContext()` + `urgeMessages()` (the urge decoder's messages, context first), `urgeReflection()`, `resetLine()`, `urgeHint()`, `urgePatterns()` (from the urge log); keeps no data |
 | `js/vitals.js` | VITALS tab with its CHECK-IN / TRIALS sub-tabs (`app.vitalsView`; check-in, urge decoder + its timer's clock, chem-free streak card, last 7 days), the morning path (`order`, `fieldReport`, `nextStep`) and Check-in first (`locked`); its buttons use `data-vital` (its own listeners), the rules are in state.js |
 | `js/trials.js` | VITALS → TRIALS screen (`ST.trials.html()` drawn by vitals.js `render()`): cards, the open trial's panel (3-2-1, stopwatch/countdown clock, tap counter, save confirm, last results), the timer loop + wake lock; buttons use `data-trial` (its own listeners), the rules are in state.js |
 | `js/crt.js`, `js/tilt.js` | CRT flicker; 3D tilt (DeviceOrientation/mouse) incl. glass glare parallax |
@@ -155,6 +155,27 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   on return) redraws at 4:00, and a Log tap on a form drawn before 4:00 redraws with a notice
   instead of logging unseen values. Dailies, streak, urges' daily cap, trials keep midnight
   (`todayStr`). Tests in `tests/vitalsday.test.js`; checked live with a fake clock (Toronto).
+- **Urge decoder record (2026-10-22, owner's "autonomous engineering mission" prompt: trigger and
+  intensity tracking, history, user-defined coping, patterns, reflection):** state.js `urges.active`
+  gets `intensity` (0-10, 0 = not noted), `trigger` (`URGE_TRIGGERS`, '' none), `copes` (ids); log
+  entries get `outcome` ('won' | 'lapsed'), the same three, `note` (≤ `URGE_NOTE_MAX` 140), `hour`,
+  `t` (ms; 0/-1 for entries from before); `urges.copes` = the player's ways (`DEFAULT_COPES`, 6
+  generic ones, then theirs; ≤ `COPES_MAX` 12, names ≤ 30, no two the same). No migrate step:
+  `DEFAULT_STATE.urges.copes` reaches old saves through `deepMergeDefaults` (an emptied list stays
+  empty), and `sanitizeVitals` rebuilds every field (old entries read as ridden out: they were).
+  `setUrgeDetail(key, value)`, `urgeLapsed()` (any time a timer exists: logged, no award, no penalty,
+  no streak lapse), `noteUrge(t, words)`, `addCope`/`removeCope` (logged ids stay, unnamed),
+  `urgesToday()` counts only ridden-out urges (the XP cap must not count lapses). insight.js:
+  `copeStats`/`bestCope` (≥ 2 uses on this need, else ≥ 3 on any, won more than half),
+  `urgeContext().cope` → first message `ctx-cope`; `urgePatterns()` (≥ 3 logged): best way,
+  top trigger (≥ 3), day part with ≥ 40% (≥ 5 timed), intensity last half vs first half of the last
+  10 rated (≥ 6, |Δ| ≥ 1), ridden-out count; observational wording only. vitals.js: the running and
+  over phases show `urgeDetailsHtml()` (range, trigger chips, cope chips with aria-pressed, + Mine /
+  Edit), "I gave in"; after an outcome `app.urgeNote` asks one line (`urgeNoteHtml`, Enter saves);
+  the start phase shows the patterns and **Last urges** (`app.urgeHistory`, last 8). Tests:
+  `tests/urges.test.js` (details, outcomes and the cap, notes, copes, documents with hostile input,
+  patterns with exact wording, the suggestion, the screen, inert hostile text); checked end to end
+  in Chromium (details → lapse → note → history → reload).
 - **VITALS readings + urge decoder messages (2026-10-12, owner's "OPUS ULTRA CODE" prompt):**
   `js/insight.js`, pure and read-only (no new data, no migration, no XP: tested that the state is
   byte-identical after every call and that an edit after logging still pays nothing). `readings()`
