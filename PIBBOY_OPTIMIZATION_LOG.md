@@ -2,6 +2,17 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — No more iPhone zoom when typing (plan task 24)
+- Measured every field on every screen and form (Chromium, phone mode): 19 of 20 had text under
+  16px (12.8–14.4px: the pulse, the streak date, the quest/item/book/wallet forms, the map search,
+  the journal), and iOS Safari zooms the page into such a field and stays zoomed.
+- `css/terminal.css`: on touch screens (`pointer:coarse`) every text field, select and textarea is
+  16px (!important over each component's size); the new item's price field 84 → 96px so "Price $"
+  stays whole. Pinch zoom stays allowed (no maximum-scale).
+- Tests: new `tests/mobile.test.js` (2); `node --test` → 367 pass, 0 fail. Chromium phone mode:
+  0 fields under 16px; the layout audit at 320/390px finds no clipping or sideways scroll; the forms
+  looked at 320px.
+
 ## 2026-10-22 — Design recheck of every screen (plan task 23)
 - Method: a Chromium script fills the app with realistic data, then on every tab, Settings, the
   trials, the urge timer (running and at zero), the perk chart, a bobblehead and the level-up, at

@@ -38,7 +38,7 @@
 'use strict';
 
 var CACHE_PREFIX = 'status-terminal-';
-var VERSION = '9ea22b708ac0';                       // node tools/stamp-sw.js
+var VERSION = '86c8c328f355';                       // node tools/stamp-sw.js
 var CACHE = CACHE_PREFIX + VERSION;
 var DATA_CACHE = CACHE_PREFIX + 'data';             // kept across versions
 var TILE_CACHE = CACHE_PREFIX + 'vector-tiles';     // kept across versions

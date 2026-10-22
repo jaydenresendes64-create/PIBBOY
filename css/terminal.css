@@ -41,6 +41,11 @@ body{
 button, input, select, textarea{
   font-family:inherit; color:inherit; background:none; border:none;
 }
+/* An iPhone zooms the whole page into a field whose text is under 16px, and stays zoomed: on
+   touch screens every field's text is 16px (over each component's own size, hence !important). */
+@media (pointer:coarse){
+  input:not([type=range]):not([type=checkbox]):not([type=file]), select, textarea{ font-size:16px !important; }
+}
 button{ cursor:pointer; }
 ::selection{ background:var(--phosphor); color:var(--bg); }
 
@@ -1127,7 +1132,7 @@ button{ cursor:pointer; }
 .add-row input.field-full{ flex:1 1 100%; }
 .add-row input.field-objective{ flex:1 1 120px; min-width:0; }
 .add-row input[type="number"]{ width:64px; }
-.add-row input#new-item-price{ width:84px; }
+.add-row input#new-item-price{ width:96px; }   /* "Price $" whole at 16px */
 .add-row input#new-wallet-amount{ width:96px; }                /* "Amount" shows in full at 375px */
 .add-row input[hidden]{ display:none; }
 .add-row select{ flex:0 0 auto; }

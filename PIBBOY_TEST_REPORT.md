@@ -4,6 +4,8 @@ Only results actually run are listed. Command: `node --test` (Node's built-in ru
 
 | Date | Scope | Result |
 |------|-------|--------|
+| 2026-10-23 | Full suite with `tests/mobile.test.js` | 367 pass, 0 fail |
+| 2026-10-23 | Chromium phone mode: every field's text size; layout at 320/390px | all 16px; no clipping, no sideways scroll |
 | 2026-10-22 | Full suite after the design fixes | 365 pass, 0 fail |
 | 2026-10-22 | Chromium design audit, every screen at 320/390/768/1024 px | contrast, sizes, taps, table fixed; no sideways scroll, no page errors |
 | 2026-10-22 | Chromium 320/360/390 px: places quest form with a long country | fits, no errors |
