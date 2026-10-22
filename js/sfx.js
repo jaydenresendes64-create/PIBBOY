@@ -53,7 +53,7 @@
   var unlocked = false;
   var soundOn = true, powerScreen = true;
   var booted = false;           // the boot sound has played this session
-  var lastScrollY = 0;
+  var lastScrollY = null;           // known from the first scroll (read at boot, it laid the page out once more)
   var scrollTick = makeTicker(TICK_STEP_PX, TICK_MIN_GAP_MS);
   var sliderBuckets = new WeakMap();
 
@@ -400,7 +400,7 @@
   }
   function onScroll(){
     var y = window.scrollY || window.pageYOffset || 0;
-    var distance = y - lastScrollY;
+    var distance = lastScrollY===null ? 0 : y - lastScrollY;
     lastScrollY = y;
     if (scrollTick(distance, Date.now())) play('tick');
   }
@@ -477,7 +477,6 @@
     window.addEventListener('scroll', onScroll, {passive:true});
     document.addEventListener('input', onInput, true);
     document.addEventListener('visibilitychange', onVisibility);
-    lastScrollY = window.scrollY || 0;
   }
 
   // The power-on screen goes up as soon as this script runs (the page is

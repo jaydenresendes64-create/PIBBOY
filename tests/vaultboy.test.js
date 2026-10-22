@@ -38,13 +38,18 @@ test('renderHeader shows him from level 1 and changes the outfit only with the t
   walk.hidden = true;                                            // as in the page
   const set = [];
   walk.setAttribute = (k, v) => set.push(k + '=' + v);
+  let layouts = 0;
+  Object.defineProperty(walk, 'offsetWidth', { get: () => { layouts++; return 0; } });
   const at = level => { ST.app.state.level = level; ST.render.renderHeader(); return walk.hidden; };
   assert.equal(at(1), false);
   assert.deepEqual(set, ['data-tier=00']);
+  assert.equal(layouts, 0, 'his first show lays nothing out early: his animations start together anyway');
   at(2); at(4);
   assert.deepEqual(set, ['data-tier=00']);                       // the same tier: untouched
   at(5);                                                         // level 5: the first new outfit
   assert.deepEqual(set, ['data-tier=00', 'data-tier=05']);
+  assert.equal(layouts, 1, 'a new outfit: hidden a moment, so his animations start again together');
+  assert.equal(walk.hidden, false);
   [9, 15, 25, 35, 55, 80].forEach(at);
   assert.deepEqual(set, ['data-tier=00', 'data-tier=05', 'data-tier=10', 'data-tier=20', 'data-tier=30', 'data-tier=50']);
 });
@@ -315,9 +320,10 @@ test('the gauge in 3D: a top he walks on, leaning back, under the front face; bo
   a.ST.app.state = a.ST.defaultState();
   a.ST.app.state.xp = 250;
   a.ST.render.renderHeader();
-  const fill = a.context.document.getElementById('hdr-xp-fill').style.width;
-  assert.ok(/^[\d.]+%$/.test(fill) && fill !== '0%', 'the front face fills: ' + fill);
-  assert.equal(a.context.document.getElementById('hdr-xp-top').style.width, fill);
+  const fill = a.context.document.getElementById('hdr-xp-fill').style.transform;
+  assert.ok(/^scaleX\(0\.\d+\)$/.test(fill), 'the front face fills (scaled: the GPU does it): ' + fill);
+  assert.equal(a.context.document.getElementById('hdr-xp-top').style.transform, fill);
+  ['.xp-top-fill', '.xp-bar-fill', '.rad-fill'].forEach(sel => assert.match(rule(sel), /transform:scaleX\(0\); transform-origin:0 50%; transition:transform/, sel + ' grows by a transform, never by its width'));
 });
 
 // Keyframes whose values hold until the next (tools/vaultboy-moves.py held_css): [{ at (0-1), css }].
@@ -336,8 +342,9 @@ test('level 5 walks with its drawings: in the walker, hidden until he walks, the
   assert.deepEqual(pngSize('images/vaultboy/walk-lvl05.png'), [walkData.width * (walkData.frames + walkData.turn), 420]);
   assert.match(read('sw.js'), /'images\/vaultboy\/walk-lvl05\.png'/);
   const html = read('index.html');
-  assert.match(html, /<div class="vb-body"><div class="vb-breathe">[\s\S]*?<\/div><span class="vb-walk"><\/span><\/div><\/div><\/div>/);   // inside .vb-move: it turns with him
-  assert.match(rule('.vb-walk'), /opacity:0;/);                   // shown only by its animation: not with Reduce Motion
+  assert.match(html, /<div class="vb-body"><div class="vb-breathe">[\s\S]*?<\/div><span class="vb-walk"><span class="vb-strip"><\/span><\/span><\/div><\/div><\/div>/);   // inside .vb-move: it turns with him
+  assert.match(rule('.vb-walk'), /opacity:0; overflow:hidden;/);   // shown only by its animation: not with Reduce Motion
+  assert.match(rule('.vb-strip'), /background:no-repeat 0 0 \/ 100% 100%; will-change:transform;/);   // the drawings slide on the GPU
   const t = '.vaultboy[data-tier="05"]';
   assert.match(rule(t + ' .vb-track'), /animation-name:vbTrack05;/);
   assert.match(rule(t + ' .vb-move'), /animation-name:vbMoveDrawn;/);
@@ -346,7 +353,8 @@ test('level 5 walks with its drawings: in the walker, hidden until he walks, the
   assert.match(rule(t + ' .vb-body'), /animation:none;/);
   assert.match(rule(t + ' .vb-breathe'), /animation:mascotBreathe 4\.2s ease-in-out infinite, vbParts05 11s linear infinite;/);
   const walk = rule(t + ' .vb-walk');
-  assert.match(walk, /background-image:url\(\.\.\/images\/vaultboy\/walk-lvl05\.png\); background-size:2300% 100%; animation:vbWalk05 11s linear infinite, mascotBreathe 4\.2s ease-in-out infinite;/);
+  assert.match(walk, /animation:vbWalk05 11s linear infinite, mascotBreathe 4\.2s ease-in-out infinite;/);
+  assert.match(rule(t + ' .vb-strip'), /^ width:2300%; background-image:url\(\.\.\/images\/vaultboy\/walk-lvl05\.png\); animation:vbStrip05 11s linear infinite; $/);
   assert.ok(Math.abs(parseFloat(walk.match(/width:([\d.]+)%/)[1]) - walkData.width / 308 * 100) < 0.01, 'his frame as wide as the drawings');
   assert.match(rule('.vb-move, .vb-body, .vb-breathe'), /transform-origin:55% 97\.9%;/);
   assert.equal(walk.match(/transform-origin:[\d.]+% ([\d.]+)%;/)[1], '97.9', 'the drawings breathe from the parts\' point: the parts take over without growing');
@@ -411,7 +419,8 @@ test('levels 1-4 walk with level 5\'s drawings: as big on the page, the front so
   const walkData = JSON.parse(read('tools/vaultboy-walk.json'))['05'];
   const t = '.vaultboy[data-tier="00"]';
   const walk = rule(t + ' .vb-walk');
-  assert.match(walk, /background-image:url\(\.\.\/images\/vaultboy\/walk-lvl05\.png\); background-size:2300% 100%; animation:vbWalk05 11s linear infinite, mascotBreathe 4\.2s ease-in-out infinite;/);
+  assert.match(walk, /animation:vbWalk05 11s linear infinite, mascotBreathe 4\.2s ease-in-out infinite;/);
+  assert.match(rule(t + ' .vb-strip'), /^ width:2300%; background-image:url\(\.\.\/images\/vaultboy\/walk-lvl05\.png\); animation:vbStrip05 11s linear infinite; $/);
   const pc = k => parseFloat(walk.match(new RegExp('(?:^|[ ;])' + k + ':(-?[\\d.]+)%'))[1]) / 100;
   assert.match(css, /\.vaultboy\[data-tier="00"\] \.vb-breathe\{ transform-origin:52% 96\.3%; \}/);
   assert.ok(Math.abs(pc('top') + pc('height') * parseFloat(walk.match(/transform-origin:[\d.]+% ([\d.]+)%;/)[1]) / 100 - 0.963) < 0.0005, 'the drawings breathe from his parts\' point');
@@ -437,7 +446,9 @@ test('levels 1-4 walk with level 5\'s drawings: as big on the page, the front so
 
 test('the drawn walk: he turns to the side, the drawings in order, he turns back to us; one at a time, the parts exactly when they aren\'t; he moves on at each drawing, never back, as far as --vb-span', () => {
   const walkData = JSON.parse(read('tools/vaultboy-walk.json'))['05'];
-  const shows = held('vbWalk05'), parts = held('vbParts05');
+  const shows = held('vbWalk05'), strip = held('vbStrip05'), parts = held('vbParts05');
+  assert.ok(shows.length <= 6, 'the frame\'s opacity changes only when he shows or hides');
+  strip.forEach(k => assert.match(k.css, /^transform:translateX\((0|-[\d.]+%)\);$/, 'only a transform: the GPU moves the strip'));
   const track = held('vbTrack05').map(k => ({ at: k.at, x: +k.css.match(/\* (-?[\d.]+)\)\);$/)[1] }));
   const span = +rule('.vaultboy[data-tier="05"]').match(/--vb-span:([\d.]+);/)[1];
   let walks = 0, seen = [], durs = [], lastFrame = null, out = true, most = 0, least = span;
@@ -446,8 +457,8 @@ test('the drawn walk: he turns to the side, the drawings in order, he turns back
     const shown = /opacity:1;/.test(s);
     assert.equal(/opacity:1;/.test(p), !shown, 'the parts or the drawings, never both or neither (' + ms + 'ms)');
     if (shown) {
-      const pos = s.match(/background-position:(\S+) 0;/)[1];
-      const frame = pos === '0' ? 0 : Math.round(parseFloat(pos) / 100 * (walkData.frames + walkData.turn - 1));
+      const pos = heldAt(strip, t).css.match(/translateX\((\S+)\)/)[1];
+      const frame = pos === '0' ? 0 : Math.round(-parseFloat(pos) / 100 * (walkData.frames + walkData.turn));
       if (lastFrame === null) { walks++; seen = []; durs = []; }
       if (frame !== lastFrame) { seen.push(frame); durs.push(0); }
       durs[durs.length - 1]++;

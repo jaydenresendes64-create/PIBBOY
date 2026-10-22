@@ -211,7 +211,8 @@ tools/              build-map-data.js, which makes data/ (see "Map data"); build
                     mascot-moves.py, which writes the mascot's moves into css/terminal.css (Python);
                     vaultboy-parts.py (amber + parts for the five outfits), vaultboy-walk.py (an outfit's
                     drawn walk from a sheet of poses) and vaultboy-moves.py (his walk on the level gauge,
-                    worked out from where his boots go), the same for the Vault Boy
+                    worked out from where his boots go), the same for the Vault Boy; perf-check.js,
+                    how hard the app works on a phone (opening, each tab sitting still: see HANDOFF)
 fonts/              the two terminal fonts, VT323 and IBM Plex Mono (licence: fonts/OFL.txt)
 api/analyze.js      optional serverless AI function (not used on GitHub Pages, see below)
 tests/              automated tests (see "Run the tests")

@@ -316,7 +316,9 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   screen; 2 fit the 69px room of a 390px screen; `--vb-span` 0.559), 9 drawings of 70 ms (the parts'
   pace), longer waits between moves. For tier 05 (`drawn_css()`): `.vb-walk` (a span after
   `.vb-breathe`, inside `.vb-move` so it turns with him; `opacity:0` unless animated, so hidden with
-  Reduce Motion) shows the drawings (vbWalk05: opacity + background-position, held keyframes), the
+  Reduce Motion) shows the drawings (vbWalk05: its opacity; since 2026-10-22 the strip is a
+  `.vb-strip` inside it, `overflow:hidden`, moved a whole drawing at a time by vbStrip05's
+  `translateX`, held keyframes: see "Performance"), the
   parts are hidden meanwhile (vbParts05 on `.vb-breathe`), the track moves at each drawing (vbTrack05,
   held), the legs and body don't animate, the move/arm/head use vbMoveDrawn/vbArmDrawn/vbHeadDrawn.
   Other tiers keep the parts' walk until they get drawings: same process (send Gemini the tier's
@@ -506,6 +508,31 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   CSP `media-src 'self' blob:` for playback.
 - PWA: installable, offline (fonts local, city list precached).
 
+- **Performance (2026-10-22, owner: "optimise mon application comme un pro"):** measured in
+  Chromium with the processor slowed 4× (a mid-range phone), `tools/perf-check.js` (needs a local
+  server and Playwright; it prints the opening's busy time and each tab's cost sitting still).
+  Found and fixed: (1) the drawn walk's strip moved by `background-position` (held keyframes): the
+  browser redid the style 60 times a second on every tab, 232 ms of each second (a quarter of a
+  phone's processor) even with nothing moving; now `.vb-walk` holds a `.vb-strip` (23 frames wide,
+  `will-change:transform`) that `vbStrip05` moves by `translateX(-k/N·100%)`, and `vbWalk05` only
+  switches the opacity (4 keyframes): 5 ms/s. Every other walker animation was already a transform
+  or an opacity (var() inside a transform still runs on the GPU). (2) The XP gauge's two fills and the
+  rad meter grew by a `width` transition at every open (1.4 s: a layout each frame): now
+  `transform:scaleX()` from the left, the same picture. (3) Forced layouts at boot: `sfx.init` read
+  `scrollY` (now known from the first scroll), `syncWalker` hid/showed the walker to restart its
+  animations even on its first show, and asked `document.fonts.ready` mid-render (now in
+  `placeWalker`, in the frame callback). (4) The two fonts are preloaded (`<link rel="preload"
+  as="font" crossorigin>`): in at 0.64 s instead of 1.24 s on a 300 ms connection, before the first
+  paint, so the text no longer jumps. Opening, first 4 s: busy 1356 → 509 ms, style 523 → 64 ms.
+  `tests/perf.test.js` keeps the rules: whatever loops animates only transform/opacity, no width
+  transition, fonts preloaded (and cached by sw.js). Not changed, to decide with the owner: the
+  service worker waits up to `NET_MS` (2.5 s) for the network on every open (so a new version shows
+  at once; a weak signal delays the opening by that much): cache-first with a full new version
+  installed in the background would open instantly but show updates one open later; the MAP's clouds
+  drift at 30 frames a second while the map is still, and ITEMS copies a WebGL picture into each
+  model's canvas at 30 fps (`drawImage`): both cost GPU time on a phone, not measurable here
+  (headless Chromium draws WebGL on the processor).
+
 ## 4. Important design decisions
 
 1. **Personal use only**: no multi-user, onboarding or generic features.
@@ -531,7 +558,9 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
    Holotapes and custom sounds are not in backups nor erased by Reset, and the UI says so.
 10. **Personal content stays out of the public repo**: the code holds generic features; the owner's own
    habits, health notes and quests live only in their data (on the phone, in backups).
-11. **The Vault Boy: everything the owner asked for** (2026-10-19, owner: "double check tout ce que je
+11. **What loops moves only transform or opacity** (the GPU plays those; anything else is redone by
+   the processor every frame): `tests/perf.test.js`. Measure a change with `tools/perf-check.js`.
+12. **The Vault Boy: everything the owner asked for** (2026-10-19, owner: "double check tout ce que je
    t'ai dit sur le Vault Boy pour que ça ne se reproduise pas"). After any change to him, check each
    one in the app, at level 2 (the owner's level: the original outfit with level 5's drawings) and
    level 5, before pushing:
