@@ -24,6 +24,7 @@ improvement campaign. Status: `[x]` done (tests pass), `[ ]` to do, `[~]` in pro
 | 16 | Urge decoder | "How strong" slider gets the same 0/10 anchors as the check-in (0 unrated, 10 extreme) | `tests/urges.test.js`, Chromium 320/390 px | [x] |
 | 17 | Backup / restore | Verify a backup of every feature comes back whole (the identity test only covered quests, items, wallet, journal) | new `tests/roundtrip.test.js`; Chromium Export → fresh profile Import → reload | [x] verified, no defect |
 | 18 | Urge decoder | Last urges showed only 8 of up to 300 kept: "N more" pages back to the oldest | `tests/urges.test.js`, Chromium clicks | [x] |
+| 19 | Urge decoder | A note could only be written right after an urge: Note on any urge in Last urges adds, changes or removes it | `tests/urges.test.js`, Chromium 320 px clicks + reload | [x] |
 | 9 | Quests | French caps objectives (`CAPS_OBJECTIVE`) | needs the owner's yes: a second one-time link would switch quests kept on a manual % to the wallet | on hold |
 
 ## Rules (from CLAUDE.md)

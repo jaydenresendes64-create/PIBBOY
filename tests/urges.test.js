@@ -293,7 +293,7 @@ test('the screen: what to note while the timer runs, "I gave in" at any point, t
     ST.app.urgeHistory = true;
   });
   assert.match(history, /<div class="urge-patterns"><p class="vital-sub reading"><span class="field-tag">PATTERN \/\/<\/span> “Walk outside”: ridden out 3 of the 3 times you used it\.<\/p>/);
-  assert.match(history, /<ul class="urge-history"><li class="">Oct 22 21h · TIRED · ridden out · Walk outside<span class="urge-history-note">“Walked to the park”<\/span><\/li>/);
+  assert.match(history, /<ul class="urge-history"><li class=""><span class="urge-history-text">Oct 22 21h · TIRED · ridden out · Walk outside<span class="urge-history-note">“Walked to the park”<\/span><\/span><button class="chip quiet" data-vital="urge-note-edit" data-key="\d+" aria-label="Note on this urge: Oct 22 21h · TIRED · ridden out · Walk outside">Note<\/button><\/li>/);
   assert.match(history, /data-vital="urge-history" aria-expanded="true">Hide \(3\)/);
 });
 
@@ -313,6 +313,22 @@ test('the last urges: 8 on a tap, then 8 more at a time back to the oldest kept'
   const all = list(24);
   assert.equal(count(all), 20);
   assert.doesNotMatch(all, /urge-history-more/);
+});
+
+test('a note on an earlier urge, from Last urges: its line above the box, the note in it (escaped), Cancel', () => {
+  let first;
+  const html = vitals((ST, s, a) => {
+    for (let i = 0; i < 2; i++) { ST.startUrge('TIRED'); a.setNow(a.context.Date.now() + ST.URGE_MS); ST.urgeWon(); }
+    first = s.urges.log[0].t;
+    ST.noteUrge(first, EVIL);
+    ST.app.urgeNote = first;
+  });
+  assert.match(html, /<p class="urge-tip">Oct 22 21h · TIRED · ridden out\. One line about it\? \(empty removes it\)<\/p>/);
+  assert.match(html, /id="urge-note" maxlength="140" autocomplete="off" value="&quot;&gt;&lt;img src=x onerror=alert\(1\)&gt;"/);
+  assert.match(html, /data-vital="urge-note-skip">Cancel</);
+  assert.doesNotMatch(html, /<img/);
+  const fresh = vitals((ST, s, a) => { ST.startUrge('TIRED'); a.setNow(a.context.Date.now() + ST.URGE_MS); ST.app.urgeNote = ST.urgeWon().entry.t; });
+  assert.match(fresh, /Ridden out\. One line for next time\? \(optional\)[\s\S]*value=""[\s\S]*data-vital="urge-note-skip">Skip</);
 });
 
 test('STATUS counts the urges ridden out, not the ones given in to', () => {

@@ -194,7 +194,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   entry off the log and puts back the urge it ended (`app.urgeUndo`, in memory only; never a
   ridden-out urge, never while another runs);
   the start phase shows the patterns and **Last urges** (`app.urgeHistory`: how many shown, 8 at a
-  time with "N more", focus on the first added). Tests:
+  time with "N more", focus on the first added; each with a Note button: `urge-note-edit` opens the
+  same box on that entry, its line above and its note in it; saved empty, the note is removed). Tests:
   `tests/urges.test.js` (details, outcomes and the cap, notes, copes, documents with hostile input,
   patterns with exact wording, the suggestion, the screen, inert hostile text); checked end to end
   in Chromium (details → lapse → note → history → reload).

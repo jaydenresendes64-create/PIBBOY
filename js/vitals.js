@@ -224,17 +224,32 @@
         '<button class="vital-btn" data-vital="cope-add">Add</button><button class="vital-btn quiet" data-vital="cope-add-close">Cancel</button></div>' : '')+
     '</div>';
   }
-  // Just after an urge is logged: one line for next time (optional).
+  // A logged urge by its t (its id), or null.
+  function urgeEntry(t){
+    var log = app.state.urges.log, i;
+    for (i=log.length-1;i>=0;i--) if (log[i].t && log[i].t===Number(t)) return log[i];
+    return null;
+  }
+  // "Oct 20 21h · TIRED · 8/10 · stress · ridden out · Walk outside"
+  function urgeLine(u){
+    var cope = (u.copes || []).map(ST.copeById).filter(Boolean).map(function(c){ return c.name; }).join(', ');
+    return [shortDay(u.date)+(u.hour>=0 ? ' '+pad2(u.hour)+'h' : ''), u.need, u.intensity ? u.intensity+'/10' : '',
+      u.trigger ? String(ST.URGE_TRIGGER_LABELS[u.trigger] || '').toLowerCase() : '', OUTCOME_WORDS[u.outcome]+(u.rounds>1 ? ' ('+u.rounds+' rounds)' : ''), cope]
+      .filter(Boolean).join(' · ');
+  }
+  // One line about an urge (optional): just after it's logged, or later on
+  // one from Last urges (its line kept in the box; emptied, it's removed).
   function urgeNoteHtml(){
-    var log = app.state.urges.log, entry = null, i;
-    for (i=log.length-1;i>=0 && !entry;i--) if (log[i].t && log[i].t===app.urgeNote) entry = log[i];
+    var log = app.state.urges.log, entry = urgeEntry(app.urgeNote);
     if (!entry) return '';
+    var past = entry!==log[log.length-1] || !!entry.note;
     var ask = ST.insight ? ST.insight.urgeReflection({need:entry.need, rounds:entry.rounds, seed:Math.floor(entry.t/60000)}) : null;
     return '<div class="urge-reflect">'+
-      '<p class="urge-tip">'+(entry.outcome==='won' ? 'Ridden out. ' : 'Logged. It’s information, not a verdict. ')+'One line for next time? (optional)</p>'+
+      '<p class="urge-tip">'+(past ? escapeHtml(urgeLine(entry))+'. One line about it? (empty removes it)' :
+        (entry.outcome==='won' ? 'Ridden out. ' : 'Logged. It’s information, not a verdict. ')+'One line for next time? (optional)')+'</p>'+
       '<div class="vital-btns"><input type="text" class="date-input name-input" id="urge-note" maxlength="'+ST.URGE_NOTE_MAX+'" autocomplete="off" '+
-        'placeholder="'+attr(ask ? ask.text : 'What helped? What set it off?')+'" aria-label="A note about this urge">'+
-      '<button class="vital-btn" data-vital="urge-note-save">Save</button><button class="vital-btn quiet" data-vital="urge-note-skip">Skip</button></div>'+
+        'value="'+attr(entry.note || '')+'" placeholder="'+attr(ask ? ask.text : 'What helped? What set it off?')+'" aria-label="A note about this urge">'+
+      '<button class="vital-btn" data-vital="urge-note-save">Save</button><button class="vital-btn quiet" data-vital="urge-note-skip">'+(past ? 'Cancel' : 'Skip')+'</button></div>'+
       (entry.outcome==='lapsed' && app.urgeUndo && app.urgeUndo.t===entry.t ?
         '<div class="vital-btns"><button class="vital-btn quiet" data-vital="urge-undo">Tapped by mistake? Undo</button></div>' : '')+
     '</div>';
@@ -251,11 +266,9 @@
     if (!shown) return html;
     var left = log.length-shown;
     return html+'<ul class="urge-history">'+log.slice(-shown).reverse().map(function(u){
-      var cope = (u.copes || []).map(ST.copeById).filter(Boolean).map(function(c){ return c.name; }).join(', ');
-      var bits = [shortDay(u.date)+(u.hour>=0 ? ' '+pad2(u.hour)+'h' : ''), u.need, u.intensity ? u.intensity+'/10' : '',
-        u.trigger ? String(ST.URGE_TRIGGER_LABELS[u.trigger] || '').toLowerCase() : '', OUTCOME_WORDS[u.outcome]+(u.rounds>1 ? ' ('+u.rounds+' rounds)' : ''), cope];
-      return '<li class="'+(u.outcome==='lapsed' ? 'lapsed' : '')+'">'+escapeHtml(bits.filter(Boolean).join(' · '))+
-        (u.note ? '<span class="urge-history-note">“'+escapeHtml(u.note)+'”</span>' : '')+'</li>';
+      return '<li class="'+(u.outcome==='lapsed' ? 'lapsed' : '')+'"><span class="urge-history-text">'+escapeHtml(urgeLine(u))+
+        (u.note ? '<span class="urge-history-note">“'+escapeHtml(u.note)+'”</span>' : '')+'</span>'+
+        (u.t ? '<button class="chip quiet" data-vital="urge-note-edit" data-key="'+num(u.t)+'" aria-label="Note on this urge: '+attr(urgeLine(u))+'">Note</button>' : '')+'</li>';
     }).join('')+'</ul>'+
     (left>0 ? '<div class="vital-btns"><button class="vital-btn quiet" data-vital="urge-history-more">'+Math.min(left, HISTORY_STEP)+' more ('+left+' older)</button></div>' : '');
   }
@@ -791,10 +804,17 @@
       redrawUrge(); refocus('[data-vital="cope-edit"]');
     },
     'urge-note-save': function(){
-      var box = el('urge-note');
-      if (box && box.value.trim() && ST.noteUrge(app.urgeNote, box.value)) save(true);
+      var box = el('urge-note'), words = box ? box.value.trim() : '', entry = urgeEntry(app.urgeNote);
+      if (entry && (words || entry.note) && ST.noteUrge(entry.t, words)) save(true);
       app.urgeNote = null;
       redraw('[data-vital="urge-start"]');
+    },
+    // A note on an urge from Last urges: the box opens above, with its line.
+    'urge-note-edit': function(btn, key){
+      if (!urgeEntry(key)) return;
+      app.urgeNote = Number(key);
+      app.urgeUndo = null;
+      redraw('#urge-note');
     },
     'urge-note-skip': function(){ app.urgeNote = null; redraw('[data-vital="urge-start"]'); },
     // The lapse taken back: the urge runs again where it was.

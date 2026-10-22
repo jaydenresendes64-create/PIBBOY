@@ -2,6 +2,14 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-22 — Notes on earlier urges (plan task 19)
+- `js/vitals.js`: `urgeEntry()`, `urgeLine()` (shared by the list and the box), a Note button per
+  urge in Last urges; the note box shows that urge's line, its note (escaped) and Cancel; saving it
+  empty removes the note. `css/terminal.css`: list items as a row (text, button). No data change.
+- Tests: `tests/urges.test.js` +1, history markup updated; `node --test` → 352 pass, 0 fail. Chromium
+  320 px: Note on the older urge → typed → Enter → saved on that one; reopened pre-filled; cleared →
+  removed after reload; Note buttons 36 px tall; no sideways scroll; no page errors.
+
 ## 2026-10-22 — Urge history paging (plan task 18)
 - `js/vitals.js`: `app.urgeHistory` is now how many are shown; "8 more (N older)" adds 8, focus on the
   first added. Checked: the urge clock only rewrites its text each second (no costly redraw); the AI

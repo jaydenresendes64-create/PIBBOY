@@ -45,7 +45,8 @@ next time, if you want: the next urge brings back the latest one you wrote after
 an urge you rode out (YOUR WORDS, the same need first). Once 3 urges are logged, **patterns** from your own log:
 the way most often ridden out with, what most often sets them off (and how those ended), how the
 strong ones (7 or more) ended next to the milder ones, the time of day most come at,
-the intensity lately, how many were ridden out (counted, never a cause); **Last urges** lists them (8 at a time, **more** for older ones). The day of a
+the intensity lately, how many were ridden out (counted, never a cause); **Last urges** lists them (8 at a time, **more** for older ones; **Note** on one adds or changes its
+line, and an emptied line removes it). The day of a
 lapse, the streak card and the decoder each show a way back (RESET), without blame. The support
 line (1-800-265-2626, 24/7) and when to call 911 are always on the card. When a round ends, the app says so
 whatever tab is open (a sound and a notice). A small light on the **VITALS** tab key shows, from every
