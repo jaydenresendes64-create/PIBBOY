@@ -2,6 +2,13 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — Lint pass
+- ESLint 9 (from the scratchpad, not a repo dependency) with the browser, service-worker and Node
+  globals, rules for undefined/unused names, unreachable code, duplicate keys, self-compare, typeof,
+  fall-through and the like, over js/, sw.js, tests/, api/: two findings, both dead code, removed
+  (`motion` in js/items3d.js, `DAY` in tests/history.test.js). tools/perf-check.js's flags are code
+  that runs in the browser (page.evaluate): left. Now clean. `node --test` → 370 pass, 0 fail.
+
 ## 2026-10-23 — Installed-app details; performance measured
 - `index.html`: `<meta name="theme-color">` (the browser's bars dark amber, as the manifest);
   `manifest.webmanifest`: `"id": "./"` (a stable identity for the installed app). Chromium parses the
