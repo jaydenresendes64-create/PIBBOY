@@ -7,11 +7,9 @@
 - `node --test`: all pass at the last commit.
 
 ## Next actions
-1. French caps objectives (`CAPS_OBJECTIVE`, HANDOFF §8 step 3: needs a one-time flag, since
-   `capsQuestsLinked` is already set on existing saves).
-2. Candidates: event-driven quest objectives (HANDOFF §8 step 0); more VITALS/urge checks.
-3. Waiting on the owner: authorization to push this branch; a clear yes for the service-worker
-   instant-open change (not started).
+1. Candidates: event-driven quest objectives (HANDOFF §8 step 0); more VITALS/urge checks.
+2. Waiting on the owner: authorization to push this branch; a yes for French caps objectives
+   (plan task 9, changes existing quests); a yes for the service-worker instant-open change.
 
 ## Resume
 ```

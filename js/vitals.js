@@ -229,6 +229,8 @@
       '<div class="vital-btns"><input type="text" class="date-input name-input" id="urge-note" maxlength="'+ST.URGE_NOTE_MAX+'" autocomplete="off" '+
         'placeholder="'+attr(ask ? ask.text : 'What helped? What set it off?')+'" aria-label="A note about this urge">'+
       '<button class="vital-btn" data-vital="urge-note-save">Save</button><button class="vital-btn quiet" data-vital="urge-note-skip">Skip</button></div>'+
+      (entry.outcome==='lapsed' && app.urgeUndo && app.urgeUndo.t===entry.t ?
+        '<div class="vital-btns"><button class="vital-btn quiet" data-vital="urge-undo">Tapped by mistake? Undo</button></div>' : '')+
     '</div>';
   }
   // The decoder's last urges, newest first (unfolded on a tap).
@@ -773,6 +775,12 @@
       redraw('[data-vital="urge-start"]');
     },
     'urge-note-skip': function(){ app.urgeNote = null; redraw('[data-vital="urge-start"]'); },
+    // The lapse taken back: the urge runs again where it was.
+    'urge-undo': function(){
+      app.urgeNote = null;
+      if (ST.undoLapse()){ save(true); ST.render.showNotice('Taken back. The urge is still running.'); }
+      redraw('[data-vital="urge-angle"]');
+    },
     'urge-history': function(){ app.urgeHistory = !app.urgeHistory; redrawUrge(); refocus('[data-vital="urge-history"]'); },
     'rad': function(btn, key){
       var dir = parseInt(btn.getAttribute('data-dir') || '0', 10);

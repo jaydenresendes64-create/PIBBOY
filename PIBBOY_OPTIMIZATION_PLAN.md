@@ -14,6 +14,8 @@ improvement campaign. Status: `[x]` done (tests pass), `[ ]` to do, `[~]` in pro
 | 5 | Backup / restore | Import: show what a backup holds next to this phone before replacing; warn when older or losing data | `tests/backup.test.js`, Chromium with a real file | [x] |
 | 6 | Mobile usability | Tap targets and focus on the new urge controls; long names wrap | browser at 360-390 px | [x] |
 | 7 | Progression | Last 7 days next to the 7 before (XP, check-ins, urges, dailies, trials, quests) on STATUS and in the RobCo boot, from recorded data only | `tests/week.test.js`, Chromium at 360 px | [x] |
+| 8 | Urge decoder | "I gave in" tapped by mistake: Undo right after (the urge runs on where it was) | `tests/urges.test.js`, Chromium real clicks + reload | [x] |
+| 9 | Quests | French caps objectives (`CAPS_OBJECTIVE`) | needs the owner's yes: a second one-time link would switch quests kept on a manual % to the wallet | on hold |
 
 ## Rules (from CLAUDE.md)
 - Every data-shape change through `sanitizeImported()` (and `migrate()` when defaults aren't enough), with a test.

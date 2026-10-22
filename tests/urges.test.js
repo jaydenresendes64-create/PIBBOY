@@ -78,6 +78,28 @@ test('one line after an urge: trimmed, at most 140 characters, only on the urge 
   assert.equal(s.urges.log.length, 1);
 });
 
+test('"I gave in" tapped by mistake: Undo takes the lapse off the log and the urge runs on where it was; only that lapse, once', () => {
+  const s = fresh();
+  app.setNow('2026-10-22T21:00:00');
+  ST.startUrge('LONELY'); ST.setUrgeDetail('intensity', 6); ST.setUrgeDetail('cope', 'call');
+  app.setNow('2026-10-22T21:05:00');
+  const before = app.plain(s.urges.active);
+  ST.urgeLapsed();
+  assert.equal(s.urges.active, null);
+  assert.deepEqual(app.plain(ST.undoLapse()), before);                  // same start: 15 minutes left
+  assert.equal(s.urges.log.length, 0);
+  assert.equal(ST.urgeLeft(), 15 * 60000);
+  assert.equal(ST.undoLapse(), null);                                    // once
+  ST.urgeLapsed();
+  ST.startUrge('TIRED');
+  assert.equal(ST.undoLapse(), null);                                    // another urge runs: the lapse stays
+  assert.equal(s.urges.log.length, 1);
+  app.setNow(app.context.Date.now() + ST.URGE_MS);
+  ST.urgeWon();
+  assert.equal(ST.undoLapse(), null);                                    // a ridden-out urge is never taken back
+  assert.deepEqual(app.plain(s.urges.log.map(u => u.outcome)), ['lapsed', 'won']);
+});
+
 test('the player\'s own ways: added (a name not there yet, at most 12), removed (logged urges keep it, unnamed)', () => {
   const s = fresh();
   assert.deepEqual(app.plain(s.urges.copes.map(c => c.id)), ['walk', 'water', 'call', 'eat', 'shower', 'move']);
@@ -182,6 +204,13 @@ test('the screen: what to note while the timer runs, "I gave in" at any point, t
     ST.app.urgeNote = ST.urgeLapsed().t;
   });
   assert.match(after, /Logged\. It’s information, not a verdict\. One line for next time\? \(optional\)[\s\S]*id="urge-note" maxlength="140"/);
+  assert.match(after, /data-vital="urge-undo">Tapped by mistake\? Undo</);
+  const won = vitals((ST, s, a) => {
+    ST.startUrge('TIRED'); a.setNow(a.context.Date.now() + ST.URGE_MS);
+    ST.app.urgeNote = ST.urgeWon().entry.t;
+  });
+  assert.match(won, /Ridden out\. One line for next time\?/);
+  assert.doesNotMatch(won, /urge-undo/);
   const history = vitals((ST, s, a) => {
     for (let i = 0; i < 3; i++) { ST.startUrge('TIRED'); ST.setUrgeDetail('cope', 'walk'); a.setNow(a.context.Date.now() + ST.URGE_MS); ST.urgeWon(); }
     ST.noteUrge(s.urges.log[2].t, 'Walked to the park');

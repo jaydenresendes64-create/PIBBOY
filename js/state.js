@@ -314,6 +314,7 @@
     ownConfirm: null,           // {id, what: 'lapse'|'remove'}: that streak's question awaits its answer
     urgeAngle: 0,               // which of the urge decoder's messages shows ("Another angle"), from 0 each round
     urgeNote: null,             // t of the urge just logged, whose one-line note is asked for
+    urgeUndo: null,             // {t, active}: the lapse just logged and the urge it ended (undoLapse)
     urgeCopeAdd: false,         // the "+ Mine" box for a new way of riding one out is open
     urgeCopeEdit: false,        // the ways show their × (removable)
     urgeHistory: false,         // the decoder's last urges are unfolded
@@ -1248,7 +1249,22 @@
   // Given in to (any time the timer runs or is over): logged, no XP, no
   // penalty; a lapse on a streak stays the player's own call. The entry, or null.
   function urgeLapsed(){
-    return app.state.urges.active ? logUrge('lapsed') : null;
+    var a = app.state.urges.active;
+    if (!a) return null;
+    var active = JSON.parse(JSON.stringify(a)), entry = logUrge('lapsed');
+    app.urgeUndo = {t:entry.t, active:active};
+    return entry;
+  }
+  // "I gave in" tapped by mistake: the lapse just logged is taken off the
+  // log and its urge runs again where it was (timer, details). Only the
+  // latest entry, only while no other urge runs. The urge, or null.
+  function undoLapse(){
+    var u = app.state.urges, undo = app.urgeUndo, last = u.log[u.log.length-1];
+    app.urgeUndo = null;
+    if (!undo || u.active || !last || last.t!==undo.t || last.outcome!=='lapsed') return null;
+    u.log.pop();
+    u.active = undo.active;
+    return u.active;
   }
   // One line about a logged urge (its t): what helped, what set it off.
   function noteUrge(t, words){
@@ -2103,6 +2119,7 @@
   ST.cancelUrge = cancelUrge;
   ST.urgesToday = urgesToday;
   ST.urgeLapsed = urgeLapsed;
+  ST.undoLapse = undoLapse;
   ST.setUrgeDetail = setUrgeDetail;
   ST.noteUrge = noteUrge;
   ST.addCope = addCope;
