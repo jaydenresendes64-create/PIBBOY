@@ -121,6 +121,7 @@
   var UPDATE_CHECK_MS = 30*60*1000;
   var registration = null, touched = false;
   function watchUpdates(reg){
+    if (!reg) return;                                  // service workers blocked
     var sw = navigator.serviceWorker, controlled = !!sw.controller, reloading = false, checked = Date.now();
     registration = reg;
     sw.addEventListener('controllerchange', function(){

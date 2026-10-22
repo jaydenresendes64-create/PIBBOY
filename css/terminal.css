@@ -1131,6 +1131,10 @@ button{ cursor:pointer; }
 .days-field{ display:flex; align-items:center; gap:6px; }
 .days-field[hidden]{ display:none; }
 .days-field span{ font-size:0.75rem; color:var(--text-dim); }
+/* Places to reveal: the whole row, the country list as wide as what's left (a long name is cut inside it). */
+#new-main-places-field{ flex:1 1 100%; min-width:0; }
+#new-main-places-field span{ flex:none; }
+#new-main-places-field select{ flex:1 1 0; min-width:0; width:0; text-overflow:ellipsis; }
 .add-row button{
   border:1px solid var(--phosphor-dim); border-radius:3px; background:var(--panel-alt);
   color:var(--phosphor); padding:8px 14px; min-height:38px;
@@ -1434,6 +1438,7 @@ body.modal-open{ overflow:hidden; }
 .set-link::after{ content:'\203A'; font-size:1.4rem; line-height:1; color:var(--text-dim); }
 .set-danger{ color:var(--danger); }
 .set-note{ margin:6px 2px 4px; font-size:0.72rem; line-height:1.45; color:var(--text-dim); }
+.set-link[hidden], .set-note[hidden]{ display:none; }
 .set-note a{ color:inherit; }
 .backup-age.due{ color:var(--amber); }
 .backup-age.due::before{ content:'\25B2  '; }

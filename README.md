@@ -272,6 +272,9 @@ waits; it's put in when you leave the app (your changes saved first), so the nex
 it's there. If the app opens with one already waiting and you haven't touched anything yet, it's put
 in right away. Old and new files are never mixed, and an older version can never save over data a
 newer one wrote (it stops and shows a "Reopen" banner instead).
+**Undo last replace** (Settings → Data): before an import, a reset or adding from the old terminal,
+the data as it was is kept on the phone (one copy, the latest). Settings then says when and what it
+holds, asks, and puts it back, keeping what was there instead, so the undo can be undone too.
 After changing any app file, run `node tools/stamp-sw.js`: it writes the new version into `sw.js`
 (a hash of the files), and the tests fail until you do.
 The terminal fonts are part of the app (`fonts/`), so they work offline from the very first open and

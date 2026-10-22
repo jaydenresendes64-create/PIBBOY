@@ -139,6 +139,41 @@
     });
   }
 
+  // ---------- the data before a replace (Settings → Undo) ----------
+  // Before a backup, a reset or the old terminal's data replaces or changes
+  // the whole state, the state as it was is kept in IndexedDB under its own
+  // key, one at a time, so Settings can put it back. Copied at once (the
+  // caller goes on changing app.state). Resolves true once kept.
+  var PREVIOUS_ID = 'state/previous';
+  function keepPrevious(state, reason){
+    if (readOnly || !state) return Promise.resolve(false);
+    var record = {id:PREVIOUS_ID, savedAt:Date.now(), schema:SCHEMA, reason:String(reason || ''), data:JSON.parse(JSON.stringify(state))};
+    return openDb().then(function(db){
+      if (!db) return false;
+      return new Promise(function(resolve){
+        var tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).put(record);
+        tx.oncomplete = function(){ resolve(true); };
+        tx.onabort = function(){ resolve(false); };
+      });
+    }).catch(function(){ return false; });
+  }
+  // The kept one as {at, reason, state} (checked and migrated), or null:
+  // none, unreadable, or written by a newer version (never put back here).
+  function readPrevious(){
+    return openDb().then(function(db){
+      if (!db) return null;
+      return new Promise(function(resolve){
+        var req = db.transaction(STORE, 'readonly').objectStore(STORE).get(PREVIOUS_ID);
+        req.onsuccess = function(){
+          var r = req.result, state = r && !(Number(r.schema)>SCHEMA) ? ST.sanitizeImported(r.data) : null;
+          resolve(state ? {at:Number(r.savedAt) || 0, reason:String(r.reason || ''), state:state} : null);
+        };
+        req.onerror = function(){ resolve(null); };
+      });
+    }).catch(function(){ return null; });
+  }
+
   // ---------- localStorage ----------
   function readLocal(){
     var raw, stamp;
@@ -348,6 +383,8 @@
     backupName: backupName,
     exportFile: exportFile,
     readJsonFile: readJsonFile,
+    keepPrevious: keepPrevious,
+    readPrevious: readPrevious,
     onSaveFailed: function(fn){ onSaveFailed = fn; },
     onNewerVersion: function(fn){ onNewerVersion = fn; },
     stale: function(){ return stale; },

@@ -395,7 +395,10 @@
   }
   // A whole new state (a backup, a reset): drawn, caps quests brought up to
   // date with its wallet, and saved; the settings close on it.
-  function replaceState(state){
+  // The data as it was is kept first (storage.keepPrevious): Settings →
+  // Undo puts it back. `reason`: 'import', 'reset' or 'undo'.
+  function replaceState(state, reason){
+    ST.storage.keepPrevious(app.state, reason).then(refreshUndo);
     app.state = state;
     app.pendingProposal = null;
     clearQuestions();
@@ -416,6 +419,7 @@
     if (!box || !box.hidden) return;
     box.hidden = false;
     box.scrollTop = 0;
+    refreshUndo();
     document.body.classList.add('modal-open');
     el('settings-btn').setAttribute('aria-expanded', 'true');
     el('settings-close').focus();
@@ -469,7 +473,7 @@
     if (!pendingImport) return;
     var imported = pendingImport;
     pendingImport = null;
-    replaceState(imported);
+    replaceState(imported, 'import');
   }
   function cancelImport(){
     pendingImport = null;
@@ -518,6 +522,7 @@
   }
   function confirmMerge(){
     if (!pendingMerge) return;
+    ST.storage.keepPrevious(app.state, 'merge').then(refreshUndo);
     ST.mergeOld(app.state, pendingMerge);
     pendingMerge = null;
     el('reset-confirm-area').innerHTML = '';
@@ -536,7 +541,44 @@
       '<button id="reset-cancel-btn">Cancel</button>';
   }
   function doReset(){
-    replaceState(ST.defaultState());
+    replaceState(ST.defaultState(), 'reset');
+  }
+
+  // ---------- undo the last replace ----------
+  // Settings shows "Undo last replace" while a copy from before the last
+  // import, reset or merge is kept: it says when and what it holds, asks,
+  // then puts it back, keeping what's here now in its place (so the undo
+  // can be undone too).
+  var UNDO_WHAT = {import:'the import', reset:'the reset', merge:'adding from the old terminal', undo:'the last undo'};
+  var previous = null;
+  function refreshUndo(){
+    return ST.storage.readPrevious().then(function(p){
+      previous = p;
+      var btn = el('undo-btn'), note = el('undo-note');
+      if (!btn || !note) return;
+      btn.hidden = note.hidden = !p;
+      if (!p) return;
+      var s = ST.stateSummary(p.state), d = new Date(p.at);
+      note.textContent = 'From before '+(UNDO_WHAT[p.reason] || 'the last replace')+', '+d.toLocaleDateString('en-US', {month:'short', day:'numeric'})+
+        ' at '+(d.getHours()<10 ? '0' : '')+d.getHours()+':'+(d.getMinutes()<10 ? '0' : '')+d.getMinutes()+
+        ': level '+s.level+' · '+ST.commas(s.lifetimeXp)+' XP · '+s.checkins+' check-ins.';
+    });
+  }
+  function askUndo(){
+    if (!previous) return;
+    pendingImport = null;
+    pendingMerge = null;
+    el('reset-confirm-area').innerHTML =
+      '<span class="reset-warning">Put back the data from before '+(UNDO_WHAT[previous.reason] || 'the last replace')+'? What’s here now is kept, to undo this.</span>'+
+      '<button id="undo-confirm-btn">Yes, put it back</button>'+
+      '<button id="undo-cancel-btn">Cancel</button>';
+  }
+  function doUndo(){
+    var p = previous;
+    if (!p) return;
+    previous = null;
+    replaceState(p.state, 'undo');
+    R.showNotice('Put back as it was');
   }
 
   // ---------- other windows / leaving ----------
@@ -761,7 +803,10 @@
     'merge-cancel-btn': function(){ pendingMerge = null; el('reset-confirm-area').innerHTML = ''; },
     'reset-btn': showResetConfirm,
     'reset-confirm-btn': doReset,
-    'reset-cancel-btn': function(){ el('reset-confirm-area').innerHTML = ''; }
+    'reset-cancel-btn': function(){ el('reset-confirm-area').innerHTML = ''; },
+    'undo-btn': askUndo,
+    'undo-confirm-btn': doUndo,
+    'undo-cancel-btn': function(){ el('reset-confirm-area').innerHTML = ''; }
   };
   function onClick(e){
     if (e.target.id==='settings'){ closeSettings(); return; }       // a tap outside the settings' box
