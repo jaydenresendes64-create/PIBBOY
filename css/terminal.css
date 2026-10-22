@@ -866,8 +866,9 @@ button{ cursor:pointer; }
 .bobble-svg .g{ stroke:var(--glint); stroke-width:1.1; opacity:0.85; }
 .bobble-svg .hole{ fill:var(--bg); }
 .bobble:not(.found) .bobble-svg .g, .bobble:not(.found) .bobble-svg .f{ display:none; }   /* not found: an outline only */
-.bobble-name{ font-size:0.62rem; line-height:1.2; text-align:center; overflow-wrap:anywhere; }
+.bobble-name{ font-size:0.66rem; line-height:1.2; text-align:center; overflow-wrap:anywhere; color:var(--text-dim); }
 .bobble.found{ border-color:var(--amber-dim); color:var(--amber); }
+.bobble.found .bobble-name{ color:inherit; }
 .bobble.found .bobble-svg{ opacity:1; filter:drop-shadow(0 0 4px rgba(255,154,46,0.55)); }
 /* A found one wobbles on its stand when tapped (the stand stays put). */
 .bobble-top{ transform-box:fill-box; transform-origin:50% 100%; }
@@ -912,7 +913,7 @@ button{ cursor:pointer; }
 @media (prefers-reduced-motion:reduce){ .tape-rec, .tape.playing .tape-icon circle{ animation:none; } }
 .stats-cell{ border:1px solid var(--line); border-radius:3px; padding:10px 6px; text-align:center; }
 .stats-num{ font-family:'VT323',ui-monospace,monospace; font-size:1.4rem; color:var(--amber); }
-.stats-label{ font-size:0.62rem; color:var(--text-dim); margin-top:2px; line-height:1.2; }
+.stats-label{ font-size:0.66rem; color:var(--text-dim); margin-top:2px; line-height:1.2; }
 
 .stat-row{
   display:grid; grid-template-columns:1fr auto 1.6em; align-items:center;
@@ -925,7 +926,7 @@ button{ cursor:pointer; }
 .seg.filled{ background:var(--phosphor); border-color:var(--phosphor); }
 .stat-value{ text-align:right; color:var(--amber); font-size:0.85rem; }
 /* Training toward the next point, under the stat's name. */
-.stat-train{ display:block; font-size:0.6rem; color:var(--text-dim); letter-spacing:0.04em; }
+.stat-train{ display:block; font-size:0.66rem; color:var(--text-dim); letter-spacing:0.04em; }
 .stepper{ display:flex; gap:4px; }
 .step-btn{
   min-width:26px; min-height:26px; border:1px solid var(--line); border-radius:3px;
@@ -944,7 +945,7 @@ button{ cursor:pointer; }
 .skill-bar{ display:block; height:8px; background:var(--panel-alt); border:1px solid var(--line); border-radius:2px; overflow:hidden; }
 .skill-fill{ display:block; height:100%; background:var(--phosphor-dim); }   /* drawn anew each time: no transition */
 .skill-value{ text-align:right; font-size:0.78rem; color:var(--amber); }
-.skill-sub{ display:block; margin-top:3px; padding-left:calc(6.5rem + 8px); font-size:0.64rem; color:var(--text-dim); overflow-wrap:anywhere; }
+.skill-sub{ display:block; margin-top:3px; padding-left:calc(6.5rem + 8px); font-size:0.66rem; color:var(--text-dim); overflow-wrap:anywhere; }
 .skill-detail{ margin:0 0 8px; padding:8px 10px; border:1px solid var(--line); border-radius:3px; background:var(--panel-alt); font-size:0.76rem; }
 .skill-detail-title{ font-size:0.62rem; letter-spacing:0.12em; color:var(--text-dim); text-transform:uppercase; margin:6px 0 2px; }
 .skill-detail-title:first-child{ margin-top:0; }
@@ -1001,10 +1002,14 @@ button{ cursor:pointer; }
    Tapping the name swaps it for .quest-title-input. */
 .quest-text{ display:flex; flex-direction:column; align-items:flex-start; min-width:0; }
 .quest-title{
-  display:block; max-width:100%; padding:1px 0; text-align:left;
+  position:relative; display:block; max-width:100%; padding:1px 0; text-align:left;
   font-family:'VT323',ui-monospace,monospace; font-size:1.3rem; line-height:1.05;
   color:var(--amber); letter-spacing:0.02em; overflow-wrap:anywhere;
 }
+/* Its tap area: 6px more above and below (the objective under it isn't a control), only 2px
+   below on a main quest's card, where the objective's box follows. */
+.quest-title::before{ content:''; position:absolute; inset:-6px 0; }
+.main-quest-card .quest-title::before{ bottom:-2px; }
 .quest-title-input{
   width:100%; border:1px solid var(--amber-dim); border-radius:3px; background:var(--bg);
   padding:1px 6px; font-family:'VT323',ui-monospace,monospace; font-size:1.3rem; line-height:1.1;
@@ -1017,7 +1022,7 @@ button{ cursor:pointer; }
 .quest-text.has-name .quest-name{ font-size:0.74rem; color:var(--text-dim); margin-top:1px; }
 .main-quest-card .quest-title, .main-quest-card .quest-title-input{ font-size:1.6rem; }
 .main-quest-card .quest-title{ text-shadow:0 0 8px rgba(255,154,46,0.35); }
-.main-quest-card.has-name .main-title-input{ padding:6px 8px; font-size:0.8rem; color:var(--text-dim); }
+.main-quest-card.has-name .main-title-input{ min-height:36px; padding:6px 8px; font-size:0.8rem; color:var(--text-dim); }
 
 .quest-list{ display:flex; flex-direction:column; }
 .quest-item{
@@ -1044,7 +1049,7 @@ button{ cursor:pointer; }
   color:var(--amber); letter-spacing:0.02em; overflow-wrap:anywhere;
 }
 .book-meta{ font-size:0.72rem; color:var(--text-dim); margin-top:1px; overflow-wrap:anywhere; }
-.quest-gain{ display:block; font-size:0.66rem; color:var(--amber-dim); }
+.quest-gain{ display:block; font-size:0.66rem; color:var(--text-dim); }
 .complete-btn{
   width:30px; height:30px; border:1px solid var(--phosphor-dim); border-radius:50%;
   color:var(--phosphor);
@@ -1378,9 +1383,9 @@ button{ cursor:pointer; }
 .place-row-name{ min-width:0; overflow-wrap:anywhere; }
 .place-row-meta{ flex:0 0 auto; max-width:55%; font-size:0.72rem; color:var(--text-dim); text-align:right; }
 .map-view .maplibregl-ctrl-attrib{
-  background:rgba(13,6,2,0.75); color:var(--text-dim); font-size:9px; line-height:1.4; padding:0 4px; margin:0;
+  background:rgba(13,6,2,0.75); color:var(--text-dim); font-size:10px; line-height:1.4; padding:0 4px; margin:0;
 }
-.map-view .maplibregl-ctrl-attrib a{ color:var(--phosphor-dim); }
+.map-view .maplibregl-ctrl-attrib a{ color:var(--text-dim); }
 .map-view .maplibregl-ctrl-bottom-right{ z-index:1; }
 
 .log-history{ display:flex; flex-direction:column; }
@@ -1622,6 +1627,8 @@ canvas.item-model{
 .vt td{ padding:4px 3px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
 .vt th:first-child, .vt td:first-child{ text-align:left; }
 .vt tr.avg td{ color:var(--amber); border-bottom:none; }
+/* Nine columns at 320px wide: a little smaller and tighter, 5px or more between two numbers. */
+@media (max-width:360px){ .vt{ font-size:0.64rem; } .vt th, .vt td{ padding:4px 2px; } }
 /* The VITALS tab key's light (js/vitals.js markTab): seen from every tab.
    Amber and slowly pulsing while an urge timer runs, steady when the round
    is over, dim while today's check-in is still to do. */
@@ -1655,7 +1662,7 @@ canvas.item-model{
 .readings{ margin:8px 0 0; }
 .reading{ font-size:0.8rem; line-height:1.45; margin:4px 0 0; }
 .vital-sub.reading{ color:var(--phosphor); margin:8px 0 4px; }
-.reading .inline-go{ padding:4px 10px; margin-left:4px; font-size:0.7rem; min-height:32px; }
+.reading .inline-go{ padding:4px 10px; margin-left:4px; font-size:0.7rem; min-height:36px; }
 .urge-angle{ border-left:2px solid var(--amber-dim); padding:2px 0 2px 10px; margin:10px 0 0; }
 /* What's noted while the urge timer runs (vitals.js urgeDetailsHtml): how strong, what set it off,
    what's being done (the player's own ways); chips toggle (aria-pressed), 36px high at least. */
@@ -1698,14 +1705,14 @@ canvas.item-model{
   padding:8px 4px; min-height:40px; font-size:0.72rem; letter-spacing:0.08em;
 }
 .sub-tab.active{ border-color:var(--phosphor); color:var(--phosphor); box-shadow:inset 0 -2px 0 var(--phosphor); }
-.sub-count{ display:inline-block; margin-left:6px; padding:0 5px; border:1px solid var(--amber-dim); border-radius:2px; color:var(--amber); font-size:0.62rem; letter-spacing:0.04em; }
+.sub-count{ display:inline-block; margin-left:6px; padding:0 5px; border:1px solid var(--amber-dim); border-radius:2px; color:var(--amber); font-size:0.66rem; letter-spacing:0.04em; }
 .trial-care{ margin:0 0 12px; }
 .trial-card{ border:1px solid var(--line); border-radius:3px; background:var(--panel-alt); padding:10px 12px; margin-bottom:10px; }
 .trial-card.open{ border-color:var(--amber-dim); }
 .trial-head{ display:flex; align-items:center; gap:8px; }
 .trial-name{ flex:1 1 auto; min-width:0; font-size:0.95rem; color:var(--amber); letter-spacing:0.03em; }
-.trial-stat{ font-size:0.62rem; color:var(--text-dim); border:1px solid var(--line); border-radius:2px; padding:0 4px; letter-spacing:0.06em; }
-.trial-due{ font-size:0.62rem; color:var(--bg); background:var(--amber); border-radius:2px; padding:0 4px; letter-spacing:0.06em; }
+.trial-stat{ font-size:0.66rem; color:var(--text-dim); border:1px solid var(--line); border-radius:2px; padding:0 4px; letter-spacing:0.06em; }
+.trial-due{ font-size:0.66rem; color:var(--bg); background:var(--amber); border-radius:2px; padding:0 4px; letter-spacing:0.06em; }
 .trial-what{ font-size:0.74rem; color:var(--text-dim); margin-top:2px; }
 .trial-record{ font-size:0.72rem; letter-spacing:0.1em; color:var(--text-dim); margin-top:6px; }
 .trial-record b{ font-family:'VT323',ui-monospace,monospace; font-weight:400; font-size:1.5rem; color:var(--amber); letter-spacing:0.02em; margin-left:4px; }

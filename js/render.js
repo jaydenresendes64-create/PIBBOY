@@ -659,7 +659,7 @@
       html += '<div class="quest-list">';
       active.forEach(function(q){
         html += '<div class="quest-item">'+
-          '<button class="complete-btn" data-action="quest-complete" data-id="'+attr(q.id)+'" aria-label="Complete: '+about(q.questName, q.name)+'">&#10003;</button>'+
+          '<button class="complete-btn" data-action="quest-complete" data-id="'+attr(q.id)+'" aria-label="Complete: '+about(q.questName, q.name)+'">&#9675;</button>'+
           questTextHtml('side', q)+
           '<span class="quest-xp">+'+num(q.xp)+' XP'+gainsHtml(q.skillGains)+'</span>'+
           '<button class="remove-btn" data-action="quest-remove" data-id="'+attr(q.id)+'" aria-label="Remove: '+about(q.questName, q.name)+'">&times;</button>'+

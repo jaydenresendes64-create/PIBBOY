@@ -28,6 +28,7 @@ improvement campaign. Status: `[x]` done (tests pass), `[ ]` to do, `[~]` in pro
 | 20 | Quests | Places quests ("reveal 5 cities in Morocco", HANDOFF §8 step 0): the bar follows the MAP, the reward waits for Complete | `tests/placesquest.test.js`, Chromium form → reveal → complete → reload | [x] |
 | 21 | Startup / updates | Instant open (owner's yes): cache-first whole versions, updates put in when the app goes to the background, older code never writes over newer data | `tests/sw.test.js`, `tests/storage.test.js`, Chromium with a real worker (offline, two deploys, live → new) | [x] |
 | 22 | Data safety | Reset, import and old-terminal merge couldn't be undone: the data before is kept, Settings → Undo last replace (reversible) | `tests/undo.test.js`, Chromium real taps + reload | [x] |
+| 23 | Design | Owner: "recheck le design tout". Every screen measured at 320/390/768/1024 px (contrast, text size, clipped text, tap areas) and looked at; the problems found fixed | audit script in Chromium, before/after numbers, screenshots | [x] |
 | 9 | Quests | French caps objectives (`CAPS_OBJECTIVE`) | owner 2026-10-22: not yet. Opt-in plan (offer on the card, keep the manual %, revertible, nothing on load) in HANDOFF §8 step 3 | planned, not built |
 
 ## Rules (from CLAUDE.md)

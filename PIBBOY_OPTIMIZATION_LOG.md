@@ -2,6 +2,30 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-22 — Design recheck of every screen (plan task 23)
+- Method: a Chromium script fills the app with realistic data, then on every tab, Settings, the
+  trials, the urge timer (running and at zero), the perk chart, a bobblehead and the level-up, at
+  320/390/768/1024 px, measures WCAG contrast of every text, text under 11px, clipped or off-screen
+  text, tap areas (counting the invisible ::before ones) and sideways scroll; screenshots looked at.
+- Fixed (`css/terminal.css` unless said):
+  - contrast: skill gains under quests and books 4.22:1 → `--text-dim` (≥ 4.5:1); hidden
+    bobbleheads' "?" 3.59:1 → `--text-dim`; map credits 4.31:1 at 9px → `--text-dim` at 10px;
+  - smallest text 9.6–10.2px → 10.6px (stats labels, TRAIN, skill sources, bobblehead names, trial
+    tags, the trials count); the slider anchors stay 9.9px (they'd wrap at 320px);
+  - tap areas: quest names 24/29px → 36/35px (an invisible area above and below; on a main quest
+    only 2px below, so the objective's box keeps its top edge: checked with elementFromPoint); the
+    main quest objective 31 → 36px; the inline "Decoder" 32 → 36px;
+  - the VITALS table at 320px: N and T were scrolled out of view → a little smaller and tighter
+    under 360px, fits with 5px or more between numbers (a 1px try made numbers touch: rejected);
+  - `js/render.js`: an open side quest showed ✓ (looks done) → ○ like dailies and bonuses;
+    `js/vitals.js`: the RADS "-" (a hyphen, smaller than "+") → "−".
+- Not changed, checked: the dark bands in full-page captures are the CRT layers in the capture only
+  (a real screen has none); VT323's slashed zero; bonus ○ 40×34 and ⇄ 34×40 are sized for their
+  neighbours (comments in the CSS); the level-up banner covers the top for a moment by design.
+- Tests: `node --test` → 365 pass, 0 fail. Audit after: no contrast, size or clipping problem left
+  except the bobblehead button's own colour (its text is the "?" span, now readable); no sideways
+  scroll at any width; no page errors.
+
 ## 2026-10-22 — Places quest form fits narrow phones
 - The country list took the width of its longest name: at 320–390 px the row ran past the form
   (select to 460 px, clipped). `css/terminal.css`: the places row takes the form's width, the list
