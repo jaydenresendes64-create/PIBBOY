@@ -203,8 +203,9 @@
     var copes = app.state.urges.copes || [], on = a.copes || [], editing = app.urgeCopeEdit, v = num(a.intensity);
     return '<div class="urge-details">'+
       '<div class="vital-row"><label for="urge-intensity">How strong</label>'+
-        '<input type="range" class="urge-range" id="urge-intensity" min="0" max="10" step="1" value="'+v+'">'+
-        '<span class="vital-val" id="urge-intensity-val">'+(v ? v : '–')+'</span></div>'+
+        '<input type="range" class="urge-range" id="urge-intensity" min="0" max="10" step="1" value="'+v+'" aria-describedby="urge-intensity-scale">'+
+        '<span class="vital-val" id="urge-intensity-val">'+(v ? v : '–')+'</span>'+
+        '<span class="vital-scale" id="urge-intensity-scale"><span>0 unrated</span><span>extreme 10</span></span></div>'+
       '<p class="urge-ask">What set it off?</p><div class="urge-chips">'+
         ST.URGE_TRIGGERS.map(function(t){
           return '<button class="chip" data-vital="urge-trigger" data-key="'+t+'" aria-pressed="'+(a.trigger===t)+'">'+escapeHtml(ST.URGE_TRIGGER_LABELS[t])+'</button>';

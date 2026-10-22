@@ -2,6 +2,10 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-22 — Urge intensity anchors (plan task 16)
+- `js/vitals.js`: "How strong" says what 0 (unrated) and 10 (extreme) mean, `aria-describedby` like the
+  check-in sliders. Tests: `node --test` → 349 pass, 0 fail; Chromium 320/390 px: no wrap, no overflow.
+
 ## 2026-10-22 — Urges logged when they happened (plan task 15)
 - `js/state.js`: `dayStr()`, `urgesOn()`, `urgeStarted()`, `urgePays()`; `logUrge` takes date and hour
   from the round's start (t stays the tap: the entry's id); the XP cap counts the urge's own day.
