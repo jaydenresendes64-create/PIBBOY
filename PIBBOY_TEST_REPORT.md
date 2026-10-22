@@ -4,6 +4,7 @@ Only results actually run are listed. Command: `node --test` (Node's built-in ru
 
 | Date | Scope | Result |
 |------|-------|--------|
+| 2026-10-22 | Chromium 320 px sweep: every tab + Settings (with urges, a late round, a check-in) | no sideways scroll, no page errors |
 | 2026-10-22 | Full suite after urge history paging | 351 pass, 0 fail |
 | 2026-10-22 | Chromium: Last urges → more → Hide | 8 → 11 → folded, focus kept, no page errors |
 | 2026-10-22 | Full suite with `tests/roundtrip.test.js` | 350 pass, 0 fail |
