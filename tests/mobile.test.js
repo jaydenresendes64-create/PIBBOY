@@ -25,3 +25,15 @@ test('the viewport covers the notch and still lets people zoom', () => {
   assert.doesNotMatch(meta, /maximum-scale|user-scalable=no/);
   assert.match(read('css/terminal.css'), /env\(safe-area-inset-top/);
 });
+
+test('installed on a phone: the manifest (id, standalone, icons) and the page agree on the dark theme colour', () => {
+  const m = JSON.parse(read('manifest.webmanifest'));
+  assert.equal(m.id, './');
+  assert.equal(m.display, 'standalone');
+  assert.deepEqual(m.icons.map(i => i.sizes + (i.purpose ? ' ' + i.purpose : '')), ['192x192', '512x512', '512x512 maskable']);
+  const theme = /<meta name="theme-color" content="([^"]+)">/.exec(read('index.html'));
+  assert.ok(theme, 'a theme-color meta');
+  assert.equal(theme[1], m.theme_color);
+  assert.equal(m.background_color, m.theme_color);
+  assert.match(read('index.html'), /<link rel="apple-touch-icon" href="icons\/apple-touch-icon\.png">/);
+});

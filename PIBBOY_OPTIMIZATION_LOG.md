@@ -2,6 +2,18 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — Installed-app details; performance measured
+- `index.html`: `<meta name="theme-color">` (the browser's bars dark amber, as the manifest);
+  `manifest.webmanifest`: `"id": "./"` (a stable identity for the installed app). Chromium parses the
+  manifest with no error. `tests/mobile.test.js` +1 (manifest and page agree). Icons checked: 180,
+  192, 512 and a 512 maskable.
+- Performance (tools/perf-check.js, CPU ×4): opening busy 612/603 ms (style 69/81, layout 49/46),
+  longest task 165 ms; VITALS, STATUS, QUESTS 3 ms/s and LOG 11 ms/s sitting still (ITEMS and MAP
+  draw WebGL on the processor in headless Chromium, as noted before). A CPU profile of the opening
+  puts the most in renderHeader (the first date formatting) and placeWalker (reading the layout);
+  the country list is 2.5 ms. No change made: no single fix worth its risk.
+- `node --test` → 370 pass, 0 fail.
+
 ## 2026-10-23 — Error log (plan task 25); accessibility checks
 - New `js/errors.js` (first script; APP_SHELL; sw VERSION stamped): uncaught errors and unhandled
   rejections kept on this device (latest 20, "Script error." and failed resources left out), a
