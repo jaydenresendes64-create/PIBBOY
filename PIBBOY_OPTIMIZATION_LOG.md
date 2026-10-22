@@ -2,6 +2,24 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-22 — Instant open (plan task 21, step 2)
+- `sw.js`: cache first from `CACHE` = prefix + `VERSION` (hash of APP_SHELL's files); install precaches
+  the whole version (`cache:'reload'`), a core file failing keeps the old one; the first version takes
+  over at once, a later one waits for `SKIP_WAITING`; region shapes in `status-terminal-data`
+  (stale-while-revalidate, kept across versions); activate deletes older versions only.
+  `tools/stamp-sw.js` writes VERSION (`--check` to verify). `js/main.js`: `watchUpdates()`,
+  `ST.reopen()`; `js/render.js` banner's Reopen uses it. CLAUDE.md/README/HANDOFF updated.
+- Tests: `tests/sw.test.js` rewritten (9: VERSION matches the files, install, cache first with no
+  network asked, navigation, skipped file, region shapes, activate, waiting/SKIP_WAITING, pass-through);
+  `node --test` → 363 pass, 0 fail.
+- Chromium, real service worker on a copy of the site: first open controlled; offline reopen with
+  data; deploy while in use → waits, old files served, background → reload on the new version, an
+  unsaved change kept, old cache deleted; deploy found while away → put in at the next untouched
+  open; live v36 (network-first) → this worker: new files on the next open, data kept, put in at the
+  next background, v36 cache deleted, offline open works. No page errors.
+- Measured (local server, 1.5 s per request): reopen to a usable VITALS 4097/4539/4510 ms (live) →
+  87/82/79 ms (new).
+
 ## 2026-10-22 — Newer data is never written over by an older version (instant-open, step 1)
 - Before cache-first opens (an older cached version can run once after a deploy), and for old tabs
   left open: `js/state.js` `DATA_SCHEMA` (1); `js/storage.js` stamps both copies with it (IndexedDB

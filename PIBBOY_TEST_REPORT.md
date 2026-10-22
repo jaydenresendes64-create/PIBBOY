@@ -4,6 +4,9 @@ Only results actually run are listed. Command: `node --test` (Node's built-in ru
 
 | Date | Scope | Result |
 |------|-------|--------|
+| 2026-10-22 | Full suite after instant open | 363 pass, 0 fail |
+| 2026-10-22 | Chromium, real worker: offline, deploy in use, deploy while away, live v36 → new | all as intended, data kept, no page errors |
+| 2026-10-22 | Reopen time at 1.5 s latency, 3 runs | live 4.1–4.5 s; new 79–87 ms |
 | 2026-10-22 | Full suite with `tests/placesquest.test.js` | 355 pass, 0 fail |
 | 2026-10-22 | Chromium: places quest from the form, places revealed, Complete, reload | bar follows, paid once, kept, no page errors |
 | 2026-10-22 | Full suite after notes on earlier urges | 352 pass, 0 fail |

@@ -215,7 +215,8 @@ vendor/maplibre/    MapLibre GL JS 6.11.2, the map library (licence: vendor/mapl
 vendor/three/       Three.js r186, only the parts ITEMS uses (licence: vendor/three/LICENSE)
 js/events.js        user actions
 js/main.js          startup
-sw.js               service worker: offline use (network first for the app, so updates show right away)
+sw.js               service worker: opens at once from the saved copy (cache first, one whole version at a
+                    time, stamped by tools/stamp-sw.js), updates put in when the app goes to the background
 manifest.webmanifest name, colours and icons (icons/) for installing on a phone
 images/vaultboy/    the Vault Boy walking on the level gauge (the hand on his hip ahead, the thumb behind):
                     the original one (images/mascot-parts.png) for
@@ -238,7 +239,8 @@ tools/              build-map-data.js, which makes data/ (see "Map data"); build
                     vaultboy-parts.py (amber + parts for the five outfits), vaultboy-walk.py (an outfit's
                     drawn walk from a sheet of poses) and vaultboy-moves.py (his walk on the level gauge,
                     worked out from where his boots go), the same for the Vault Boy; perf-check.js,
-                    how hard the app works on a phone (opening, each tab sitting still: see HANDOFF)
+                    how hard the app works on a phone (opening, each tab sitting still: see HANDOFF);
+                    stamp-sw.js, which writes the app's version (a hash of its files) into sw.js
 fonts/              the two terminal fonts, VT323 and IBM Plex Mono (licence: fonts/OFL.txt)
 api/analyze.js      optional serverless AI function (not used on GitHub Pages, see below)
 tests/              automated tests (see "Run the tests")
@@ -262,10 +264,16 @@ Open the site once while online, then:
 - **iPhone (Safari):** Share → **Add to Home Screen**.
 - **Android (Chrome):** menu ⋮ → **Install app** (or **Add to Home screen**).
 
-It opens full screen like an app and keeps working without a connection. Updates still arrive
-normally: while online the app loads from GitHub Pages like any website (checked against the server
-on every open, so a new version shows up the next time you open it), and the copy saved on the phone
-is only used when there's no connection. Nothing needs to change in `sw.js` when you update the app.
+It opens full screen like an app, **at once**: from the copy saved on the phone, without waiting for
+the network (on a 1.5 s connection: about 80 ms instead of 4.5 s), and the same with no connection.
+Updates: each open asks GitHub Pages, quietly, whether there's a new version (and again when the app
+comes back to the screen after half an hour). A new version downloads whole in the background, then
+waits; it's put in when you leave the app (your changes saved first), so the next time you look,
+it's there. If the app opens with one already waiting and you haven't touched anything yet, it's put
+in right away. Old and new files are never mixed, and an older version can never save over data a
+newer one wrote (it stops and shows a "Reopen" banner instead).
+After changing any app file, run `node tools/stamp-sw.js`: it writes the new version into `sw.js`
+(a hash of the files), and the tests fail until you do.
 The terminal fonts are part of the app (`fonts/`), so they work offline from the very first open and
 nothing is loaded from Google.
 

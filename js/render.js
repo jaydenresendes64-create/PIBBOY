@@ -1070,7 +1070,7 @@
     bar.innerHTML = '<span>A newer version of PIBBOY saved your data. Changes here won’t be saved.</span>'+
       '<button type="button" id="stale-reload">Reopen</button>';
     document.body.appendChild(bar);
-    bar.querySelector('#stale-reload').addEventListener('click', function(){ location.reload(); });
+    bar.querySelector('#stale-reload').addEventListener('click', function(){ if (ST.reopen) ST.reopen(); else location.reload(); });
   }
   // The saved data exists but couldn't be read (storage.js). Nothing is
   // shown or saved, so it stays as it is for the next try.

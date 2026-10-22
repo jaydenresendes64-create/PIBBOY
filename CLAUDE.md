@@ -11,7 +11,9 @@ DATA MODEL comment at the top of `js/state.js`.
 - Never commit copyrighted audio/video or sound packs (the repo is public for GitHub Pages).
 - Plain scripts sharing `window.StatusTerminal`; no framework, no build step for the app.
 - Before every push: `node --test` must pass. Pushing to `main` deploys to GitHub Pages.
-- Bump `CACHE` in `sw.js` and update `APP_SHELL` when app files are added or removed.
+- After changing any app file run `node tools/stamp-sw.js` (sw.js VERSION; the tests check it), and update
+  `APP_SHELL` when app files are added or removed.
+- When a version saves fields an older one would drop, raise `DATA_SCHEMA` in `js/state.js`.
 - Keep the amber terminal look; decorations must never block taps and must respect
   `prefers-reduced-motion`.
 - Animations that loop move only `transform` or `opacity` (tests/perf.test.js); measure a change

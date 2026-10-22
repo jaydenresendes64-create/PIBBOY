@@ -1,7 +1,8 @@
 # PIBBOY — technical handoff
 
-State as of the swinging arms PR (2026-10-19, after PR #32). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-320/320 tests pass locally. `sw.js` cache: `v32`.
+State as of PR #39 and its follow-ups (2026-10-22). Live: https://jaydenresendes64-create.github.io/PIBBOY/
+`node --test` passes locally and on GitHub (Tests workflow). `sw.js` VERSION: a hash of the app's
+files, written by `node tools/stamp-sw.js`; `DATA_SCHEMA` (js/state.js): 1.
 
 ## 1. What it is
 
@@ -32,7 +33,7 @@ Plain scripts (not ES modules, so `index.html` still opens from disk) sharing
 | `js/crt.js`, `js/tilt.js` | CRT flicker; 3D tilt (DeviceOrientation/mouse) incl. glass glare parallax |
 | `js/events.js` | All user actions → state change → re-render → debounced save |
 | `js/main.js` | Boot: load → setup events → render → `syncCaps()` → SW registration |
-| `sw.js` | Service worker: network-first app files with a 2.5 s timeout (then the cached copy, refreshed in the background), APP_SHELL precache (big `HEAVY` files may fail without stopping the install), vector tiles cache (≤800); tested in `tests/sw.test.js` with a fake network |
+| `sw.js` | Service worker: cache first, one whole version at a time (`CACHE` = prefix + `VERSION`, a hash of APP_SHELL's files from `tools/stamp-sw.js`); install precaches APP_SHELL past the HTTP cache (big `HEAVY` files may fail without stopping it; a core file failing keeps the old version); a later version waits for the page's `SKIP_WAITING` (js/main.js `watchUpdates`: when the app goes to the background, or at an untouched open); region shapes in `status-terminal-data` (stale-while-revalidate, kept across versions); vector tiles cache (≤800); tested in `tests/sw.test.js` with a fake network |
 | `css/terminal.css` | All styles (palette variables in `:root`) |
 | `vendor/three/three.pibboy.min.js` | Three.js r186, tree-shaken (parts in `tools/three-entry.mjs`, built by `tools/build-three.mjs`) |
 | `tests/*.test.js` | `node --test` (Node built-in runner, vm harness in `tests/helpers.js`, no deps) |
@@ -155,6 +156,17 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   on return) redraws at 4:00, and a Log tap on a form drawn before 4:00 redraws with a notice
   instead of logging unseen values. Dailies, streak, urges' daily cap, trials keep midnight
   (`todayStr`). Tests in `tests/vitalsday.test.js`; checked live with a fake clock (Toronto).
+- **Instant open (2026-10-22, owner's yes):** sw.js cache first, whole versions (`VERSION` hash of
+  APP_SHELL from `tools/stamp-sw.js`; `tests/sw.test.js` fails if stale), the first version takes
+  over at once, a later one waits; js/main.js `watchUpdates()`: `reg.update()` when back on screen
+  after 30 min, `SKIP_WAITING` when the app goes to the background (after `leaving()` saved) or at an
+  open where it's already waiting and nothing was touched, one reload on `controllerchange`;
+  `ST.reopen()` fetches the new version for the stale banner. js/storage.js stamps every copy with
+  `DATA_SCHEMA` and never adopts or writes over a higher one (`goStale`, `showNewerVersion`).
+  Measured: reopen on a 1.5 s-latency link 4.1–4.5 s → 79–87 ms. Checked in Chromium with a real
+  worker: offline open, deploy while in use (old files kept until the background, then new, unsaved
+  change kept, old cache deleted), deploy found while away (put in at the next untouched open), the
+  move from the live network-first worker (v36) to this one.
 - **Places quests (2026-10-22, HANDOFF §8 step 0):** main quest `progressType:'places'`, `placesTarget`
   (1-PLACES_TARGET_MAX), `placesCc` (a COUNTRY_CODES entry or '' anywhere). state.js `placesCount()` =
   cities + regions on the MAP now (in that country), `placesProgress()`, `questProgress()` (mainReady
@@ -576,10 +588,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   as="font" crossorigin>`): in at 0.64 s instead of 1.24 s on a 300 ms connection, before the first
   paint, so the text no longer jumps. Opening, first 4 s: busy 1356 → 509 ms, style 523 → 64 ms.
   `tests/perf.test.js` keeps the rules: whatever loops animates only transform/opacity, no width
-  transition, fonts preloaded (and cached by sw.js). Not changed, to decide with the owner: the
-  service worker waits up to `NET_MS` (2.5 s) for the network on every open (so a new version shows
-  at once; a weak signal delays the opening by that much): cache-first with a full new version
-  installed in the background would open instantly but show updates one open later; the MAP's clouds
+  transition, fonts preloaded (and cached by sw.js). Done 2026-10-22 (owner's yes): cache-first opens
+  with whole versions installed in the background (see "Instant open" below). Still to decide: the MAP's clouds
   drift at 30 frames a second while the map is still, and ITEMS copies a WebGL picture into each
   model's canvas at 30 fps (`drawImage`): both cost GPU time on a phone, not measurable here
   (headless Chromium draws WebGL on the processor).
@@ -630,8 +640,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
    - The turn: 0.6 s or more, enough drawings to be smooth, no head jump, and the parts take over
      without a pop (2026-10-19).
    - Taps go through him; Reduce Motion: he stands still, centred; he never covers the name or level.
-   - Bump `CACHE` in sw.js with every change, or the phone keeps the old one ("je ne vois aucun
-     changement", 2026-10-11).
+   - Run `node tools/stamp-sw.js` with every change, or the phone keeps the old one ("je ne vois aucun
+     changement", 2026-10-11); the tests fail until it's done.
 
 ## 5. Workflow
 
@@ -645,7 +655,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 - The working copy now has CRLF line endings (git autocrlf after pulls): scripted text edits must
   normalize `
 ` first (the Edit tool is fine).
-- Bump `CACHE` in `sw.js` when files are added/removed; add new app files to `APP_SHELL`.
+- `node tools/stamp-sw.js` after any app file change (tests check VERSION); add new app files to `APP_SHELL`.
+- Raise `DATA_SCHEMA` (js/state.js) when a version saves fields an older one would drop.
 - Code the owner brings from other AIs (Grok, ChatGPT): diff it against the repo, test it, and take
   only the good parts; never paste whole files over newer ones. Grok's first `sw.js` broke opening
   offline (fixed before merging); its later "places worker" and "PER/LUK + quest skillGains" passes
@@ -663,8 +674,11 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 - Caps linking regex only matches English objectives ("Obtain/Get/Reach/Earn/Have/Save N Caps"); a
   French objective ("Obtenir 5 caps") is not auto-converted (on purpose: opt-in plan in §8 step 3).
 - Scroll ticks only follow window scrolling (not inner scroll areas such as the custom-sounds panel).
-- Right after a deploy, one open on a weak signal (>2.5 s) may mix old cached and new files; the next
-  open is whole again.
+- An update shows after the app has been in the background once (or at an open where it's already
+  downloaded and nothing was touched), not on the open that downloads it. The very first deploy of
+  the cache-first worker comes through the old network-first one (checked in Chromium: data kept).
+- Versions deployed before `DATA_SCHEMA` don't check it: one of them left open in a second tab during
+  the first deploy of 2026-10-22 could still save over new fields; from then on, older code stops.
 - The MAP opens on Montréal (`HOME` in `map.js`), not on the whole world.
 - Routes need a connection when added (OSRM's public demo server; if it ever goes away, another
   OSRM/Valhalla server with CORS can replace `ROUTER` in `routes.js` and the CSP). Removing a city
