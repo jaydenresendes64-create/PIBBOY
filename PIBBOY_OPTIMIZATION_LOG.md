@@ -2,6 +2,15 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-22 — Last 7 days summary (plan task 7); mobile check (task 6)
+- Task 6: urge controls and the import comparison at 360 px in Chromium: no sideways scroll, every
+  button ≥ 36 px tall, long coping names wrap (checked before this entry; marked done now).
+- `js/state.js`: `weekSummary()` (no new data). `js/render.js`: `weekHtml()`, a "Last 7 days" grid
+  above Lifetime (hidden when both weeks are empty; the week before in brackets, no minus signs).
+  `js/boot.js`: `LAST 7 DAYS... +X XP · N CHECK-INS · N URGES RIDDEN OUT`.
+- Tests: new `tests/week.test.js` (2); `node --test` → 343 pass, 0 fail. Chromium 360×800: the panel
+  renders after a check-in, an urge given in to and a daily; scrollWidth 360; no page errors.
+
 ## 2026-10-22 — Backup import comparison (plan task 5); reward paths reviewed (task 4)
 - Task 4: `completeMain/Side/Bonus/Daily`, `logVitals`, `urgeWon` are guarded by their flags and
   covered by existing tests; no change needed.

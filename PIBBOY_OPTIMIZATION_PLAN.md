@@ -12,7 +12,8 @@ improvement campaign. Status: `[x]` done (tests pass), `[ ]` to do, `[~]` in pro
 | 3 | Data integrity | Old saves and backups read the new urge fields safely (no migrate step needed: defaults + sanitize) | documents tests (identical round trip, hostile input) | [x] |
 | 4 | VITALS / QUESTS | Inspect reward paths for double taps, reloads and the 4:00 VITALS day vs midnight dailies | existing tests (flags `completed`/`done`/`logged`/`lastDate`) | [x] no defect found |
 | 5 | Backup / restore | Import: show what a backup holds next to this phone before replacing; warn when older or losing data | `tests/backup.test.js`, Chromium with a real file | [x] |
-| 6 | Mobile usability | Tap targets and focus on the new urge controls; long names wrap | browser at 360-390 px | [ ] |
+| 6 | Mobile usability | Tap targets and focus on the new urge controls; long names wrap | browser at 360-390 px | [x] |
+| 7 | Progression | Last 7 days next to the 7 before (XP, check-ins, urges, dailies, trials, quests) on STATUS and in the RobCo boot, from recorded data only | `tests/week.test.js`, Chromium at 360 px | [x] |
 
 ## Rules (from CLAUDE.md)
 - Every data-shape change through `sanitizeImported()` (and `migrate()` when defaults aren't enough), with a test.

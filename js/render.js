@@ -218,6 +218,7 @@
     SKILL_KEYS.forEach(function(k){ html += skillRowHtml(k); });
     html += '<p class="vital-fine">Tap a skill: where its points came from. They come from quests, books, the journal and urges ridden out.</p>';
     html += bobbleheadsHtml();
+    html += weekHtml();
     html += '<div class="panel-title">Lifetime</div><div class="stats-grid">'+
       statsCell(commas(state.lifetimeXp||0), 'Total XP earned')+
       statsCell(state.quests.side.filter(function(q){return q.done;}).length, 'Side quests done')+
@@ -227,6 +228,21 @@
       statsCell(state.vitals.filter(function(v){ return v.logged; }).length, 'Vitals check-ins')+
     '</div>';
     el('tab-status').innerHTML = html;
+  }
+  // The last 7 days next to the 7 before (ST.weekSummary): XP, check-ins,
+  // urges, dailies, trials. Nothing when both weeks are empty.
+  function weekHtml(){
+    var sum = ST.weekSummary(), w = sum.week, b = sum.before;
+    function any(o){ return Object.keys(o).some(function(k){ return o[k]; }); }
+    if (!any(w) && !any(b)) return '';
+    return '<div class="panel-title">Last 7 days</div><div class="stats-grid">'+
+      statsCell('+'+commas(w.xp), 'XP (the 7 before: +'+commas(b.xp)+')')+
+      statsCell(w.checkins+'/7', 'Check-ins (the 7 before: '+b.checkins+')')+
+      statsCell(w.urgesWon, 'Urges ridden out'+(w.urgesLapsed ? ' · '+w.urgesLapsed+' given in to' : ''))+
+      statsCell(w.dailies, 'Dailies done (the 7 before: '+b.dailies+')')+
+      statsCell(w.trials, 'Trials logged'+(w.records ? ' · '+w.records+' record'+(w.records>1 ? 's' : '') : ''))+
+      statsCell(w.quests, 'Quests completed')+
+    '</div>';
   }
   function statsCell(value, label){
     return '<div class="stats-cell"><div class="stats-num">'+escapeHtml(value)+'</div><div class="stats-label">'+label+'</div></div>';

@@ -129,6 +129,11 @@ when the app goes to the background; what was recorded is kept). Each tape plays
 first). The recordings stay on this device only, in their own storage: they are not in the backup
 file (too big), so use a tape's Share button to keep a copy.
 
+**Last 7 days** (STATUS tab, above Lifetime): XP gained, check-ins (out of 7), urges ridden out (and
+given in to), dailies done, trials logged (and records), quests completed, each next to the 7 days
+before; counted from what's recorded only, and hidden until something is. The RobCo boot says it in
+one line.
+
 **Bobbleheads** (STATUS tab): 16 collectibles for real milestones, each with its own trophy on the
 shelf, found by themselves the moment one is reached (a banner showing the trophy, a springy sound,
 +50 XP each): Vault Dweller (level 5: a vault door), Wasteland Veteran (level 10: a medal), Devotion
@@ -303,7 +308,7 @@ the boot sound plays on the first tap). The phone's own volume and silent switch
 
 **RobCo boot** (`js/boot.js`): the first power-on of the day, the terminal then types its startup
 letter by letter, about 2.5 seconds: the RobCo logon, then your real status (level and XP, quests,
-today's dailies, a streak quest's day, S.P.E.C.I.A.L. points waiting, rads and the last backup) and
+today's dailies, a streak quest's day, the last 7 days, S.P.E.C.I.A.L. points waiting, rads and the last backup) and
 the weather outside. A tap shows it all at once; a second tap (or the end) opens the app. Not with
 Power-on off, nor with Reduce Motion.
 

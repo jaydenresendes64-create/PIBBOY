@@ -7,10 +7,11 @@
 - `node --test`: all pass at the last commit.
 
 ## Next actions
-1. Plan task 6: check the new urge controls and the import comparison at 360 px in Chromium
-   (tap targets ≥ 36 px, long coping names wrap).
-2. Candidate: a weekly line on STATUS or in the RobCo boot from `historySummary(7)` (HANDOFF §8).
-3. Candidate: French caps objectives (`CAPS_OBJECTIVE`, HANDOFF §8 step 3: needs a one-time flag).
+1. French caps objectives (`CAPS_OBJECTIVE`, HANDOFF §8 step 3: needs a one-time flag, since
+   `capsQuestsLinked` is already set on existing saves).
+2. Candidates: event-driven quest objectives (HANDOFF §8 step 0); more VITALS/urge checks.
+3. Waiting on the owner: authorization to push this branch; a clear yes for the service-worker
+   instant-open change (not started).
 
 ## Resume
 ```

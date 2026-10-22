@@ -155,6 +155,12 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   on return) redraws at 4:00, and a Log tap on a form drawn before 4:00 redraws with a notice
   instead of logging unseen values. Dailies, streak, urges' daily cap, trials keep midnight
   (`todayStr`). Tests in `tests/vitalsday.test.js`; checked live with a fake clock (Toronto).
+- **Last 7 days (2026-10-22):** state.js `weekSummary()` → `{week, before}` (calendar days: today and
+  the 6 before, then the 7 before those): XP and check-ins/dailies/quests/trial records from
+  `state.history`, urges ridden out / given in to from `urges.log`, trials from `trials.log`. No new
+  data. render.js `weekHtml()` (STATUS, above Lifetime, hidden when both weeks are empty; each cell
+  shows the week before in brackets, never a minus); boot.js a `LAST 7 DAYS` line once the week has
+  XP or urges. `historySummary(days)` stays (rolling hours, by type). `tests/week.test.js`.
 - **Backup import comparison (2026-10-22):** state.js `stateSummary(s)` (level, lifetimeXp, logged
   check-ins, urges, quests done, journal entries, places, `last` = latest history/urge `t` or logged
   check-in day at 4:00) and `compareBackup(here, backup)` (`older`, `lose` per count, never negative);
@@ -689,8 +695,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 ## 8. Exact next engineering steps
 
 0. Next on the event core (owner's call): event-driven quest objectives ("reveal 5 cities in Morocco"
-   progressing by themselves from PLACE_DISCOVERED events), a weekly summary from `historySummary(7)`
-   (e.g. a line in the RobCo boot), bobbleheads based on events.
+   progressing by themselves from PLACE_DISCOVERED events), (done: the weekly summary, `weekSummary()`, on
+   STATUS and in the RobCo boot), bobbleheads based on events.
 
 1. Collect the owner's phone feedback and adjust: VITALS insight wording (`PRIORITY`, `ACTION`,
    `POOL` in js/insight.js are plain lists, easy to edit or extend; the thresholds are `LINES`),

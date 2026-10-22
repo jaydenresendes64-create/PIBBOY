@@ -731,6 +731,35 @@
     return out;
   }
 
+  // The last 7 days (today and the 6 before, calendar days) and the 7 before
+  // them, from what's recorded: XP gained, check-ins logged, urges ridden out
+  // and given in to, dailies done, trials logged (records among them), quests
+  // completed. {week, before}.
+  function weekSummary(){
+    var today = dayNumber(todayStr());
+    function empty(){ return {xp:0, checkins:0, urgesWon:0, urgesLapsed:0, dailies:0, trials:0, records:0, quests:0}; }
+    var week = empty(), before = empty();
+    function slot(day){ var d = today - day; return d>=0 && d<7 ? week : d>=7 && d<14 ? before : null; }
+    (app.state.history||[]).forEach(function(e){
+      var t = new Date(Number(e.t) || 0), w = slot(dayNumber(t.getFullYear()+'-'+(t.getMonth()+1)+'-'+t.getDate()));
+      if (!w) return;
+      w.xp += Number(e.xp) || 0;
+      if (e.type==='VITALS_CHECKIN') w.checkins++;
+      else if (e.type==='DAILY_DONE') w.dailies++;
+      else if (e.type==='QUEST_COMPLETED') w.quests++;
+      else if (e.type==='TRIAL_DONE' && e.data && Number(e.data.record)) w.records++;
+    });
+    ((app.state.urges && app.state.urges.log) || []).forEach(function(u){
+      var w = slot(dayNumber(u.date));
+      if (w){ if (u.outcome==='lapsed') w.urgesLapsed++; else w.urgesWon++; }
+    });
+    ((app.state.trials && app.state.trials.log) || []).forEach(function(r){
+      var w = slot(dayNumber(r.date));
+      if (w) w.trials++;
+    });
+    return {week:week, before:before};
+  }
+
   // ---------- centralized reward logic ----------
   // Every reward goes through award(): the perks taken change it (withPerks,
   // from the PERKS table below), its skill gains and XP are given, and it's
@@ -2176,6 +2205,7 @@
   ST.record = record;
   ST.recentEvents = recentEvents;
   ST.historySummary = historySummary;
+  ST.weekSummary = weekSummary;
   ST.completeDaily = completeDaily;
   ST.sellItem = sellItem;
   ST.moveItem = moveItem;
