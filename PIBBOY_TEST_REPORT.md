@@ -4,6 +4,8 @@ Only results actually run are listed. Command: `node --test` (Node's built-in ru
 
 | Date | Scope | Result |
 |------|-------|--------|
+| 2026-10-22 | Full suite after the stale-weather limit | 346 pass, 0 fail |
+| 2026-10-22 | Chromium, weather server blocked: 1 h vs 4 h old reading | shown / hidden as intended |
 | 2026-10-22 | Full suite after the 3D context-loss recovery | 345 pass, 0 fail |
 | 2026-10-22 | Chromium: ITEMS models through WEBGL_lose_context lose/restore and lose/reopen | hidden then drawn again both ways, no page errors |
 | 2026-10-22 | Full suite after the check-in level anchors | 345 pass, 0 fail |

@@ -320,7 +320,8 @@ Power-on off, nor with Reduce Motion.
 tap reads it the Pip-Boy way ("RAD-STORM INCOMING — SEEK SHELTER" when it rains, "NUCLEAR WINTER
 CONDITIONS" in snow, "FOG BANK — WATCH FOR FERAL GHOULS"...). From [Open-Meteo](https://open-meteo.com)
 (free, no key, CC BY 4.0, credited in Settings), asked at most every 30 minutes, for Montréal only
-(never your position), and kept on the phone for offline.
+(never your position), and kept on the phone for offline for 3 hours; an older reading isn't shown
+(the boot says NO SIGNAL) rather than pass for the weather now.
 
 ### Custom sounds (your own clips)
 

@@ -2,6 +2,13 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-22 — No stale weather passed off as current (plan task 13)
+- `js/weather.js`: offline (or with Open-Meteo failing) the last kept reading was shown in the topbar
+  and the boot however old. `STALE_MS` (3 h) and `recent()`: older readings show nothing (the boot
+  says NO SIGNAL). Checked too: the fog layer already rebuilds its GL state after a context loss.
+- Tests: `tests/boot.test.js` +1 (1 h kept, 3 h gone, button hidden, NO SIGNAL); `node --test` →
+  346 pass, 0 fail. Chromium with Open-Meteo blocked: 1 h-old reading shown, 4 h-old hidden.
+
 ## 2026-10-22 — ITEMS 3D models survive a GPU context loss (plan task 12)
 - `js/items3d.js`: a context loss set `broken` for good (models gone until reload; iOS drops GPU
   contexts of backgrounded apps). Now `lost` hides them, `webglcontextrestored` brings them back,
