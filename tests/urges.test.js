@@ -297,6 +297,24 @@ test('the screen: what to note while the timer runs, "I gave in" at any point, t
   assert.match(history, /data-vital="urge-history" aria-expanded="true">Hide \(3\)/);
 });
 
+test('the last urges: 8 on a tap, then 8 more at a time back to the oldest kept', () => {
+  const list = shown => vitals((ST, s, a) => {
+    for (let i = 0; i < 20; i++) { ST.startUrge('TIRED'); a.setNow(a.context.Date.now() + ST.URGE_MS); ST.urgeLapsed(); }
+    ST.app.urgeHistory = shown;
+  });
+  const count = html => (html.match(/<li class="lapsed">/g) || []).length;
+  assert.equal(count(list(0)), 0);
+  const first = list(8);
+  assert.equal(count(first), 8);
+  assert.match(first, /data-vital="urge-history-more">8 more \(12 older\)</);
+  const more = list(16);
+  assert.equal(count(more), 16);
+  assert.match(more, /data-vital="urge-history-more">4 more \(4 older\)</);
+  const all = list(24);
+  assert.equal(count(all), 20);
+  assert.doesNotMatch(all, /urge-history-more/);
+});
+
 test('STATUS counts the urges ridden out, not the ones given in to', () => {
   const a = loadApp({ files: FILES.vitals });
   a.setNow('2026-10-22T12:00:00');

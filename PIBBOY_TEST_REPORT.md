@@ -4,6 +4,8 @@ Only results actually run are listed. Command: `node --test` (Node's built-in ru
 
 | Date | Scope | Result |
 |------|-------|--------|
+| 2026-10-22 | Full suite after urge history paging | 351 pass, 0 fail |
+| 2026-10-22 | Chromium: Last urges → more → Hide | 8 → 11 → folded, focus kept, no page errors |
 | 2026-10-22 | Full suite with `tests/roundtrip.test.js` | 350 pass, 0 fail |
 | 2026-10-22 | Chromium: Export → fresh profile → Import → reload | all data identical, no page errors |
 | 2026-10-22 | Full suite after logging urges at their start | 349 pass, 0 fail |

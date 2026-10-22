@@ -193,7 +193,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   after a lapse it also offers "Tapped by mistake? Undo": state.js `undoLapse()` takes that latest
   entry off the log and puts back the urge it ended (`app.urgeUndo`, in memory only; never a
   ridden-out urge, never while another runs);
-  the start phase shows the patterns and **Last urges** (`app.urgeHistory`, last 8). Tests:
+  the start phase shows the patterns and **Last urges** (`app.urgeHistory`: how many shown, 8 at a
+  time with "N more", focus on the first added). Tests:
   `tests/urges.test.js` (details, outcomes and the cap, notes, copes, documents with hostile input,
   patterns with exact wording, the suggestion, the screen, inert hostile text); checked end to end
   in Chromium (details → lapse → note → history → reload).

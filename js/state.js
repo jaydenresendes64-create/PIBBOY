@@ -318,7 +318,7 @@
     urgeUndo: null,             // {t, active}: the lapse just logged and the urge it ended (undoLapse)
     urgeCopeAdd: false,         // the "+ Mine" box for a new way of riding one out is open
     urgeCopeEdit: false,        // the ways show their × (removable)
-    urgeHistory: false,         // the decoder's last urges are unfolded
+    urgeHistory: 0,             // how many of the decoder's last urges are unfolded (0: folded)
     vitalsView: 'checkin',      // VITALS shows 'checkin' or 'trials'
     trialOpen: null,            // id of the trial whose panel (timer, result) is open
     trialCount: null,           // {id, n}: the tap counter of that trial's set

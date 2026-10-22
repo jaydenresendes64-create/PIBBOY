@@ -2,6 +2,13 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-22 — Urge history paging (plan task 18)
+- `js/vitals.js`: `app.urgeHistory` is now how many are shown; "8 more (N older)" adds 8, focus on the
+  first added. Checked: the urge clock only rewrites its text each second (no costly redraw); the AI
+  journal client holds no key (server-side), falls back to offline rules.
+- Tests: `tests/urges.test.js` +1; `node --test` → 351 pass, 0 fail. Chromium: 11 urges → 8 shown,
+  "3 more (3 older)" → 11, focus on the 9th, Hide folds; no page errors.
+
 ## 2026-10-22 — Backups verified end to end (plan task 17)
 - New `tests/roundtrip.test.js`: two weeks of use through the app's functions (check-ins, urges with
   details/notes/lapses and one running, copes, trials incl. a custom one, chem-free and own streak with

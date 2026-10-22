@@ -239,20 +239,25 @@
         '<div class="vital-btns"><button class="vital-btn quiet" data-vital="urge-undo">Tapped by mistake? Undo</button></div>' : '')+
     '</div>';
   }
-  // The decoder's last urges, newest first (unfolded on a tap).
+  // The decoder's last urges, newest first: HISTORY_STEP on a tap, then as
+  // many more on each "more", back to the oldest kept.
+  var HISTORY_STEP = 8;
   function urgeHistoryHtml(){
     var log = app.state.urges.log;
     if (!log.length) return '';
-    var html = '<div class="vital-btns"><button class="vital-btn quiet" data-vital="urge-history" aria-expanded="'+!!app.urgeHistory+'">'+
-      (app.urgeHistory ? 'Hide' : 'Last urges')+' ('+log.length+')</button></div>';
-    if (!app.urgeHistory) return html;
-    return html+'<ul class="urge-history">'+log.slice(-8).reverse().map(function(u){
+    var shown = app.urgeHistory ? Math.min(log.length, Math.max(HISTORY_STEP, num(app.urgeHistory))) : 0;
+    var html = '<div class="vital-btns"><button class="vital-btn quiet" data-vital="urge-history" aria-expanded="'+!!shown+'">'+
+      (shown ? 'Hide' : 'Last urges')+' ('+log.length+')</button></div>';
+    if (!shown) return html;
+    var left = log.length-shown;
+    return html+'<ul class="urge-history">'+log.slice(-shown).reverse().map(function(u){
       var cope = (u.copes || []).map(ST.copeById).filter(Boolean).map(function(c){ return c.name; }).join(', ');
       var bits = [shortDay(u.date)+(u.hour>=0 ? ' '+pad2(u.hour)+'h' : ''), u.need, u.intensity ? u.intensity+'/10' : '',
         u.trigger ? String(ST.URGE_TRIGGER_LABELS[u.trigger] || '').toLowerCase() : '', OUTCOME_WORDS[u.outcome]+(u.rounds>1 ? ' ('+u.rounds+' rounds)' : ''), cope];
       return '<li class="'+(u.outcome==='lapsed' ? 'lapsed' : '')+'">'+escapeHtml(bits.filter(Boolean).join(' · '))+
         (u.note ? '<span class="urge-history-note">“'+escapeHtml(u.note)+'”</span>' : '')+'</li>';
-    }).join('')+'</ul>';
+    }).join('')+'</ul>'+
+    (left>0 ? '<div class="vital-btns"><button class="vital-btn quiet" data-vital="urge-history-more">'+Math.min(left, HISTORY_STEP)+' more ('+left+' older)</button></div>' : '');
   }
   function urgeCardHtml(){
     var a = app.state.urges.active, left = ST.urgeLeft();
@@ -799,7 +804,16 @@
       redraw('[data-vital="urge-angle"]');
       ST.render.renderStatus();
     },
-    'urge-history': function(){ app.urgeHistory = !app.urgeHistory; redrawUrge(); refocus('[data-vital="urge-history"]'); },
+    'urge-history': function(){ app.urgeHistory = app.urgeHistory ? 0 : HISTORY_STEP; redrawUrge(); refocus('[data-vital="urge-history"]'); },
+    // Older ones under the list; the focus goes to the first one added.
+    'urge-history-more': function(){
+      var before = Math.max(HISTORY_STEP, num(app.urgeHistory));
+      app.urgeHistory = before + HISTORY_STEP;
+      redrawUrge();
+      var items = el('urge-card') && el('urge-card').querySelectorAll('.urge-history li');
+      var first = items && items[before];
+      if (first){ first.setAttribute('tabindex', '-1'); first.focus(); }
+    },
     'rad': function(btn, key){
       var dir = parseInt(btn.getAttribute('data-dir') || '0', 10);
       ST.stepRads(key, dir);
