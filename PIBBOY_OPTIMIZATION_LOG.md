@@ -2,6 +2,14 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-22 — Your own words back while the timer runs (plan task 10)
+- The notes written after urges were stored but never shown again. `js/insight.js`: `lastNote()`,
+  `urgeContext().note`, message `ctx-note` (style YOUR WORDS) right after the coping suggestion:
+  "After an urge you rode out 3 days ago, you wrote: “…”". Only ridden-out urges; same need first.
+- Tests: `tests/urges.test.js` +1 test, hostile note escaped on the running card; `node --test` →
+  345 pass, 0 fail. Chromium 360×800, real taps: rode it out → note (Enter) → new urge: the note
+  shows first; no page errors.
+
 ## 2026-10-22 — Undo a mistaken "I gave in" (plan task 8); French caps on hold (task 9)
 - "I gave in" sits next to Cancel: a mis-tap ended the timer and logged a lapse for good.
   `js/state.js`: `undoLapse()` (+ `app.urgeUndo`, not saved); `js/vitals.js`: "Tapped by mistake?

@@ -291,6 +291,14 @@
     return best;
   }
   // What's known about this urge, from the state: never more.
+  // The latest line written after an urge ridden out (`log`): on this
+  // need, else on any. {text, ago, date}, or null.
+  function lastNote(log, need){
+    var noted = log.filter(function(x){ return x.note; });
+    var same = noted.filter(function(x){ return x.need===need; });
+    var x = same.length ? same[same.length-1] : noted[noted.length-1];
+    return x ? {text:String(x.note), ago:ST.daysSince(x.date), date:x.date} : null;
+  }
   function urgeContext(){
     var s = app.state, u = s.urges || {}, a = u.active || null, all = u.log || [], log = all.filter(ridden), copes = u.copes || [];
     var e = ST.vitalsToday(false), checkin = e && e.logged ? e : null;
@@ -317,6 +325,7 @@
       // The player's way most often ridden out with: on this need (2 tries), else on any (3).
       cope: need ? (bestCope(all, copes, need, 2) || bestCope(all, copes, null, PATTERN_MIN)) : null,
       trigger: a && a.trigger ? a.trigger : '',
+      note: need ? lastNote(log, need) : null,
       seed: all.length + (a ? Math.floor(num(a.start)/60000) : dayNumber(ST.todayStr()))
     };
   }
@@ -394,6 +403,7 @@
     }
     if (ctx.cope) out.push({style:'STRATEGY', id:'ctx-cope', text:'“'+ctx.cope.name+'”: you rode it out '+ctx.cope.won+' of the '+
       plural(ctx.cope.uses, 'time')+' you used it. Worth a go now?'});
+    if (ctx.note) out.push({style:'YOUR WORDS', id:'ctx-note', text:'After an urge you rode out '+agoText(ctx.note.ago, ctx.note.date)+', you wrote: “'+ctx.note.text+'”'});
     if (ctx.rounds>=2) out.push({style:'DIRECT', id:'ctx-round', text:pick([
       'Round '+ctx.rounds+'. Still here after twenty minutes is information, not failure. Change something this time: room, task, company.',
       'Round '+ctx.rounds+'. A longer urge still passes. Do the next twenty somewhere different.'], ctx.seed)});

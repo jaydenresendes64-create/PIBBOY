@@ -178,6 +178,23 @@ test('the way most often ridden out with on this need is suggested first while t
   assert.equal(ST.insight.urgeMessages().some(m => m.id === 'ctx-cope'), false);
 });
 
+test('while the timer runs, the latest line written after an urge ridden out comes back in your words: this need first, else any; never a lapse\'s', () => {
+  const s = fresh();
+  urge('LONELY', {}, 'won', '2026-10-12T21:00:00'); ST.noteUrge(s.urges.log[0].t, 'Called my brother');
+  urge('TIRED', {}, 'won', '2026-10-19T21:00:00'); ST.noteUrge(s.urges.log[1].t, 'Went to bed at 10');
+  urge('TIRED', {}, 'lapsed', '2026-10-20T21:00:00'); ST.noteUrge(s.urges.log[2].t, 'Was out of it');
+  app.setNow('2026-10-22T21:00:00');
+  const note = () => app.plain(ST.insight.urgeMessages()).filter(m => m.id === 'ctx-note');
+  ST.startUrge('TIRED');
+  assert.deepEqual(note(), [{ style: 'YOUR WORDS', id: 'ctx-note', text: 'After an urge you rode out 3 days ago, you wrote: “Went to bed at 10”' }]);
+  ST.cancelUrge(); ST.startUrge('LONELY');
+  assert.equal(note()[0].text, 'After an urge you rode out on Oct 12, you wrote: “Called my brother”');
+  ST.cancelUrge(); ST.startUrge('HUNGRY');
+  assert.equal(note()[0].text, 'After an urge you rode out 3 days ago, you wrote: “Went to bed at 10”');   // none on hunger: the latest
+  fresh(); ST.startUrge('TIRED');
+  assert.deepEqual(note(), []);
+});
+
 // ---------- the screen ----------
 const EVIL = '"><img src=x onerror=alert(1)>';
 function vitals(setup) {
@@ -246,4 +263,13 @@ test('a hostile way, note or log stays inert on the screen', () => {
   });
   assert.doesNotMatch(html, /<img|<b>/);
   assert.match(html, /&quot;&gt;&lt;img/);
+  const running = vitals((ST, s, a) => {                                  // the note, back in your words
+    ST.startUrge('TIRED'); a.setNow(a.context.Date.now() + ST.URGE_MS);
+    ST.noteUrge(ST.urgeWon().entry.t, EVIL);
+    a.setNow(a.context.Date.now() + 60000);
+    ST.startUrge('TIRED');
+    ST.app.urgeAngle = ST.insight.urgeMessages().findIndex(m => m.id === 'ctx-note');
+  });
+  assert.doesNotMatch(running, /<img/);
+  assert.match(running, /YOUR WORDS \/\/<\/span> After an urge you rode out earlier today, you wrote: “&quot;&gt;&lt;img/);
 });

@@ -35,7 +35,8 @@ At zero: one question to look back with (REFLECTION), then **Rode it out** (**+4
 and +1 SURVIVAL**, 3 times a day; logged every time), **Still strong** (another round) or **I gave in**
 (at any point: logged as it was, no XP lost, no streak reset; a lapse on a streak stays your call;
 tapped by mistake? **Undo**, right after, and the urge runs on where it was).
-Then one line for next time, if you want. Once 3 urges are logged, **patterns** from your own log:
+Then one line for next time, if you want: the next urge brings back the latest one you wrote after
+an urge you rode out (YOUR WORDS, the same need first). Once 3 urges are logged, **patterns** from your own log:
 the way most often ridden out with, what most often sets them off, the time of day most come at,
 the intensity lately, how many were ridden out (counted, never a cause); **Last urges** lists them. The day of a
 lapse, the streak card and the decoder each show a way back (RESET), without blame. The support
