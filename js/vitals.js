@@ -749,6 +749,7 @@
       app.urgeCopeAdd = false;
       redraw('#urge-note');
       ST.render.showNotice('Logged. No XP lost, nothing reset.');
+      ST.render.renderStatus();     // the last 7 days
     },
     // What's noted while the timer runs: only the urge card is drawn again.
     'urge-trigger': function(btn, key){
@@ -780,6 +781,7 @@
       app.urgeNote = null;
       if (ST.undoLapse()){ save(true); ST.render.showNotice('Taken back. The urge is still running.'); }
       redraw('[data-vital="urge-angle"]');
+      ST.render.renderStatus();
     },
     'urge-history': function(){ app.urgeHistory = !app.urgeHistory; redrawUrge(); refocus('[data-vital="urge-history"]'); },
     'rad': function(btn, key){

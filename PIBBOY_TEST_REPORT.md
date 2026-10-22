@@ -4,6 +4,8 @@ Only results actually run are listed. Command: `node --test` (Node's built-in ru
 
 | Date | Scope | Result |
 |------|-------|--------|
+| 2026-10-22 | Full suite after the review fix (STATUS redraw) | 345 pass, 0 fail |
+| 2026-10-22 | Chromium: STATUS "Last 7 days" after "I gave in" and Undo (real clicks) | current both times, no page errors |
 | 2026-10-22 | Full suite after YOUR WORDS | 345 pass, 0 fail |
 | 2026-10-22 | Chromium 360×800: note after an urge, shown on the next one | pass, no page errors |
 | 2026-10-22 | Full suite after the lapse Undo | 344 pass, 0 fail |

@@ -2,6 +2,16 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-22 — Review of the branch since the PR #38 merge
+- Read every app-code change of this campaign (state, vitals, insight, events, render, boot).
+  One defect: "I gave in" and its Undo didn't redraw STATUS, so "Last 7 days" kept an old
+  "given in to" count until another redraw. `js/vitals.js`: both now call `renderStatus()`.
+- Checked, no change: default arrays are cloned (`defaultState`, `deepMergeDefaults`); old log
+  entries (hour -1, intensity 0, no trigger) stay out of the patterns; a lapse's note is never
+  shown back.
+- Tests: `node --test` → 345 pass, 0 fail. Chromium, real clicks: STATUS panel appears after the
+  lapse and goes after Undo, with no forced redraw; no page errors.
+
 ## 2026-10-22 — Your own words back while the timer runs (plan task 10)
 - The notes written after urges were stored but never shown again. `js/insight.js`: `lastNote()`,
   `urgeContext().note`, message `ctx-note` (style YOUR WORDS) right after the coping suggestion:
