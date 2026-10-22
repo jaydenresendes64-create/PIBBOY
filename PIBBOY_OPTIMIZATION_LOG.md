@@ -2,6 +2,15 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-22 — Backup import comparison (plan task 5); reward paths reviewed (task 4)
+- Task 4: `completeMain/Side/Bonus/Daily`, `logVitals`, `urgeWon` are guarded by their flags and
+  covered by existing tests; no change needed.
+- `js/state.js`: `stateSummary()`, `compareBackup()`. `js/events.js`: `importQuestion()` shows the
+  backup and this phone side by side, warns when the backup is older or would lose XP, check-ins,
+  urges, journal entries or places. `css/terminal.css`: `.import-compare`.
+- Tests: new `tests/backup.test.js` (3); `node --test` → 341 pass, 0 fail. Chromium: Settings →
+  Import with an older real file shows both lines and the warning; nothing replaced; no page errors.
+
 ## 2026-10-22 — Urge decoder record (plan tasks 1-3)
 - `js/state.js`: urge `active` and log entries gain `intensity`, `trigger`, `copes`; log entries gain
   `outcome`, `note`, `hour`, `t`; `urges.copes` (player's ways). New: `setUrgeDetail`, `urgeLapsed`,

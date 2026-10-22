@@ -4,6 +4,8 @@ Only results actually run are listed. Command: `node --test` (Node's built-in ru
 
 | Date | Scope | Result |
 |------|-------|--------|
+| 2026-10-22 | Full suite after the backup import comparison | 341 pass, 0 fail |
+| 2026-10-22 | Chromium: Settings → Import an older backup file | comparison + warning shown, nothing replaced |
 | 2026-10-22 | Full suite after the urge decoder record | 338 pass, 0 fail |
 | 2026-10-22 | Chromium (Playwright, 390×844): urge flow end to end with reload | pass, no page errors |
 

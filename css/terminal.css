@@ -1383,6 +1383,9 @@ button{ cursor:pointer; }
 .log-xp{ font-size:0.75rem; color:var(--amber); margin-top:2px; }
 
 .reset-warning{ color:var(--danger); }
+/* A backup about to replace everything: it, then this phone, one line each (events.js importQuestion). */
+.import-compare{ display:block; flex-basis:100%; font-size:0.74rem; line-height:1.5; color:var(--text-dim); }
+.import-line{ display:block; }
 
 /* ---------- settings (index.html #settings, js/events.js) ----------
    Over the app, under the toasts (so a backup's RadAway shows) and under

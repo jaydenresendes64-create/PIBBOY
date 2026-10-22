@@ -7,10 +7,10 @@
 - `node --test`: all pass at the last commit.
 
 ## Next actions
-1. Plan task 4: read `js/state.js` reward paths (`completeDaily`, `logVitals`, main/side quest
-   completion) and `js/events.js` handlers for double-tap and reload cases; add tests for any gap.
-2. Plan task 5: backup import preview (`js/events.js` import flow, `ST.sanitizeImported`).
-3. Plan task 6: check the new urge controls at 360 px in Chromium.
+1. Plan task 6: check the new urge controls and the import comparison at 360 px in Chromium
+   (tap targets ≥ 36 px, long coping names wrap).
+2. Candidate: a weekly line on STATUS or in the RobCo boot from `historySummary(7)` (HANDOFF §8).
+3. Candidate: French caps objectives (`CAPS_OBJECTIVE`, HANDOFF §8 step 3: needs a one-time flag).
 
 ## Resume
 ```

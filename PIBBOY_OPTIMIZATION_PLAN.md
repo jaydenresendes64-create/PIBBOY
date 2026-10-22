@@ -10,8 +10,8 @@ improvement campaign. Status: `[x]` done (tests pass), `[ ]` to do, `[~]` in pro
 | 1 | Urge decoder | Record every urge with its outcome (ridden out / given in to), intensity, trigger, coping ways used, one-line note, hour; the XP cap counts only urges ridden out | `tests/urges.test.js`, Chromium end to end | [x] |
 | 2 | Urge decoder | Player's own coping list (add / remove, 6 generic defaults), best way suggested first, patterns from the log (counted, never causal) | `tests/urges.test.js` (exact wording) | [x] |
 | 3 | Data integrity | Old saves and backups read the new urge fields safely (no migrate step needed: defaults + sanitize) | documents tests (identical round trip, hostile input) | [x] |
-| 4 | VITALS / QUESTS | Inspect reward paths for double taps, reloads and the 4:00 VITALS day vs midnight dailies; fix what's wrong, with tests | new tests | [ ] |
-| 5 | Backup / restore | Import: show what a backup holds before replacing anything (counts, dates); check old formats still import | tests + browser | [ ] |
+| 4 | VITALS / QUESTS | Inspect reward paths for double taps, reloads and the 4:00 VITALS day vs midnight dailies | existing tests (flags `completed`/`done`/`logged`/`lastDate`) | [x] no defect found |
+| 5 | Backup / restore | Import: show what a backup holds next to this phone before replacing; warn when older or losing data | `tests/backup.test.js`, Chromium with a real file | [x] |
 | 6 | Mobile usability | Tap targets and focus on the new urge controls; long names wrap | browser at 360-390 px | [ ] |
 
 ## Rules (from CLAUDE.md)

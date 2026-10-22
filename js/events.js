@@ -430,8 +430,7 @@
       var imported = ST.sanitizeImported(raw);
       if (!imported) throw new Error('Not a Status Terminal backup');
       pendingImport = imported;
-      el('reset-confirm-area').innerHTML =
-        '<span class="reset-warning">Replace all data with this backup?</span>'+
+      el('reset-confirm-area').innerHTML = importQuestion(ST.compareBackup(app.state, imported))+
         '<button id="import-confirm-btn">Yes, replace</button>'+
         '<button id="import-cancel-btn">Cancel</button>';
     }).catch(function(){
@@ -439,6 +438,25 @@
       if (ST.sfx) ST.sfx.play('error');
       el('reset-confirm-area').innerHTML = '<span class="reset-warning">That file isn’t a Status Terminal backup.</span>';
     });
+  }
+  // Before a backup replaces everything: what it holds next to what's here,
+  // and a warning when it's older or would lose things only this phone has.
+  function importQuestion(c){
+    function when(t){ return t ? 'last used '+new Date(t).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) : 'never used'; }
+    function line(label, x){
+      return '<span class="import-line">'+label+': level '+x.level+' · '+ST.commas(x.lifetimeXp)+' XP · '+x.checkins+' check-ins · '+
+        x.urges+' urges · '+ST.escapeHtml(when(x.last))+'</span>';
+    }
+    var lost = [];
+    if (c.lose.xp) lost.push(ST.commas(c.lose.xp)+' XP');
+    if (c.lose.checkins) lost.push(c.lose.checkins+' check-in'+(c.lose.checkins===1 ? '' : 's'));
+    if (c.lose.urges) lost.push(c.lose.urges+' urge'+(c.lose.urges===1 ? '' : 's'));
+    if (c.lose.journal) lost.push(c.lose.journal+' journal entr'+(c.lose.journal===1 ? 'y' : 'ies'));
+    if (c.lose.places) lost.push(c.lose.places+' place'+(c.lose.places===1 ? '' : 's'));
+    return '<span class="import-compare">'+line('This backup', c.backup)+line('On this phone', c.here)+'</span>'+
+      (c.older || lost.length ? '<span class="reset-warning">'+(c.older ? 'This backup is older than what’s on this phone. ' : '')+
+        (lost.length ? 'Replacing loses '+lost.join(', ')+'. ' : '')+'Export a backup of this phone first if you’re unsure.</span>' : '')+
+      '<span class="reset-warning">Replace all data with this backup?</span>';
   }
   function confirmImport(){
     if (!pendingImport) return;

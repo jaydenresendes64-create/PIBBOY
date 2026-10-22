@@ -155,6 +155,12 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   on return) redraws at 4:00, and a Log tap on a form drawn before 4:00 redraws with a notice
   instead of logging unseen values. Dailies, streak, urges' daily cap, trials keep midnight
   (`todayStr`). Tests in `tests/vitalsday.test.js`; checked live with a fake clock (Toronto).
+- **Backup import comparison (2026-10-22):** state.js `stateSummary(s)` (level, lifetimeXp, logged
+  check-ins, urges, quests done, journal entries, places, `last` = latest history/urge `t` or logged
+  check-in day at 4:00) and `compareBackup(here, backup)` (`older`, `lose` per count, never negative);
+  events.js `importQuestion()` puts both lines and the warning before "Replace all data with this
+  backup?". Nothing changes before "Yes, replace" (tested: state byte-identical, a non-backup file
+  refused). `tests/backup.test.js`; checked in Chromium with a real file.
 - **Urge decoder record (2026-10-22, owner's "autonomous engineering mission" prompt: trigger and
   intensity tracking, history, user-defined coping, patterns, reflection):** state.js `urges.active`
   gets `intensity` (0-10, 0 = not noted), `trigger` (`URGE_TRIGGERS`, '' none), `copes` (ids); log

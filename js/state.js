@@ -1424,6 +1424,40 @@
     return (h ? h+':'+(m<10 ? '0' : '') : '')+m+':'+(sec<10 ? '0' : '')+sec;
   }
 
+  // ---------- what a document holds (before a backup replaces the data) ----------
+  // A summary of a state (sanitized): its level and XP, how much is in it,
+  // and when it was last used (its latest reward, check-in or urge; null
+  // for none). So a backup can be compared with what's here before it
+  // replaces everything.
+  function stateSummary(s){
+    var last = 0;
+    (s.history || []).forEach(function(e){ last = Math.max(last, num(e.t, 0)); });
+    (s.urges && s.urges.log || []).forEach(function(u){ last = Math.max(last, num(u.t, 0)); });
+    (s.vitals || []).forEach(function(v){
+      var m = DATE.exec(v.date || '');
+      if (m && v.logged) last = Math.max(last, new Date(+m[1], +m[2]-1, +m[3], VITALS_DAY_START).getTime());
+    });
+    var quests = s.quests || {};
+    return {
+      level: num(s.level, 1), lifetimeXp: num(s.lifetimeXp, 0),
+      checkins: (s.vitals || []).filter(function(v){ return v.logged; }).length,
+      urges: (s.urges && s.urges.log || []).length,
+      questsDone: (quests.mains || []).filter(function(m){ return m.completed; }).length + (quests.side || []).filter(function(q){ return q.done; }).length,
+      journal: (s.log || []).length, places: (s.map && s.map.discovered || []).length,
+      last: last || null
+    };
+  }
+  // A backup about to replace `here`: what would be lost (XP, check-ins,
+  // urges, journal entries, places that only `here` has) and whether it
+  // was last used before `here` was. Counts only, never a guess.
+  function compareBackup(here, backup){
+    var a = stateSummary(here), b = stateSummary(backup);
+    return {here:a, backup:b,
+      older: !!(a.last && (!b.last || b.last<a.last)),
+      lose: {xp:Math.max(0, a.lifetimeXp-b.lifetimeXp), checkins:Math.max(0, a.checkins-b.checkins), urges:Math.max(0, a.urges-b.urges),
+        journal:Math.max(0, a.journal-b.journal), places:Math.max(0, a.places-b.places)}};
+  }
+
   // ---------- the old terminal's data ----------
   // The owner's in-Claude version (one page, with its own data) has VITALS,
   // the streak, urges and training too. Its backup can be added to this
@@ -2103,6 +2137,8 @@
   ST.migrate = migrate;
   ST.defaultState = defaultState;
   ST.sanitizeImported = sanitizeImported;
+  ST.stateSummary = stateSummary;
+  ST.compareBackup = compareBackup;
   ST.totalHoldingsCAD = totalHoldingsCAD;
   ST.logEntryCount = logEntryCount;
   ST.addLogEntry = addLogEntry;

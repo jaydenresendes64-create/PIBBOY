@@ -261,7 +261,9 @@ in the app to bring it over.
 The **⚙** in the topbar (beside the date) opens Settings, over the app: **Display** (3D tilt, the
 power-on screen and its RobCo boot), **Morning** (Check-in first: the tabs that wait for the day's
 check-in, on this device), **Sound** (sound on/off, Custom sounds), **Data** (Export backup
-= RadAway, with the last backup's date; Import backup; **Add from the old terminal**: from a backup of
+= RadAway, with the last backup's date; Import backup (before anything is replaced, it shows the backup
+next to this phone: level, XP, check-ins, urges, when each was last used, and warns when the backup is
+older or would lose XP, check-ins, urges, journal entries or places); **Add from the old terminal**: from a backup of
 your in-Claude version, it adds only its VITALS check-ins, chem-free streak, urges, training and the
 daily / side quests not here yet, after saying what (adding the same file twice adds nothing); Reset
 progress, which asks first; holotapes and
