@@ -54,7 +54,8 @@
  *               copes: [cope id] }|null,                              // []: not noted)
  *     log: [ { date:'YYYY-M-D', need, rounds, outcome: 'won'|'lapsed',   // each urge decoded, the latest
  *              intensity, trigger, copes, note: string,   // URGES_MAX: ridden out or given in to; note:
- *              hour: 0-23|-1, t: ms|0 } ],              // one line after it; hour/t: -1/0 before 2026-10
+ *              hour: 0-23|-1, t: ms|0 } ],              // one line after it; date/hour: when its last round
+ *                                                       // started; t: when logged; hour/t: -1/0 before 2026-10
  *     copes: [ { id, name } ]                 // the player's ways of riding one out (DEFAULT_COPES at
  *   },                                      // first, then theirs; at most COPES_MAX)
  *   trials: {                               // VITALS → TRIALS: tests to repeat about once a week
@@ -330,7 +331,8 @@
   function el(id){ return document.getElementById(id); }
   function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
   function genId(){ return 'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
-  function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+  function dayStr(d){ return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+  function todayStr(){ return dayStr(new Date()); }
   function todayDisplay(){ return new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
   // A saved date ('YYYY-M-D') as shown: "Sep 24, 2026", or '' when it isn't one.
   function dateText(date){
@@ -742,7 +744,7 @@
     var week = empty(), before = empty();
     function slot(day){ var d = today - day; return d>=0 && d<7 ? week : d>=7 && d<14 ? before : null; }
     (app.state.history||[]).forEach(function(e){
-      var t = new Date(Number(e.t) || 0), w = slot(dayNumber(t.getFullYear()+'-'+(t.getMonth()+1)+'-'+t.getDate()));
+      var w = slot(dayNumber(dayStr(new Date(Number(e.t) || 0))));
       if (!w) return;
       w.xp += Number(e.xp) || 0;
       if (e.type==='VITALS_CHECKIN') w.checkins++;
@@ -1217,17 +1219,25 @@
     return a;
   }
   function ridden(u){ return u.outcome!=='lapsed'; }
-  // Ridden out today (what the day's XP cap counts).
-  function urgesToday(){
-    var today = todayStr();
-    return app.state.urges.log.filter(function(u){ return u.date===today && ridden(u); }).length;
+  // Ridden out on a day (what that day's XP cap counts).
+  function urgesOn(date){
+    return app.state.urges.log.filter(function(u){ return u.date===date && ridden(u); }).length;
   }
-  // The running urge, logged with how it ended.
+  function urgesToday(){ return urgesOn(todayStr()); }
+  // An urge belongs to the day and hour its round started, however late
+  // its end is tapped ("come back at zero" can mean the next morning).
+  function urgeStarted(a){ return new Date(num(a.start, 0) || Date.now()); }
+  // Riding the running urge out still pays: its day's cap isn't reached.
+  function urgePays(){
+    var a = app.state.urges.active;
+    return !!a && urgesOn(dayStr(urgeStarted(a)))<URGE_XP_PER_DAY;
+  }
+  // The running urge, logged with how it ended (`t`: when, its id).
   function logUrge(outcome){
-    var u = app.state.urges, a = u.active, now = new Date();
-    var entry = {date:todayStr(), need:a.need, rounds:a.rounds||1, outcome:outcome,
+    var u = app.state.urges, a = u.active, started = urgeStarted(a);
+    var entry = {date:dayStr(started), need:a.need, rounds:a.rounds||1, outcome:outcome,
       intensity:clamp(Math.round(num(a.intensity)), 0, 10), trigger:URGE_TRIGGERS.indexOf(a.trigger)!==-1 ? a.trigger : '',
-      copes:(a.copes || []).filter(copeById), note:'', hour:now.getHours(), t:now.getTime()};
+      copes:(a.copes || []).filter(copeById), note:'', hour:started.getHours(), t:Date.now()};
     u.log.push(entry);
     if (u.log.length>URGES_MAX) u.log = u.log.slice(-URGES_MAX);
     u.active = null;
@@ -1239,7 +1249,7 @@
   function urgeWon(){
     var a = app.state.urges.active;
     if (!a || urgeLeft()>0) return null;
-    var paid = urgesToday()<URGE_XP_PER_DAY;
+    var paid = urgePays();
     var entry = logUrge('won');
     if (!paid) return {xp:0, leveled:false, skillGains:[], capped:true, entry:entry};
     var r = award('URGE_RESISTED', {need:entry.need, rounds:entry.rounds}, URGE_XP, [{skill:URGE_SKILL, amount:1}]);
@@ -2118,6 +2128,8 @@
   ST.urgeAgain = urgeAgain;
   ST.cancelUrge = cancelUrge;
   ST.urgesToday = urgesToday;
+  ST.urgePays = urgePays;
+  ST.dayStr = dayStr;
   ST.urgeLapsed = urgeLapsed;
   ST.undoLapse = undoLapse;
   ST.setUrgeDetail = setUrgeDetail;

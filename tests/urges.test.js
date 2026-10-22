@@ -230,6 +230,27 @@ test('the strong urges next to the milder ones, once each has 3 rated and they d
   assert.deepEqual(strong(), []);                                        // 3 of 3 both ways: nothing to tell
 });
 
+test('an urge belongs to when its round started, however late its end is tapped: its date and hour, and that day\'s XP cap', () => {
+  const s = fresh();
+  for (let i = 0; i < 3; i++) urge('TIRED', {}, 'won', '2026-10-21T1' + i + ':00:00');     // the 21st's cap reached
+  app.setNow('2026-10-21T21:30:00');
+  ST.startUrge('ANGRY');
+  app.setNow('2026-10-22T08:10:00');                                   // "come back at zero": the next morning
+  assert.equal(ST.urgePays(), false);                                  // it counts on the 21st, already capped
+  const r = ST.urgeWon();
+  assert.equal(r.capped, true);
+  assert.deepEqual([r.entry.date, r.entry.hour], ['2026-10-21', 21]);
+  assert.equal(r.entry.t, new Date('2026-10-22T08:10:00').getTime());  // when it was logged
+  assert.equal(ST.urgesToday(), 0);
+  ST.startUrge('TIRED');                                               // one of today's: paid
+  app.setNow(app.context.Date.now() + ST.URGE_MS);
+  assert.equal(ST.urgePays(), true);
+  assert.equal(ST.urgeWon().xp > 0, true);
+  ST.startUrge('LONELY'); app.setNow(app.context.Date.now() + 5 * 60000);
+  assert.equal(ST.urgeLapsed().hour, 8);                               // given in to during the round: its start too
+  assert.equal(sumXp(s), 3 * ST.URGE_XP + ST.URGE_XP);
+});
+
 // ---------- the screen ----------
 const EVIL = '"><img src=x onerror=alert(1)>';
 function vitals(setup) {
@@ -250,6 +271,9 @@ test('the screen: what to note while the timer runs, "I gave in" at any point, t
   assert.match(running, /data-vital="urge-cope" data-key="walk" aria-pressed="true">Walk outside</);
   assert.match(running, /data-vital="cope-add-open" aria-expanded="false">\+ Mine</);
   const over = vitals((ST, s, a) => { ST.startUrge('TIRED'); a.setNow(a.context.Date.now() + ST.URGE_MS); });
+  assert.doesNotMatch(over, /urge-when/);
+  const late = vitals((ST, s, a) => { ST.startUrge('TIRED'); a.setNow('2026-10-23T07:45:00'); });
+  assert.match(late, /<p class="vital-sub urge-when">This round started Oct 22 at 21:00; it’s logged then\.<\/p>/);
   assert.match(over, /data-vital="urge-won">Rode it out[\s\S]*data-vital="urge-again">Still strong[\s\S]*data-vital="urge-lapse">I gave in/);
   const after = vitals((ST, s, a) => {
     ST.startUrge('TIRED'); a.setNow(a.context.Date.now() + ST.URGE_MS);
@@ -269,7 +293,7 @@ test('the screen: what to note while the timer runs, "I gave in" at any point, t
     ST.app.urgeHistory = true;
   });
   assert.match(history, /<div class="urge-patterns"><p class="vital-sub reading"><span class="field-tag">PATTERN \/\/<\/span> “Walk outside”: ridden out 3 of the 3 times you used it\.<\/p>/);
-  assert.match(history, /<ul class="urge-history"><li class="">Oct 22 22h · TIRED · ridden out · Walk outside<span class="urge-history-note">“Walked to the park”<\/span><\/li>/);
+  assert.match(history, /<ul class="urge-history"><li class="">Oct 22 21h · TIRED · ridden out · Walk outside<span class="urge-history-note">“Walked to the park”<\/span><\/li>/);
   assert.match(history, /data-vital="urge-history" aria-expanded="true">Hide \(3\)/);
 });
 

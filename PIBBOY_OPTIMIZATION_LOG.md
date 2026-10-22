@@ -2,6 +2,15 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-22 — Urges logged when they happened (plan task 15)
+- `js/state.js`: `dayStr()`, `urgesOn()`, `urgeStarted()`, `urgePays()`; `logUrge` takes date and hour
+  from the round's start (t stays the tap: the entry's id); the XP cap counts the urge's own day.
+  `js/vitals.js`: over for more than an hour, the card says when the round started. No data-shape
+  change (same fields, truer values from now on; older entries untouched).
+- Tests: `tests/urges.test.js` +1 test (next-morning tap, capped day, lapse mid-round), screen assert,
+  history hour updated (21:40 start → 21h); `node --test` → 349 pass, 0 fail. Chromium: urge started
+  10 h earlier, reload → "This round started Oct 21 at 22:20", logged 2026-10-21 22h; no page errors.
+
 ## 2026-10-22 — Urge decoder uses the trigger (plan task 14)
 - `urgeContext().trigger` was collected but unused. `js/insight.js`: `TRIGGER_WORDS`, `TRIGGER_TIPS`
   (one practical step per trigger), messages `ctx-trigger` and `ctx-trigger-past` (counted from the

@@ -39,7 +39,9 @@ At zero: one question to look back with (REFLECTION), then **Rode it out** (**+4
 and +1 SURVIVAL**, 3 times a day; logged every time), **Still strong** (another round) or **I gave in**
 (at any point: logged as it was, no XP lost, no streak reset; a lapse on a streak stays your call;
 tapped by mistake? **Undo**, right after, and the urge runs on where it was).
-Then one line for next time, if you want: the next urge brings back the latest one you wrote after
+Each urge is logged at the day and hour its round started, even when you come back to it hours later
+(the card then says when that was), and it counts toward that day's 3 paid urges. Then one line for
+next time, if you want: the next urge brings back the latest one you wrote after
 an urge you rode out (YOUR WORDS, the same need first). Once 3 urges are logged, **patterns** from your own log:
 the way most often ridden out with, what most often sets them off (and how those ended), how the
 strong ones (7 or more) ended next to the milder ones, the time of day most come at,

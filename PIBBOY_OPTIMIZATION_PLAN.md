@@ -20,6 +20,7 @@ improvement campaign. Status: `[x]` done (tests pass), `[ ]` to do, `[~]` in pro
 | 12 | ITEMS / errors | 3D models came back only after a reload once the GPU context was lost; now they hide, then return on restore or with a new renderer when ITEMS reopens | Chromium + WEBGL_lose_context (lose, restore, lose and reopen) | [x] |
 | 13 | Integrations | Weather: a kept reading of any age was shown as the weather now (offline); now only while under 3 h old | `tests/boot.test.js`, Chromium (1 h shown, 4 h hidden) | [x] |
 | 14 | Urge decoder | The trigger noted was stored but never used: now a practical step per trigger at once, how urges with that trigger went before, the top trigger's outcomes, strong vs milder urges | `tests/urges.test.js` (exact wording), Chromium real taps | [x] |
+| 15 | Urge decoder | Urges were logged at the hour the end was tapped (often hours later, "come back at zero"), skewing time patterns and the day's cap; now at the round's start | `tests/urges.test.js`, Chromium (10 h late, reload) | [x] |
 | 9 | Quests | French caps objectives (`CAPS_OBJECTIVE`) | needs the owner's yes: a second one-time link would switch quests kept on a manual % to the wallet | on hold |
 
 ## Rules (from CLAUDE.md)

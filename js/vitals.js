@@ -194,6 +194,7 @@
 
   // ---------- the urge decoder ----------
   var OUTCOME_WORDS = {won:'ridden out', lapsed:'given in to'};
+  var LATE_MS = 60*60*1000;           // over for an hour: the card says when the round started
   function attr(v){ return escapeHtml(String(v)); }
   // What's noted about the running urge (all of it optional, to fill the
   // wait): how strong, what set it off, what's being done about it, from
@@ -282,9 +283,12 @@
         urgeDetailsHtml(a)+
         '<p class="vital-fine">'+HELP_LINE+'</p>';
     } else {
-      var paid = ST.urgesToday()<ST.URGE_XP_PER_DAY;
+      var paid = ST.urgePays(), started = new Date(num(a.start));
       html += '<div class="urge-clock">00:00</div>'+
         '<p class="urge-tip">Twenty minutes down. Did it pass?</p>'+
+        // Back long after zero: when it was, which is when it's logged.
+        (Date.now()-num(a.start)-ST.URGE_MS>LATE_MS ? '<p class="vital-sub urge-when">This round started '+escapeHtml(shortDay(ST.dayStr(started)))+' at '+
+          pad2(started.getHours())+':'+pad2(started.getMinutes())+'; it’s logged then.</p>' : '')+
         (ST.insight ? insightLine(ST.insight.urgeReflection(), 'vital-sub reading') : '')+
         '<div class="urge-grid">'+
           '<button class="vital-btn hot" data-vital="urge-won">Rode it out'+

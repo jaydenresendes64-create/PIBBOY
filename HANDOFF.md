@@ -188,6 +188,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   10 rated (≥ 6, |Δ| ≥ 1), ridden-out count; observational wording only. vitals.js: the running and
   over phases show `urgeDetailsHtml()` (range, trigger chips, cope chips with aria-pressed, + Mine /
   Edit), "I gave in"; after an outcome `app.urgeNote` asks one line (`urgeNoteHtml`, Enter saves);
+  log entries take `date`/`hour` from the round's start (`urgeStarted`), `t` from the tap; the cap
+  counts that day (`urgesOn`, `urgePays`); the over card says when it started once LATE_MS has passed;
   after a lapse it also offers "Tapped by mistake? Undo": state.js `undoLapse()` takes that latest
   entry off the log and puts back the urge it ended (`app.urgeUndo`, in memory only; never a
   ridden-out urge, never while another runs);
