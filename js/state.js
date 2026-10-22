@@ -176,6 +176,10 @@
   // The MAP tab (see "map" above).
   var CITY_RADIUS_MIN = 1000, CITY_RADIUS_MAX = 30000;
   var PLACES_TARGET_MAX = 999;        // a places quest: at most this many to reveal
+  // The saved data's format (storage.js stamps every copy with it). Raise it
+  // by one whenever a version saves fields an older version would drop:
+  // an older version then stops saving instead of writing over them.
+  var DATA_SCHEMA = 1;
   var PIN_RADIUS_MIN = 100, PIN_RADIUS_MAX = 5000;
   var PLACE_NAME_MAX = 80, PLACE_NOTE_MAX = 500;
   var ROUTE_NAME_MAX = 120, ROUTE_STOPS_MAX = 25, ROUTE_PATH_MAX = 200000;
@@ -2229,6 +2233,7 @@
   ST.questProgress = questProgress;
   ST.syncPlacesQuests = syncPlacesQuests;
   ST.PLACES_TARGET_MAX = PLACES_TARGET_MAX;
+  ST.DATA_SCHEMA = DATA_SCHEMA;
   ST.escapeHtml = escapeHtml;
   ST.catLabel = catLabel;
 

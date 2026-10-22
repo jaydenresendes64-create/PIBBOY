@@ -11,6 +11,7 @@
   function boot(){
     ST.storage.onSaveFailed(ST.render.showSaveWarning);
     ST.storage.onExternalChange(ST.events.adoptState);
+    ST.storage.onNewerVersion(ST.render.showNewerVersion);
     if (ST.mascot) ST.mascot.init('vitals');     // decoration: the app runs without it
     if (ST.crt) ST.crt.init();                    // decoration too
     if (ST.tilt) ST.tilt.init();

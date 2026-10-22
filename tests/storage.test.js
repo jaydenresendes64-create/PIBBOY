@@ -282,3 +282,88 @@ test('backup file name carries the local date, zero-padded', () => {
   w.setNow(new Date(2026, 10, 24, 8));
   assert.equal(w.ST.storage.backupName(), 'status-terminal-backup-2026-11-24.json');
 });
+
+// ---------- the data format (schema): newer data is never written over ----------
+const LS_SCHEMA = 'status_terminal_schema_v1';
+async function runningWithNewer(shared) {
+  const w = await running(shared);
+  w.newer = 0;
+  w.ST.storage.onNewerVersion(() => { w.newer++; });
+  return w;
+}
+
+test('each copy carries the data format; a save from before it (no format) loads and is saved with it', async () => {
+  const shared = sharedStorage();
+  const w = await running(shared);
+  const old = withItem(w.plain(w.ST.app.state), 'Old save');
+  shared.idb.put('status_terminal', 'docs', { id: 'state/player', savedAt: 100, data: old });   // no schema
+  const again = await running(shared);
+  assert.equal(again.ST.app.state.inventory.slice(-1)[0].name, 'Old save');
+  assert.equal(await again.ST.storage.saveNow(), 'saved');
+  assert.equal(idbRecord(shared).schema, again.ST.DATA_SCHEMA);
+  assert.equal(shared.items.get(LS_SCHEMA), String(again.ST.DATA_SCHEMA));
+  assert.equal(again.ST.storage.stale(), false);
+});
+
+test('data saved by a newer version: shown, never saved over; the window says to reopen', async () => {
+  const shared = sharedStorage();
+  const w = await running(shared);
+  const newer = withItem(w.plain(w.ST.app.state), 'From the new version');
+  newer.futureField = { kept: true };
+  const record = { id: 'state/player', savedAt: 500, schema: w.ST.DATA_SCHEMA + 1, data: newer };
+  shared.idb.put('status_terminal', 'docs', record);
+  const old = openWindow(shared);
+  let told = 0;
+  old.ST.storage.onNewerVersion(() => { told++; });
+  const s = await old.ST.storage.load();
+  assert.equal(s.inventory.slice(-1)[0].name, 'From the new version');
+  assert.equal(told, 1);
+  assert.equal(old.ST.storage.stale(), true);
+  old.ST.app.state = s;
+  withItem(old.ST.app.state, 'Old version change');
+  assert.equal(await old.ST.storage.saveNow(), 'failed');
+  old.ST.storage.scheduleSave(); old.ST.storage.flush();
+  await settle();
+  assert.deepEqual(idbRecord(shared), record);                            // untouched, its new field too
+  assert.equal(shared.items.get(LS_KEY), undefined);
+});
+
+test('an open window meets a newer version\'s save: not taken in, nothing written after it', async () => {
+  const shared = sharedStorage();
+  const a = await runningWithNewer(shared);
+  withItem(a.ST.app.state, 'A');
+  await a.ST.storage.saveNow();
+  const newer = withItem(a.plain(a.ST.app.state), 'Newer version');
+  // the newer version's window saves: localStorage first (its event reaches A), then IndexedDB
+  const stamp = Date.now() + 1000;
+  shared.items.set(LS_KEY, JSON.stringify(newer)); shared.items.set(LS_SCHEMA, String(a.ST.DATA_SCHEMA + 1));
+  shared.items.set(LS_AT, String(stamp));
+  shared.windows[0].dispatch('storage', { key: LS_AT });     // A is the first window opened
+  shared.idb.put('status_terminal', 'docs', { id: 'state/player', savedAt: stamp, schema: a.ST.DATA_SCHEMA + 1, data: newer });
+  assert.equal(a.newer, 1);
+  assert.equal(a.events.adopted.length, 0);
+  assert.equal(a.ST.app.state.inventory.slice(-1)[0].name, 'A');
+  withItem(a.ST.app.state, 'A after');
+  assert.equal(await a.ST.storage.saveNow(), 'failed');
+  assert.equal(JSON.parse(shared.items.get(LS_KEY)).inventory.slice(-1)[0].name, 'Newer version');
+  assert.equal(idbRecord(shared).data.inventory.slice(-1)[0].name, 'Newer version');
+});
+
+test('the newer save only in IndexedDB: the write is refused there and localStorage is put back to it', async () => {
+  const shared = sharedStorage();
+  const a = await runningWithNewer(shared);
+  shared.silent = true;
+  const newer = withItem(a.plain(a.ST.app.state), 'Newer version');
+  const record = { id: 'state/player', savedAt: 1, schema: a.ST.DATA_SCHEMA + 1, data: newer };   // even with an old stamp
+  shared.idb.put('status_terminal', 'docs', record);
+  withItem(a.ST.app.state, 'Old version change');
+  assert.equal(await a.ST.storage.saveNow(), 'failed');
+  assert.equal(a.newer, 1);
+  assert.equal(a.events.adopted.length, 0);
+  assert.deepEqual(idbRecord(shared), record);
+  assert.equal(JSON.parse(shared.items.get(LS_KEY)).inventory.slice(-1)[0].name, 'Newer version');
+  assert.equal(shared.items.get(LS_SCHEMA), String(a.ST.DATA_SCHEMA + 1));
+  assert.equal(shared.items.get(LS_AT), '1');
+  const next = await openWindow(shared).ST.storage.load();
+  assert.equal(next.inventory.slice(-1)[0].name, 'Newer version');
+});

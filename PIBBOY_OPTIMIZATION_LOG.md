@@ -2,6 +2,18 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-22 — Newer data is never written over by an older version (instant-open, step 1)
+- Before cache-first opens (an older cached version can run once after a deploy), and for old tabs
+  left open: `js/state.js` `DATA_SCHEMA` (1); `js/storage.js` stamps both copies with it (IndexedDB
+  record `schema`, localStorage `status_terminal_schema_v1`). A copy from a higher schema is never
+  adopted or overwritten: the window goes read-only (`goStale`), the IndexedDB check refuses the
+  write and puts localStorage back to the newer copy; `onNewerVersion` → `render.showNewerVersion()`
+  banner with Reopen. Saves without a schema (all before this) read as 0 and load as before.
+- Residual risk: versions already deployed (no schema check) can still write over newer fields if
+  left open in a tab during this one deploy.
+- Tests: `tests/storage.test.js` +4; `node --test` → 359 pass, 0 fail. Chromium: data stamped schema 2
+  with an unknown field → reload → banner; a tap → nothing written (field and schema kept); no errors.
+
 ## 2026-10-22 — Review since f5087bf; QUESTS country list cached
 - Read every app-code change since the last review (state, vitals, insight, events, render, items3d,
   weather, css). One inefficiency: the QUESTS form rebuilt and sorted the 250-country list on every

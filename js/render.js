@@ -1059,6 +1059,19 @@
     sound('error');
     toast('xp-toast save-warning', 'Changed in another window — your last change wasn’t saved', 4000).style.animationDuration = '4s';
   }
+  // A newer version of the app saved on this phone (storage.js): this one
+  // stops saving; a banner says so, with a way to reopen.
+  function showNewerVersion(){
+    if (document.getElementById('stale-banner')) return;
+    var bar = document.createElement('div');
+    bar.id = 'stale-banner';
+    bar.className = 'stale-banner';
+    bar.setAttribute('role', 'alert');
+    bar.innerHTML = '<span>A newer version of PIBBOY saved your data. Changes here won’t be saved.</span>'+
+      '<button type="button" id="stale-reload">Reopen</button>';
+    document.body.appendChild(bar);
+    bar.querySelector('#stale-reload').addEventListener('click', function(){ location.reload(); });
+  }
   // The saved data exists but couldn't be read (storage.js). Nothing is
   // shown or saved, so it stays as it is for the next try.
   function showLoadError(){
@@ -1130,6 +1143,7 @@
     showSaveWarning: showSaveWarning,
     showConflictWarning: showConflictWarning,
     showLoadError: showLoadError,
+    showNewerVersion: showNewerVersion,
     clearTyped: clearTyped,
     playCheck: playCheck,
     switchTab: switchTab,

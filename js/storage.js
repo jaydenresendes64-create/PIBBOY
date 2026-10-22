@@ -13,6 +13,13 @@
  * copy another window saved after this one last loaded or saved: the newer
  * copy is taken instead (onExternalChange). Windows also follow each
  * other's saves as they happen, through the localStorage `storage` event.
+ *
+ * Each copy also carries the data format it was written in (`schema`,
+ * ST.DATA_SCHEMA; none for saves from before it, read as 0). A copy written
+ * by a newer version of the app (a higher schema: fields this code would
+ * drop) is never taken in and never written over: this window stops saving
+ * and says to reopen the app (onNewerVersion). So an old tab, or an old
+ * cached version, can't overwrite newer data.
  */
 (function(ST){
   'use strict';
@@ -23,6 +30,8 @@
   var DOC_ID = 'state/player';                 // same document path the Claude db used
   var LS_KEY = 'status_terminal_state_v1';
   var LS_SAVED_AT_KEY = 'status_terminal_saved_at_v1';
+  var LS_SCHEMA_KEY = 'status_terminal_schema_v1';
+  var SCHEMA = ST.DATA_SCHEMA;
   var SAVE_DELAY_MS = 500;
   var OPEN_TIMEOUT_MS = 4000;
   var MAX_IMPORT_BYTES = 5*1024*1024;
@@ -31,7 +40,9 @@
   var saveTimer = null;
   var lastSavedAt = 0;          // stamp of the copy this window loaded, took, or saved last
   var readOnly = false;         // the saved data couldn't be read: never write over it
+  var stale = false;            // a newer version of the app saved: this one stops saving
   var onSaveFailed = function(){};
+  var onNewerVersion = function(){};
   var onExternalChange = function(){};
 
   // ---------- IndexedDB ----------
@@ -85,7 +96,17 @@
   }
   function copyOf(record){
     if (!record) return {status:'empty'};
-    return {status:'found', savedAt:Number(record.savedAt)||0, data:record.data};
+    return {status:'found', savedAt:Number(record.savedAt)||0, schema:Number(record.schema)||0, data:record.data};
+  }
+  // A copy written by a newer version of the app than this one.
+  function fromNewer(copy){ return copy.status==='found' && copy.schema>SCHEMA; }
+  // This window stops saving for good (until the app is opened again) and says so, once.
+  function goStale(){
+    if (stale) return;
+    stale = readOnly = true;
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    onNewerVersion();
   }
   // Writes `record` unless the stored copy is newer than `base`, the stamp
   // this window last knew: then another window saved in between, and the
@@ -101,7 +122,7 @@
         var get = store.get(DOC_ID);
         get.onsuccess = function(){
           var stored = copyOf(get.result);
-          if (stored.status==='found' && stored.savedAt>base && ST.sanitizeImported(stored.data)){
+          if (stored.status==='found' && (stored.savedAt>base || fromNewer(stored)) && ST.sanitizeImported(stored.data)){
             newer = stored;
             tx.abort();
           } else {
@@ -126,18 +147,23 @@
       stamp = localStorage.getItem(LS_SAVED_AT_KEY);
     }catch(e){ return {status:'none'}; }
     if (raw===null) return {status:'empty'};
-    try{ return {status:'found', savedAt:Number(stamp)||0, data:JSON.parse(raw)}; }
+    try{ return {status:'found', savedAt:Number(stamp)||0, schema:localSchema(), data:JSON.parse(raw)}; }
     catch(e){ return {status:'failed'}; }
+  }
+  function localSchema(){
+    try{ return Number(localStorage.getItem(LS_SCHEMA_KEY))||0; }catch(e){ return 0; }
   }
   // Just the stamp, so a save doesn't have to read the whole copy.
   function localStamp(){
     try{ return Number(localStorage.getItem(LS_SAVED_AT_KEY))||0; }catch(e){ return 0; }
   }
-  // The data first, then its stamp: if the stamp can't be written, the copy
-  // looks older than it is and never wins over a newer one by mistake.
-  function writeLocal(state, savedAt){
+  // The data first, then its format, then its stamp: if the stamp can't be
+  // written, the copy looks older than it is and never wins over a newer
+  // one by mistake.
+  function writeLocal(state, savedAt, schema){
     try{
       localStorage.setItem(LS_KEY, JSON.stringify(state));
+      localStorage.setItem(LS_SCHEMA_KEY, String(schema));
       localStorage.setItem(LS_SAVED_AT_KEY, String(savedAt));
       return true;
     }catch(e){ return false; }
@@ -154,8 +180,10 @@
   // exists but can't be read: the app then stops rather than start empty.
   function load(){
     return readIdb().then(function(idb){
-      var best = null, unreadable = false;
-      [idb, readLocal()].forEach(function(copy){
+      var best = null, unreadable = false, copies = [idb, readLocal()];
+      // Saved by a newer version: shown as this version reads it, never saved over.
+      if (copies.some(fromNewer)) goStale();
+      copies.forEach(function(copy){
         var state = stateOf(copy);
         if (state){
           if (!best || copy.savedAt>best.savedAt) best = {savedAt:copy.savedAt, state:state};
@@ -175,6 +203,7 @@
   // Takes a copy another window saved: it replaces this window's state.
   // `lost` says whether this window had a change that wasn't saved yet.
   function adopt(copy, lost){
+    if (fromNewer(copy)){ goStale(); return false; }
     var state = stateOf(copy);
     if (!state) return false;
     clearTimeout(saveTimer);
@@ -190,6 +219,7 @@
   // is kept even if IndexedDB doesn't get to finish.
   function write(state){
     var base = lastSavedAt;
+    if (localSchema()>SCHEMA){ goStale(); return Promise.resolve('failed'); }
     if (localStamp()>base){
       var local = readLocal();
       if (local.status==='found' && local.savedAt>base && adopt(local, true)) return Promise.resolve('conflict');
@@ -197,13 +227,13 @@
     // Always later than any copy seen, even if the clock was moved back.
     var savedAt = Math.max(Date.now(), base+1);
     lastSavedAt = savedAt;
-    var localOk = writeLocal(state, savedAt);
-    return writeIdb({id:DOC_ID, savedAt:savedAt, data:state}, base).then(function(){ return 'saved'; }, function(err){
+    var localOk = writeLocal(state, savedAt, SCHEMA);
+    return writeIdb({id:DOC_ID, savedAt:savedAt, schema:SCHEMA, data:state}, base).then(function(){ return 'saved'; }, function(err){
       if (err && err.newer){
         // Put the localStorage copy back to the one being taken (unless yet
         // another save replaced it), so the refused change doesn't come back
         // on the next load.
-        if (localOk && localStamp()===savedAt) writeLocal(err.newer.data, err.newer.savedAt);
+        if (localOk && localStamp()===savedAt) writeLocal(err.newer.data, err.newer.savedAt, err.newer.schema);
         return adopt(err.newer, true) ? 'conflict' : 'failed';
       }
       return localOk ? 'saved' : 'failed';
@@ -244,7 +274,9 @@
   // Another window saved: follow it. A change this window hadn't saved yet
   // can't be merged, so it gives way to the newer copy (and says so).
   function onStorage(e){
-    if (e.key!==LS_SAVED_AT_KEY || readOnly || !ST.app.state || localStamp()<=lastSavedAt) return;
+    if (e.key!==LS_SAVED_AT_KEY || readOnly || !ST.app.state) return;
+    if (localSchema()>SCHEMA){ goStale(); return; }
+    if (localStamp()<=lastSavedAt) return;
     var copy = readLocal();
     if (copy.status==='found' && copy.savedAt>lastSavedAt) adopt(copy, saveTimer!==null);
   }
@@ -317,6 +349,8 @@
     exportFile: exportFile,
     readJsonFile: readJsonFile,
     onSaveFailed: function(fn){ onSaveFailed = fn; },
+    onNewerVersion: function(fn){ onNewerVersion = fn; },
+    stale: function(){ return stale; },
     onExternalChange: function(fn){ onExternalChange = fn; },
     onChange: function(fn){ onChange = fn; }
   };
