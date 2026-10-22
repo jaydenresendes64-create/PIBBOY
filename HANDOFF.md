@@ -661,7 +661,7 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 ## 6. Known bugs / limitations
 
 - Caps linking regex only matches English objectives ("Obtain/Get/Reach/Earn/Have/Save N Caps"); a
-  French objective ("Obtenir 5 caps") is not auto-converted.
+  French objective ("Obtenir 5 caps") is not auto-converted (on purpose: opt-in plan in §8 step 3).
 - Scroll ticks only follow window scrolling (not inner scroll areas such as the custom-sounds panel).
 - Right after a deploy, one open on a weak signal (>2.5 s) may mix old cached and new files; the next
   open is whole again.
@@ -722,8 +722,22 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
    `POOL` in js/insight.js are plain lists, easy to edit or extend; the thresholds are `LINES`),
    `canvas.item-model` size in `css/terminal.css`, `.crt-glare` opacity, `.device-plate` opacity.
 2. (Done: the SETTINGS panel, PR #10.)
-3. Extend `CAPS_OBJECTIVE` in `state.js` with French verbs (obtenir|avoir|atteindre|gagner) — a new
-   one-time migration flag is needed since `capsQuestsLinked` is already set on existing saves.
+3. French caps objectives — owner's answer 2026-10-22: **not yet**; no migration, nothing automatic.
+   Safe plan for when it's wanted (opt-in, never silent):
+   - No load-time change: `linkCapsQuests()` and its `capsQuestsLinked` flag stay as they are; a
+     second automatic link is ruled out (it would overwrite a manual % the owner chose).
+   - `CAPS_OBJECTIVE` gains French forms (obtenir|avoir|atteindre|gagner|économiser, "caps" or
+     "capsules", decimal comma) but is used only to *offer*: an open percentage quest whose
+     objective matches shows "Follow the wallet? (5 CAPS)" and "Keep manual" on its card.
+   - "Follow the wallet" (a tap) sets `progressType:'caps'`, `capsTarget`, and keeps the slider's
+     value in `manualProgress`; "Back to manual %" on a caps quest restores it. "Keep manual" sets
+     `capsOffer:false` so it's never asked again. Both fields go through `sanitizeImported()`
+     (`manualProgress` 0-100, `capsOffer` boolean), with a test; old saves need no migrate step.
+   - The new-quest form: an objective that reads as a caps amount, with "Percentage" picked, gets a
+     hint to pick "Caps goal" (no switch by itself).
+   - Never offered on completed quests, streak or places quests. Tests: regex cases (FR/EN, "5,5"),
+     a French percent quest unchanged after load/import, conversion only on the tap, revert gives the
+     same %, export → import identical.
 4. (Done: caps quests re-sync after import, reset and another window's save.)
 5. Optional next features the owner showed interest in: STATUS 3D globe with revealed places
    (`SphereGeometry` already in the Three bundle; reuse items3d's shared renderer), Fallout-style
