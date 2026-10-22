@@ -22,6 +22,7 @@ improvement campaign. Status: `[x]` done (tests pass), `[ ]` to do, `[~]` in pro
 | 14 | Urge decoder | The trigger noted was stored but never used: now a practical step per trigger at once, how urges with that trigger went before, the top trigger's outcomes, strong vs milder urges | `tests/urges.test.js` (exact wording), Chromium real taps | [x] |
 | 15 | Urge decoder | Urges were logged at the hour the end was tapped (often hours later, "come back at zero"), skewing time patterns and the day's cap; now at the round's start | `tests/urges.test.js`, Chromium (10 h late, reload) | [x] |
 | 16 | Urge decoder | "How strong" slider gets the same 0/10 anchors as the check-in (0 unrated, 10 extreme) | `tests/urges.test.js`, Chromium 320/390 px | [x] |
+| 17 | Backup / restore | Verify a backup of every feature comes back whole (the identity test only covered quests, items, wallet, journal) | new `tests/roundtrip.test.js`; Chromium Export → fresh profile Import → reload | [x] verified, no defect |
 | 9 | Quests | French caps objectives (`CAPS_OBJECTIVE`) | needs the owner's yes: a second one-time link would switch quests kept on a manual % to the wallet | on hold |
 
 ## Rules (from CLAUDE.md)

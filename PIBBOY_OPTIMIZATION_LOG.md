@@ -2,6 +2,17 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-22 — Backups verified end to end (plan task 17)
+- New `tests/roundtrip.test.js`: two weeks of use through the app's functions (check-ins, urges with
+  details/notes/lapses and one running, copes, trials incl. a custom one, chem-free and own streak with
+  a lapse, dailies, a side quest, a book, the journal, map cities/pins/regions/routes, history) →
+  JSON → `sanitizeImported` gives the identical document; a second pass changes nothing;
+  `compareBackup` sees nothing lost. Passed first time: the import gate keeps every feature's data.
+- Chromium, real controls: taps (pulse, check-in, urge with trigger/cope, lapse, note) → Settings →
+  Export (download, 4.8 KB) → a fresh profile → Import → Yes, replace → reload: every top-level key
+  identical to the file; no page errors.
+- `node --test` → 350 pass, 0 fail.
+
 ## 2026-10-22 — Urge intensity anchors (plan task 16)
 - `js/vitals.js`: "How strong" says what 0 (unrated) and 10 (extreme) mean, `aria-describedby` like the
   check-in sliders. Tests: `node --test` → 349 pass, 0 fail; Chromium 320/390 px: no wrap, no overflow.

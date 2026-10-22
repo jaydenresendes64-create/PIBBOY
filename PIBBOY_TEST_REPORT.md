@@ -4,6 +4,8 @@ Only results actually run are listed. Command: `node --test` (Node's built-in ru
 
 | Date | Scope | Result |
 |------|-------|--------|
+| 2026-10-22 | Full suite with `tests/roundtrip.test.js` | 350 pass, 0 fail |
+| 2026-10-22 | Chromium: Export → fresh profile → Import → reload | all data identical, no page errors |
 | 2026-10-22 | Full suite after logging urges at their start | 349 pass, 0 fail |
 | 2026-10-22 | Chromium: urge confirmed 10 h late, after a reload | logged at its start, card says when, no page errors |
 | 2026-10-22 | Full suite after trigger-aware messages and patterns | 348 pass, 0 fail |
