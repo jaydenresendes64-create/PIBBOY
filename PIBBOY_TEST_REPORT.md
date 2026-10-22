@@ -4,6 +4,8 @@ Only results actually run are listed. Command: `node --test` (Node's built-in ru
 
 | Date | Scope | Result |
 |------|-------|--------|
+| 2026-10-22 | Full suite after trigger-aware messages and patterns | 348 pass, 0 fail |
+| 2026-10-22 | Chromium 360 px: tap a trigger while the timer runs | its step shows at once, focus kept, no page errors |
 | 2026-10-22 | Full suite after the stale-weather limit | 346 pass, 0 fail |
 | 2026-10-22 | Chromium, weather server blocked: 1 h vs 4 h old reading | shown / hidden as intended |
 | 2026-10-22 | Full suite after the 3D context-loss recovery | 345 pass, 0 fail |

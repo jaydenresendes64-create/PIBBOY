@@ -758,7 +758,13 @@
     },
     // What's noted while the timer runs: only the urge card is drawn again.
     'urge-trigger': function(btn, key){
-      if (!ST.setUrgeDetail('trigger', key)) return;
+      var a = ST.setUrgeDetail('trigger', key);
+      if (!a) return;
+      // The trigger just noted: what to do about it shows at once.
+      if (a.trigger && ST.insight){
+        var i = ST.insight.urgeMessages().map(function(m){ return m.id; }).indexOf('ctx-trigger');
+        if (i!==-1) app.urgeAngle = i;
+      }
       redrawUrge(); refocus('[data-vital="urge-trigger"][data-key="'+key+'"]'); save();
     },
     'urge-cope': function(btn, key){

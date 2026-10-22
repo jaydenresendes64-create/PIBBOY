@@ -32,14 +32,17 @@ While the clock runs you can note, if you want: **how strong** it is (0-10), **w
 (stress, boredom, people around, alone, usual time or place, something I saw, celebrating, pain or
 discomfort) and **what you're doing about it**: your own list of ways (six to start with; **+ Mine**
 adds one, **Edit** removes). The way you've most often ridden urges out with comes first among the
-messages ("“Walk outside”: you rode it out 3 of the 4 times you used it. Worth a go now?").
+messages ("“Walk outside”: you rode it out 3 of the 4 times you used it. Worth a go now?"). Tapping
+what set it off shows one practical thing to do about that trigger at once, and how urges set off
+the same way went before ("Urges set off by being alone before: 2 of 3 ridden out.").
 At zero: one question to look back with (REFLECTION), then **Rode it out** (**+40 XP
 and +1 SURVIVAL**, 3 times a day; logged every time), **Still strong** (another round) or **I gave in**
 (at any point: logged as it was, no XP lost, no streak reset; a lapse on a streak stays your call;
 tapped by mistake? **Undo**, right after, and the urge runs on where it was).
 Then one line for next time, if you want: the next urge brings back the latest one you wrote after
 an urge you rode out (YOUR WORDS, the same need first). Once 3 urges are logged, **patterns** from your own log:
-the way most often ridden out with, what most often sets them off, the time of day most come at,
+the way most often ridden out with, what most often sets them off (and how those ended), how the
+strong ones (7 or more) ended next to the milder ones, the time of day most come at,
 the intensity lately, how many were ridden out (counted, never a cause); **Last urges** lists them. The day of a
 lapse, the streak card and the decoder each show a way back (RESET), without blame. The support
 line (1-800-265-2626, 24/7) and when to call 911 are always on the card. When a round ends, the app says so

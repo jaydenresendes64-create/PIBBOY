@@ -180,7 +180,10 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   `urgesToday()` counts only ridden-out urges (the XP cap must not count lapses). insight.js:
   `copeStats`/`bestCope` (≥ 2 uses on this need, else ≥ 3 on any, won more than half),
   `urgeContext().cope` → first message `ctx-cope`; `urgeContext().note` (`lastNote()`: the latest
-  note on a ridden-out urge, this need first, else any) → `ctx-note` (style YOUR WORDS); `urgePatterns()` (≥ 3 logged): best way,
+  note on a ridden-out urge, this need first, else any) → `ctx-note` (style YOUR WORDS); the trigger
+  tapped → `ctx-trigger` (`TRIGGER_TIPS`, one practical step each) and `ctx-trigger-past` (urges with
+  that trigger before, 2 at least); vitals.js jumps `app.urgeAngle` to `ctx-trigger` on the tap;
+  patterns add `pat-strong` (rated ≥ 7 vs 1-6, 3 each, told at a 25-point difference); `urgePatterns()` (≥ 3 logged): best way,
   top trigger (≥ 3), day part with ≥ 40% (≥ 5 timed), intensity last half vs first half of the last
   10 rated (≥ 6, |Δ| ≥ 1), ridden-out count; observational wording only. vitals.js: the running and
   over phases show `urgeDetailsHtml()` (range, trigger chips, cope chips with aria-pressed, + Mine /

@@ -2,6 +2,15 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-22 — Urge decoder uses the trigger (plan task 14)
+- `urgeContext().trigger` was collected but unused. `js/insight.js`: `TRIGGER_WORDS`, `TRIGGER_TIPS`
+  (one practical step per trigger), messages `ctx-trigger` and `ctx-trigger-past` (counted from the
+  log, 2 at least); `pat-trigger` now says how those urges ended; new `pat-strong` (rated 7+ vs 1-6,
+  3 each, shown at a 25-point gap). `js/vitals.js`: tapping a trigger shows its step at once.
+- Tests: `tests/urges.test.js` +2 tests, pattern wording updated; `node --test` → 348 pass, 0 fail.
+  Chromium 360 px, real taps: "People around" → its STRATEGY line replaces the message shown,
+  focus stays on the chip; no page errors.
+
 ## 2026-10-22 — No stale weather passed off as current (plan task 13)
 - `js/weather.js`: offline (or with Open-Meteo failing) the last kept reading was shown in the topbar
   and the boot however old. `STALE_MS` (3 h) and `recent()`: older readings show nothing (the boot

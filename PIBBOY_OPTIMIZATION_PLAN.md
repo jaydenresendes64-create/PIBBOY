@@ -19,6 +19,7 @@ improvement campaign. Status: `[x]` done (tests pass), `[ ]` to do, `[~]` in pro
 | 11 | VITALS | Every check-in level defined on screen (0 / 10 anchors, read out with the slider; Sleep = last night), matching insight.js `LINES` | `tests/vitals.test.js`, Chromium 320/360/390 px | [x] |
 | 12 | ITEMS / errors | 3D models came back only after a reload once the GPU context was lost; now they hide, then return on restore or with a new renderer when ITEMS reopens | Chromium + WEBGL_lose_context (lose, restore, lose and reopen) | [x] |
 | 13 | Integrations | Weather: a kept reading of any age was shown as the weather now (offline); now only while under 3 h old | `tests/boot.test.js`, Chromium (1 h shown, 4 h hidden) | [x] |
+| 14 | Urge decoder | The trigger noted was stored but never used: now a practical step per trigger at once, how urges with that trigger went before, the top trigger's outcomes, strong vs milder urges | `tests/urges.test.js` (exact wording), Chromium real taps | [x] |
 | 9 | Quests | French caps objectives (`CAPS_OBJECTIVE`) | needs the owner's yes: a second one-time link would switch quests kept on a manual % to the wallet | on hold |
 
 ## Rules (from CLAUDE.md)

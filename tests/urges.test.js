@@ -155,7 +155,7 @@ test('patterns, once the log has 3: the way most often ridden out with, the usua
   const lines = app.plain(ST.insight.urgePatterns()).map(p => p.style + ' ' + p.text);
   assert.deepEqual(lines, [
     'PATTERN “Walk outside”: ridden out 3 of the 4 times you used it.',
-    'PATTERN Most often set off by: stress (4 of 5 noted).',
+    'PATTERN Most often set off by: stress (4 of 5 noted); 2 of those ridden out.',
     'PATTERN Most come in the evening (4 of 6).',
     'PATTERN Intensity lately: 4.3 on average, down from 8.3.']);
   urge('TIRED', {}, 'won', '2026-10-21T08:00:00');
@@ -193,6 +193,41 @@ test('while the timer runs, the latest line written after an urge ridden out com
   assert.equal(note()[0].text, 'After an urge you rode out 3 days ago, you wrote: “Went to bed at 10”');   // none on hunger: the latest
   fresh(); ST.startUrge('TIRED');
   assert.deepEqual(note(), []);
+});
+
+test('the trigger noted while the timer runs: one practical thing to do about it, and how urges set off that way went before (2 at least)', () => {
+  const s = fresh();
+  const said = () => app.plain(ST.insight.urgeMessages()).filter(m => /^ctx-trigger/.test(m.id));
+  app.setNow('2026-10-22T21:00:00');
+  ST.startUrge('TIRED');
+  assert.deepEqual(said(), []);                                          // none noted yet
+  ST.setUrgeDetail('trigger', 'ALONE');
+  assert.deepEqual(said(), [{ style: 'STRATEGY', id: 'ctx-trigger', text: 'Being alone makes it louder. Send one message to someone, even just “hey”. A little company turns the volume down.' }]);
+  ST.cancelUrge();
+  urge('LONELY', { trigger: 'ALONE' }, 'won', '2026-10-18T21:00:00');
+  urge('LONELY', { trigger: 'ALONE' }, 'lapsed', '2026-10-19T21:00:00');
+  urge('LONELY', { trigger: 'ALONE' }, 'won', '2026-10-20T21:00:00');
+  app.setNow('2026-10-22T21:00:00');
+  ST.startUrge('LONELY'); ST.setUrgeDetail('trigger', 'ALONE');
+  assert.equal(said()[1].text, 'Urges set off by being alone before: 2 of 3 ridden out.');
+  s.urges.log[1].outcome = 'won';
+  assert.equal(said()[1].text, 'Urges set off by being alone before: all 3 ridden out.');
+  ST.setUrgeDetail('trigger', 'HABIT');
+  assert.deepEqual(said().map(m => m.id), ['ctx-trigger']);              // never set off by habit before
+  ST.app.state.urges.active.trigger = 'LUCK';                           // not a trigger: nothing told
+  assert.deepEqual(said(), []);
+});
+
+test('the strong urges next to the milder ones, once each has 3 rated and they differ by a quarter', () => {
+  const s = fresh();
+  const strong = () => app.plain(ST.insight.urgePatterns()).filter(p => p.id === 'pat-strong').map(p => p.text);
+  [[8, 'lapsed'], [9, 'lapsed'], [7, 'won'], [3, 'won'], [5, 'won']].forEach(([n, end], i) =>
+    urge('TIRED', { intensity: n }, end, '2026-10-1' + i + 'T21:00:00'));
+  assert.deepEqual(strong(), []);                                        // only 2 milder ones
+  urge('TIRED', { intensity: 4 }, 'won', '2026-10-16T21:00:00');
+  assert.deepEqual(strong(), ['Rated 7 or more: 1 of 3 ridden out. Under 7: 3 of 3.']);
+  s.urges.log[0].outcome = s.urges.log[1].outcome = 'won';
+  assert.deepEqual(strong(), []);                                        // 3 of 3 both ways: nothing to tell
 });
 
 // ---------- the screen ----------
