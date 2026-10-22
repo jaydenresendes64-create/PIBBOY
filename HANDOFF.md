@@ -156,6 +156,11 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   on return) redraws at 4:00, and a Log tap on a form drawn before 4:00 redraws with a notice
   instead of logging unseen values. Dailies, streak, urges' daily cap, trials keep midnight
   (`todayStr`). Tests in `tests/vitalsday.test.js`; checked live with a fake clock (Toronto).
+- **Undo last replace (2026-10-22):** storage.js `keepPrevious(state, reason)` (IndexedDB key
+  `state/previous`, one copy, stamped with DATA_SCHEMA) and `readPrevious()` (sanitized; null for a
+  higher schema); events.js `replaceState(state, reason)` keeps the old one first (import, reset, undo),
+  `confirmMerge` too; Settings → `undo-btn` / `undo-note` (refreshed on open), confirm, `doUndo()`.
+  `tests/undo.test.js`.
 - **Instant open (2026-10-22, owner's yes):** sw.js cache first, whole versions (`VERSION` hash of
   APP_SHELL from `tools/stamp-sw.js`; `tests/sw.test.js` fails if stale), the first version takes
   over at once, a later one waits; js/main.js `watchUpdates()`: `reg.update()` when back on screen

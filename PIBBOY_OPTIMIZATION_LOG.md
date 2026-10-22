@@ -2,6 +2,20 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-22 — Undo last replace (plan task 22); audit notes
+- The two destructive operations (Reset progress, Import → Yes, replace) and the old-terminal merge
+  had no way back without an exported file. `js/storage.js` `keepPrevious`/`readPrevious`;
+  `js/events.js` keeps the state before each, Settings shows "Undo last replace" with when and what
+  (level · XP · check-ins), asks, swaps. `index.html` two Settings rows; `css/terminal.css`
+  `.set-link[hidden], .set-note[hidden]` (a display rule was showing the hidden button: caught in
+  Chromium). `js/main.js`: `watchUpdates` ignores a missing registration (page error when service
+  workers are blocked, caught in Chromium).
+- Audit, no change needed: every `new Date()` from a stored date uses numeric parts (Safari-safe);
+  after-change hook 0.74 ms and VITALS redraw 3.8 ms on a heavy state at 4× CPU slowdown.
+- Tests: new `tests/undo.test.js` (2); `node --test` → 365 pass, 0 fail. Chromium 360 px: check-in →
+  Reset → Undo shown ("From before the reset, Oct 22 at 16:08: level 2 · 15 XP · 1 check-ins.") →
+  Yes, put it back → 15 XP → reload → 15 XP; Undo hidden before any replace; no page errors.
+
 ## 2026-10-22 — Instant open (plan task 21, step 2)
 - `sw.js`: cache first from `CACHE` = prefix + `VERSION` (hash of APP_SHELL's files); install precaches
   the whole version (`cache:'reload'`), a core file failing keeps the old one; the first version takes

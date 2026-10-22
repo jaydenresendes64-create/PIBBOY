@@ -1434,6 +1434,7 @@ body.modal-open{ overflow:hidden; }
 .set-link::after{ content:'\203A'; font-size:1.4rem; line-height:1; color:var(--text-dim); }
 .set-danger{ color:var(--danger); }
 .set-note{ margin:6px 2px 4px; font-size:0.72rem; line-height:1.45; color:var(--text-dim); }
+.set-link[hidden], .set-note[hidden]{ display:none; }
 .set-note a{ color:inherit; }
 .backup-age.due{ color:var(--amber); }
 .backup-age.due::before{ content:'\25B2  '; }
