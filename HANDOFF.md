@@ -655,8 +655,10 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 - Routes need a connection when added (OSRM's public demo server; if it ever goes away, another
   OSRM/Valhalla server with CORS can replace `ROUTER` in `routes.js` and the CSP). Removing a city
   doesn't remove the routes through it.
-- 3D models: canvases are small (78×44 CSS px) and weren't reviewed on a real phone yet; after a
-  WebGL context loss they stay hidden until reload.
+- 3D models: canvases are small (78×44 CSS px) and weren't reviewed on a real phone yet. After a
+  WebGL context loss (iOS, app in the background) they hide until the context is restored, or until
+  ITEMS next opens with a new renderer (`makeRenderer`/`renew` in items3d.js; checked in Chromium
+  with WEBGL_lose_context, 2026-10-22).
 - Custom sounds and 3D tilt choice are per device/origin; on iPhone the Home Screen app and Safari
   have separate storage.
 

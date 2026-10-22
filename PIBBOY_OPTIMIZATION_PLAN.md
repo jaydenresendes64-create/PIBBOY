@@ -17,6 +17,7 @@ improvement campaign. Status: `[x]` done (tests pass), `[ ]` to do, `[~]` in pro
 | 8 | Urge decoder | "I gave in" tapped by mistake: Undo right after (the urge runs on where it was) | `tests/urges.test.js`, Chromium real clicks + reload | [x] |
 | 10 | Urge decoder | The owner's own notes come back: the latest line written after an urge ridden out shows while the next timer runs (YOUR WORDS) | `tests/urges.test.js` (exact wording, escaped), Chromium | [x] |
 | 11 | VITALS | Every check-in level defined on screen (0 / 10 anchors, read out with the slider; Sleep = last night), matching insight.js `LINES` | `tests/vitals.test.js`, Chromium 320/360/390 px | [x] |
+| 12 | ITEMS / errors | 3D models came back only after a reload once the GPU context was lost; now they hide, then return on restore or with a new renderer when ITEMS reopens | Chromium + WEBGL_lose_context (lose, restore, lose and reopen) | [x] |
 | 9 | Quests | French caps objectives (`CAPS_OBJECTIVE`) | needs the owner's yes: a second one-time link would switch quests kept on a manual % to the wallet | on hold |
 
 ## Rules (from CLAUDE.md)

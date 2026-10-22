@@ -18,7 +18,10 @@
  * Only runs while the ITEMS tab is open, at least one model is on screen and
  * the app is in the foreground, at about 30 frames a second. With reduced
  * motion the models stay still. Without WebGL (or opened from disk, where
- * modules can't load) the little canvases are simply hidden.
+ * modules can't load) the little canvases are simply hidden. When the phone
+ * takes the GPU context away (iOS does, with the app in the background),
+ * they hide until it's given back, or until the tab next opens, with a
+ * new renderer if it's still gone.
  */
 (function(ST){
   'use strict';
@@ -33,6 +36,7 @@
   var T = null;                 // the Three.js module
   var loading = null;
   var broken = false;
+  var lost = false;             // the GPU context was taken away (for now)
   var renderer = null, scene = null, camera = null;
   var models = {};              // category → a Three.js Group
   var angle = {};               // category → {y, x}: kept across re-renders of the tab
@@ -160,9 +164,7 @@
     if (!loading){
       loading = import(new URL(THREE_URL, document.baseURI).href).then(function(module){
         T = module;
-        renderer = new T.WebGLRenderer({antialias:true, alpha:true});
-        renderer.setClearColor(0x000000, 0);
-        renderer.domElement.addEventListener('webglcontextlost', function(){ fail(); });
+        makeRenderer();
         scene = new T.Scene();
         camera = new T.PerspectiveCamera(32, 1.8, 0.1, 20);
         camera.position.set(0, 0, 4.1);
@@ -177,6 +179,33 @@
     broken = true;
     stop();
     canvases.forEach(function(c){ c.hidden = true; });
+  }
+  // One hidden WebGL canvas for every model. Three.js keeps a lost context
+  // restorable (it calls preventDefault); only this renderer's events count.
+  function makeRenderer(){
+    var r = new T.WebGLRenderer({antialias:true, alpha:true});
+    r.setClearColor(0x000000, 0);
+    r.domElement.addEventListener('webglcontextlost', function(){
+      if (r!==renderer) return;
+      lost = true;
+      stop();
+      canvases.forEach(function(c){ c.hidden = true; });
+    });
+    r.domElement.addEventListener('webglcontextrestored', function(){
+      if (r!==renderer) return;
+      lost = false;
+      canvases.forEach(function(c){ c.hidden = false; });
+      start();
+    });
+    renderer = r;
+  }
+  // Still lost when the tab opens: a new renderer (a new context) instead.
+  function renew(){
+    var old = renderer;
+    try{ makeRenderer(); }catch(err){ fail(); return; }
+    lost = false;
+    canvases.forEach(function(c){ c.hidden = false; });
+    try{ old.dispose(); }catch(err){}
   }
 
   // ---------- drawing ----------
@@ -217,7 +246,7 @@
     drawAll();
   }
   function running(){
-    return !broken && T && tabShown && onScreen.size>0 && document.visibilityState!=='hidden';
+    return !broken && !lost && T && tabShown && onScreen.size>0 && document.visibilityState!=='hidden';
   }
   function start(){
     if (!running()) return;
@@ -262,7 +291,8 @@
     onScreen.clear();
     canvases = Array.prototype.slice.call(tab.querySelectorAll('canvas.item-model'));
     canvases.forEach(function(c){
-      if (broken){ c.hidden = true; return; }
+      if (broken || lost) c.hidden = true;
+      if (broken) return;
       c.addEventListener('pointerdown', onPointerDown);
       c.addEventListener('pointermove', onPointerMove);
       c.addEventListener('pointerup', onPointerUp);
@@ -276,7 +306,10 @@
     tabShown = !!value;
     if (!tabShown){ stop(); return; }
     if (broken) return;
-    load().then(function(){ start(); drawAll(); }, function(){});
+    load().then(function(){
+      if (lost) renew();
+      if (running()){ start(); drawAll(); }
+    }, function(){});
   }
 
   document.addEventListener('visibilitychange', function(){

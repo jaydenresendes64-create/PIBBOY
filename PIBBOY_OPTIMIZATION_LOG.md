@@ -2,6 +2,17 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-22 — ITEMS 3D models survive a GPU context loss (plan task 12)
+- `js/items3d.js`: a context loss set `broken` for good (models gone until reload; iOS drops GPU
+  contexts of backgrounded apps). Now `lost` hides them, `webglcontextrestored` brings them back,
+  and if it's still lost when ITEMS opens, `renew()` makes a new renderer. Only the current
+  renderer's events count.
+- Also decided: the service worker's mixed-version open (first weak-signal open after a deploy)
+  stays as documented; changing the fetch strategy is the cache-first question waiting on the owner.
+- Tests: `node --test` → 345 pass, 0 fail (`tests/items3d.test.js` builds the models; the GPU part
+  has no unit harness). Chromium (SwiftShader), WEBGL_lose_context: open → drawn; lose → hidden;
+  restore → shown and drawing; lose + reopen ITEMS → 2nd context, drawing; no page errors.
+
 ## 2026-10-22 — Check-in levels defined (plan task 11)
 - The six sliders shared one rule ("0 is none, 10 is maximum"): "mood 0" or "sleep 6" had no stated
   meaning. `js/vitals.js` `SCALE`: anchors under each slider (`.vital-scale`, `aria-describedby`),
