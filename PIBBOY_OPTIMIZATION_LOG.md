@@ -2,6 +2,13 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — No double-tap zoom on controls
+- Two quick taps on a control (the RADS + and −, a quest's ○, "Another angle") zoom the page on an
+  iPhone; only the trial counter had `touch-action:manipulation`. `css/terminal.css`: buttons, links,
+  fields and labels get it (pinch zoom still works; the map's canvas keeps MapLibre's own `none`).
+- Tests: `tests/mobile.test.js` +1; `node --test` → 371 pass, 0 fail. Chromium phone mode: buttons
+  and tabs `manipulation`, the map canvas `none`, the page `auto`.
+
 ## 2026-10-23 — Lint pass
 - ESLint 9 (from the scratchpad, not a repo dependency) with the browser, service-worker and Node
   globals, rules for undefined/unused names, unreachable code, duplicate keys, self-compare, typeof,

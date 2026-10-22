@@ -47,6 +47,9 @@ button, input, select, textarea{
   input:not([type=range]):not([type=checkbox]):not([type=file]), select, textarea{ font-size:16px !important; }
 }
 button{ cursor:pointer; }
+/* Two quick taps on a control (+ + on a counter) would zoom the page on an iPhone: not on controls.
+   Pinching to zoom still works everywhere. */
+button, a, input, select, textarea, label, [role="button"]{ touch-action:manipulation; }
 ::selection{ background:var(--phosphor); color:var(--bg); }
 
 .frame{

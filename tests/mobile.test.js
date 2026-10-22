@@ -37,3 +37,8 @@ test('installed on a phone: the manifest (id, standalone, icons) and the page ag
   assert.equal(m.background_color, m.theme_color);
   assert.match(read('index.html'), /<link rel="apple-touch-icon" href="icons\/apple-touch-icon\.png">/);
 });
+
+test('two quick taps on a control never zoom the page (touch-action: manipulation)', () => {
+  const css = read('css/terminal.css');
+  assert.match(css, /^button, a, input, select, textarea, label, \[role="button"\]\{ touch-action:manipulation; \}$/m);
+});
