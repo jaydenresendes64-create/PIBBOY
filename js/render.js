@@ -45,8 +45,8 @@
     el('hdr-date').textContent = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
     el('hdr-level').textContent = (state.level<10?'0':'')+state.level;
     var pct = clamp((state.xp/state.xpToNext)*100,0,100);
-    el('hdr-xp-fill').style.width = pct+'%';
-    el('hdr-xp-top').style.width = pct+'%';      // the same fill, on the gauge's top
+    el('hdr-xp-fill').style.transform = 'scaleX('+(pct/100)+')';
+    el('hdr-xp-top').style.transform = 'scaleX('+(pct/100)+')';      // the same fill, on the gauge's top
     el('hdr-xp-text').textContent = commas(state.xp)+' / '+commas(state.xpToNext)+' XP';
     renderBackup();             // the rad meter beside it (first XP without a backup: rads)
     syncWalker();
@@ -74,18 +74,22 @@
     if (!walk || !app.state) return;
     var tier = walkerTier(app.state.level);
     if (tier!==walkerOn){
+      var first = walkerOn===null;
       walkerOn = tier;
       walk.setAttribute('data-tier', tier);
       // Hidden for a moment so all his animations start again together (each
-      // outfit's walk has its own track).
-      walk.hidden = true;
-      void walk.offsetWidth;
+      // outfit's walk has its own track). Not the first time: he comes out
+      // of hiding then, so they start together anyway, and the page isn't
+      // laid out once more before it's drawn.
+      if (!first){
+        walk.hidden = true;
+        void walk.offsetWidth;
+      }
       walk.hidden = false;
     }
     if (!walkerWatched){
       walkerWatched = true;
       window.addEventListener('resize', placeWalker);
-      if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeWalker);   // the text's real width
     }
     if (window.requestAnimationFrame) window.requestAnimationFrame(placeWalker);
   }
@@ -96,7 +100,15 @@
   // still don't slide; where it's longer, his walk sits in its middle.
   // --vb-from: where his walk starts; --vb-len: how far it goes.
   var WALK_GAP = 10, WALK_MAX = 150, FRAME_RATIO = 308/420, WALK_SPAN = 0.68;
+  var fontsWatched = false;
   function placeWalker(){
+    // Again once the fonts are in (the text's real width). Asked here, just
+    // before a frame is drawn, where the page is laid out anyway: asked
+    // while rendering, it laid the page out once more.
+    if (!fontsWatched && document.fonts && document.fonts.ready){
+      fontsWatched = true;
+      document.fonts.ready.then(placeWalker);
+    }
     var walk = el('vaultboy-walk'), bar = document.querySelector('.level-block .xp-bar-outer');
     if (!walk || walk.hidden || !bar || !bar.getBoundingClientRect) return;
     var track = walk.querySelector && walk.querySelector('.vb-track');
@@ -865,7 +877,7 @@
     var meter = el('rad-meter'), rads = ST.rads();
     if (!meter) return;
     el('rad-text').textContent = rads+' RADS';
-    el('rad-fill').style.width = (rads/ST.RADS_MAX*100)+'%';
+    el('rad-fill').style.transform = 'scaleX('+(rads/ST.RADS_MAX)+')';
     meter.classList.toggle('due', due);
     meter.classList.toggle('critical', rads>=ST.RADS_MAX);
     meter.setAttribute('aria-label', rads+' rads. '+age+'. Tap for RadAway: back up your data');

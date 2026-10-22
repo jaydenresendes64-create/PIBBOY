@@ -508,10 +508,11 @@ def drawn_css(tier, data):
             '%s .vb-head{ animation-name:vbHeadDrawn; }' % t,
             '%s{ animation:none; }' % legs_,
             '%s .vb-breathe{ animation:mascotBreathe 4.2s ease-in-out infinite, vbParts%s %s linear infinite; }' % (t, src, length),
-            '%s .vb-walk{ left:%s%%; right:auto; width:%s%%; top:%s%%; bottom:auto; height:%s%%; background-image:url(../images/vaultboy/walk-lvl%s.png); background-size:%d%% 100%%; animation:vbWalk%s %s linear infinite, %s; transform-origin:%s%% %s%%; }'
+            '%s .vb-walk{ left:%s%%; right:auto; width:%s%%; top:%s%%; bottom:auto; height:%s%%; animation:vbWalk%s %s linear infinite, %s; transform-origin:%s%% %s%%; }'
             % (t, num(100.0 * box[0] / fit['W'], 3), num(100.0 * box[2] / fit['W'], 3), num(100.0 * box[1] / fit['H'], 3),
-               num(100.0 * box[3] / fit['H'], 3), src, 100 * N, src, length, BREATHE,
+               num(100.0 * box[3] / fit['H'], 3), src, length, BREATHE,
                num(100.0 * (fit['origin'][0] - box[0]) / box[2], 3), num(100.0 * (fit['origin'][1] - box[1]) / box[3], 3)),
+            '%s .vb-strip{ width:%d%%; background-image:url(../images/vaultboy/walk-lvl%s.png); animation:vbStrip%s %s linear infinite; }' % (t, 100 * N, src, src, length),
             '%s{ --vb-span:%s; }' % (t, num(span, 4)),
             track_css,
         ]
@@ -523,13 +524,20 @@ def drawn_css(tier, data):
         '%s .vb-head{ animation-name:vbHeadDrawn; }' % t,
         '%s{ animation:none; }' % legs_,
         '%s .vb-breathe{ animation:mascotBreathe 4.2s ease-in-out infinite, vbParts%s %s linear infinite; }' % (t, tier, length),
-        '%s .vb-walk{ left:%s%%; right:auto; width:%s%%; background-image:url(../images/vaultboy/walk-lvl%s.png); background-size:%d%% 100%%; animation:vbWalk%s %s linear infinite, %s; transform-origin:%s%% %s%%; }'
-        % (t, num(100.0 * data['left'] / 308, 3), num(100.0 * data['width'] / 308, 3), tier, 100 * N, tier, length, BREATHE,
+        '%s .vb-walk{ left:%s%%; right:auto; width:%s%%; animation:vbWalk%s %s linear infinite, %s; transform-origin:%s%% %s%%; }'
+        % (t, num(100.0 * data['left'] / 308, 3), num(100.0 * data['width'] / 308, 3), tier, length, BREATHE,
            num(100.0 * (own['origin'][0] - data['left']) / data['width'], 3), num(100.0 * own['origin'][1] / own['H'], 3)),
+        '%s .vb-strip{ width:%d%%; background-image:url(../images/vaultboy/walk-lvl%s.png); animation:vbStrip%s %s linear infinite; }' % (t, 100 * N, tier, tier, length),
         '%s{ --vb-span:%s; }' % (t, num(span, 4)),
         track_css,
-        held_css('vbWalk' + tier, [(at_, 'opacity:%d; background-position:%s 0;' % (o, '%s%%' % num(100.0 * k / (N - 1), 4) if k else '0'))
-                                   for at_, (o, k) in show]),
+        # Which drawing: the strip moved by a whole frame (a transform: the
+        # GPU moves it; moving its background-position redrew him 60 times
+        # a second, a quarter of a phone's processor). Shown or not: the
+        # frame's opacity, only when that changes.
+        held_css('vbStrip' + tier, [(at_, 'transform:translateX(%s);' % ('-%s%%' % num(100.0 * k / N, 4) if k else '0'))
+                                    for at_, (o, k) in show]),
+        held_css('vbWalk' + tier, [(at_, 'opacity:%d;' % o) for i, (at_, (o, k)) in enumerate(show)
+                                   if i == 0 or o != show[i - 1][1][0] or at_ == LOOP]),
         held_css('vbParts' + tier, [(at_, 'opacity:%d;' % o) for at_, o in parts_]),
     ]
 
