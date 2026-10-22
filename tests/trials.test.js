@@ -20,7 +20,8 @@ test('the built-in trials, each with how it is measured and the stat it trains',
     ['pushups', 'reps', 'reps', 'more', 'counter', 'STR'],
     ['plank', 'hold', 'seconds', 'more', 'stopwatch', 'END'],
     ['squats', 'timed', 'reps', 'more', 'countdown', 'AGI'],
-    ['km', 'fastest', 'seconds', 'less', 'stopwatch', 'END']]);
+    ['km', 'fastest', 'seconds', 'less', 'stopwatch', 'END'],
+    ['distance', 'distance', 'm', 'more', 'none', 'END']]);
   assert.equal(ST.trialById('squats').seconds, 60);
   assert.equal(ST.trialById('nope'), null);
 });
@@ -72,7 +73,7 @@ test('a time: lower is better, typed as m:ss or seconds, shown as m:ss', () => {
 test('due: never tried, or no result for 7 days', () => {
   fresh();
   app.setNow('2026-10-10T09:00:00');
-  assert.equal(ST.trialsDue(), 4);
+  assert.equal(ST.trialsDue(), 5);
   ST.logTrial('plank', 50);
   assert.equal(ST.trialDue('plank'), false);
   app.setNow('2026-10-16T09:00:00');
@@ -106,7 +107,7 @@ test('the player\'s own trials, built-in ones hidden, and results removed: what 
   assert.equal(ST.removeTrial('squats'), true);                // hidden, results kept
   assert.deepEqual(app.plain(ST.trialList().map(t => t.id)).slice(0, 3), ['pushups', 'plank', 'km']);
   ST.showTrial('squats');
-  assert.equal(ST.trialList().length, 6);
+  assert.equal(ST.trialList().length, 7);
   ST.logTrial('plank', 70);
   const t = s.trials.log.find(r => r.id === 'plank').t;
   assert.equal(ST.removeTrialResult('plank', t), true);
@@ -160,8 +161,8 @@ function screen(setup) {
 
 test('TRIALS: the sub-tabs, a card per trial, the record and the next goal, the panel and its question', () => {
   const empty = screen(() => {});
-  assert.match(empty, /data-key="trials" aria-pressed="true">TRIALS<span class="sub-count">4 due<\/span>/);
-  assert.equal((empty.match(/class="trial-card"/g) || []).length, 4);
+  assert.match(empty, /data-key="trials" aria-pressed="true">TRIALS<span class="sub-count">5 due<\/span>/);
+  assert.equal((empty.match(/class="trial-card"/g) || []).length, 5);
   assert.match(empty, /Not tried yet: your first result is your record\./);
   assert.match(empty, /data-trial="add-open"/);
   const done = screen(ST => {
@@ -197,7 +198,7 @@ test('the clock\'s format', () => {
   assert.deepEqual([0, 9, 60, 92, 600].map(a.ST.trials.clock), ['0:00', '0:09', '1:00', '1:32', '10:00']);
 });
 
-test('the 1 km trial: a button that opens the "PIBBOY Run" shortcut (a Strava run), not on the other trials', () => {
+test('the 1 km trial and the distances: a button that opens the "PIBBOY Run" shortcut (a Strava run), not on the other trials', () => {
   const km = screen(ST => { ST.app.trialOpen = 'km'; });
   assert.match(km, /<a class="vital-btn hot trial-strava" href="shortcuts:\/\/run-shortcut\?name=PIBBOY%20Run">Run with Strava<\/a>/);
   assert.match(km, /opens your “PIBBOY Run” shortcut \(Shortcuts app\), which starts a Strava run\. Back here, type your 1 km time/);
@@ -205,4 +206,69 @@ test('the 1 km trial: a button that opens the "PIBBOY Run" shortcut (a Strava ru
   assert.doesNotMatch(running, /trial-strava/);                  // the stopwatch is running: Stop and Cancel only
   const plank = screen(ST => { ST.app.trialOpen = 'plank'; });
   assert.doesNotMatch(plank, /trial-strava|shortcuts:/);
+  const far = screen(ST => { ST.app.trialOpen = 'distance'; });
+  assert.match(far, /<a class="vital-btn hot trial-strava" href="shortcuts:\/\/run-shortcut\?name=PIBBOY%20Run">Start with Strava<\/a>/);
+  assert.match(far, /Back here, type the distance Strava shows \(km\) and save it\./);
+});
+
+// ---------- a distance (the owner, 2026-10-21: "parfois je fais 5 km… ça devrait être moi qui l'ajoute") ----------
+test('a distance: typed in km, kept in metres, shown in km; the longest is the record, the next goal 5% or 100 m further', () => {
+  fresh();
+  app.setNow('2026-10-10T09:00:00');
+  assert.deepEqual(['5.4', '5,4 km', ' 6 KM ', '0.85', '12.345'].map(v => ST.parseTrialValue('distance', v)), [5400, 5400, 6000, 850, 12345]);
+  assert.deepEqual(['', 'far', '5:30', '-3', '0', '5.4 mi'].map(v => ST.parseTrialValue('distance', v)), [null, null, null, null, null, null]);
+  assert.equal(ST.parseTrialValue('distance', '999'), 200000);           // at most 200 km
+  assert.deepEqual([5400, 6000, 12345, 850].map(v => ST.trialValueText('distance', v)), ['5.4', '6', '12.35', '0.85']);
+  assert.equal(ST.trialGoal('distance'), null);
+  ST.logTrial('distance', 6000);
+  assert.equal(ST.trialGoal('distance'), 6300);
+  ST.logTrial('distance', 1000);                                          // shorter: not the record
+  assert.equal(ST.trialBest('distance'), 6000);
+  const mine = ST.addTrial('Bike', 'distance', 'END');
+  assert.deepEqual([mine.kind, mine.unit, mine.timer, mine.what], ['distance', 'm', 'none', 'Longest distance (km)']);
+  ST.logTrial(mine.id, 1000);
+  assert.equal(ST.trialGoal(mine.id), 1100);                              // 100 m at least
+});
+
+test('a distance pays by the km: 5 XP a km (at most 100), and 50 more for a record; once a day; it trains END', () => {
+  const s = fresh();
+  app.setNow('2026-10-10T09:00:00');
+  assert.deepEqual(app.plain(ST.trialPreview('distance', 5400)), { value: 5400, record: true, xp: 77 });   // 27 + 50
+  assert.equal(ST.logTrial('distance', 5400).reward.xp, 77);
+  assert.equal(ST.logTrial('distance', 8000).reward, null);               // same day: kept (a record), unpaid
+  app.setNow('2026-10-11T09:00:00');
+  assert.equal(ST.logTrial('distance', 3000).reward.xp, 15);             // 3 km, not a record
+  app.setNow('2026-10-12T09:00:00');
+  assert.equal(ST.logTrial('distance', 100).reward.xp, 1);               // 1 XP at least
+  app.setNow('2026-10-13T09:00:00');
+  assert.equal(ST.logTrial('distance', 42195).reward.xp, 150);           // a marathon: 100 at most, + the record's 50
+  app.setNow('2026-10-14T09:00:00');
+  assert.equal(ST.trialPreview('distance', 30000).xp, 100);              // a typo can't pay more than 100
+  assert.equal(s.statTrain.END, 77 + 15 + 1 + 150);
+  assert.deepEqual(app.plain(s.history.map(e => [e.type, e.xp, e.data.value, e.data.record])),
+    [['TRIAL_DONE', 77, 5400, 1], ['TRIAL_DONE', 15, 3000, 0], ['TRIAL_DONE', 1, 100, 0], ['TRIAL_DONE', 150, 42195, 1]]);
+  assert.equal(s.history.reduce((sum, e) => sum + e.xp, 0), s.lifetimeXp);
+});
+
+test('a distance in a document: kept in metres, brought within 200 km; the player\'s own distance trial kept', () => {
+  const s = fresh();
+  app.setNow('2026-10-10T09:00:00');
+  ST.logTrial('distance', 5400);
+  ST.logTrial(ST.addTrial('Bike', 'distance', 'END').id, 21000);
+  assert.equal(JSON.stringify(load(s)), JSON.stringify(s));
+  const junk = load({ stats: {}, quests: {}, trials: { log: [{ id: 'distance', date: '2026-10-09', value: 5e9 }, { id: 'distance', date: '2026-10-09', value: '6400.4' }] } });
+  assert.deepEqual(app.plain(junk.trials.log.map(r => r.value)), [200000, 6400]);
+});
+
+test('a distance on the screen: no timer, typed in km, the XP it pays asked first', () => {
+  const card = screen(ST => { ST.logTrial('distance', 5400); });
+  assert.match(card, /<span class="trial-name">Distance<\/span>/);
+  assert.match(card, /RECORD <b>5\.4 km<\/b>/);
+  assert.match(card, /Last: 5\.4 km · Oct 10 · Next goal: 5\.7 km/);
+  assert.match(card, /data-trial="open" data-id="distance">Log<\/button>/);
+  assert.match(card, /A distance: \+5 XP a km \(at most 100\), and \+50 more for a record\./);
+  const panel = screen(ST => { ST.app.trialOpen = 'distance'; ST.app.trialConfirm = { id: 'distance', value: 6200 }; });
+  assert.doesNotMatch(panel, /trial-clock|data-trial="start"/);
+  assert.match(panel, /<label for="trial-value">Distance \(km\)<\/label><input type="text" id="trial-value" data-id="distance" inputmode="decimal" autocomplete="off" placeholder="0\.0"/);
+  assert.match(panel, /Save <b>6\.2 km<\/b>\? <span class="trial-new">NEW RECORD<\/span> \+81 XP · trains END/);
 });

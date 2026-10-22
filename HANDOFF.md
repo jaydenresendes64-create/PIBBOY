@@ -113,6 +113,16 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   its Siri shortcut (start a run/walk) goes in the owner's "PIBBOY Run" shortcut. The result is typed
   back by hand (Strava's 1 km split): reading it automatically would need Strava's API, whose OAuth
   needs a client secret, so a server; not on GitHub Pages.
+  **Distance (2026-10-21, owner: "parfois je fais 5 km, 6 km… alors que je n'ai qu'un objectif de 1 km;
+  ça devrait être moi qui l'ajoute manuellement, avec mon record"; the owner chose the XP by the km and
+  to keep the 1 km):** a kind `distance` (unit `m`, better more, timer `none`: typed in) and a built-in
+  `distance` trial (END). Values are whole metres (`TRIAL_VALUE_MAX.m` 200 km), typed in km ("5.4",
+  "5,4 km") and shown in km to the 10 m. It pays by the km (`trialXp()`): `TRIAL_KM_XP` 5 a km, at
+  least 1, at most `TRIAL_KM_XP_MAX` 100 (a typo can't pay much), + `TRIAL_RECORD_XP` for a record;
+  still once a trial a day. Goal: 5% or 100 m further, to the next 100 m. The panel has no timer: the
+  Strava shortcut button ("Start with Strava") and a km box. Own trials can use the kind too (a bike).
+  No migrate: the shape is the same (a new kind and unit in the code; sanitize caps by unit). Tests in
+  `tests/trials.test.js` (parsing, XP, document, screen); `5 trials due` on a fresh save.
 - **Morning path (2026-10-10, from a Grok prompt the owner brought, reviewed against the code):** the
   app opens on VITALS (main.js; index.html shows #tab-vitals first). vitals.js `order()`: urge decoder
   first if `urges.active` or a craving ≥ 6 (today's logged check-in, else yesterday's: `lastCheckIn().ago===1`),

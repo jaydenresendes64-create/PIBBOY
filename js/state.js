@@ -56,7 +56,7 @@
  *     custom: [ { id, name, kind: TRIAL_KINDS key, stat: one of STAT_KEYS } ],   // the player's own
  *     hidden: [ id ],                       // built-in TRIALS put away
  *     log: [ { id: trial id, date:'YYYY-M-D', value: number,   // the results, oldest first (the
- *              xp: number, t: ms } ],       // latest TRIALS_LOG_MAX): reps, or seconds; xp: what it paid
+ *              xp: number, t: ms } ],       // latest TRIALS_LOG_MAX): reps, seconds or metres; xp: what it paid
  *     active: { id, start: ms }|null        // a trial's timer (it counts from `start`, a few seconds
  *   },                                      // after the tap: the 3-2-1)
  *   inventory: [ { id, name, category: one of CATS,     // WEAPONS is gone: see migrate()
@@ -187,24 +187,31 @@
   var TRAIN_PER_POINT = 300;          // training XP for one S.P.E.C.I.A.L. point
   // TRIALS (see "trials" above). A kind says how a trial is measured: the
   // most reps in one set (a tap counter helps), the most reps in a set time,
-  // the longest hold, the fastest time (lower is better). Values are reps,
-  // or whole seconds.
+  // the longest hold, the fastest time (lower is better), the longest
+  // distance (typed in, from Strava). Values are reps, whole seconds, or
+  // whole metres (typed and shown in km).
   var TRIAL_KINDS = {
-    reps:    {unit:'reps', better:'more', timer:'counter', label:'Most reps in one set'},
-    timed:   {unit:'reps', better:'more', timer:'countdown', seconds:60, label:'Most reps in 60 seconds'},
-    hold:    {unit:'seconds', better:'more', timer:'stopwatch', label:'Longest hold'},
-    fastest: {unit:'seconds', better:'less', timer:'stopwatch', label:'Fastest time'}
+    reps:     {unit:'reps', better:'more', timer:'counter', label:'Most reps in one set'},
+    timed:    {unit:'reps', better:'more', timer:'countdown', seconds:60, label:'Most reps in 60 seconds'},
+    hold:     {unit:'seconds', better:'more', timer:'stopwatch', label:'Longest hold'},
+    fastest:  {unit:'seconds', better:'less', timer:'stopwatch', label:'Fastest time'},
+    distance: {unit:'m', better:'more', timer:'none', label:'Longest distance (km)'}
   };
   var TRIALS = [
     {id:'pushups', name:'Push-ups', what:'Most in one set, good form', kind:'reps', stat:'STR'},
     {id:'plank', name:'Plank', what:'Longest hold, back straight', kind:'hold', stat:'END'},
     {id:'squats', name:'Squats', what:'Most in 60 seconds, full depth', kind:'timed', stat:'AGI'},
-    {id:'km', name:'1 km', what:'Fastest, walking or running', kind:'fastest', stat:'END'}
+    {id:'km', name:'1 km', what:'Fastest, walking or running', kind:'fastest', stat:'END'},
+    {id:'distance', name:'Distance', what:'Longest walk or run, typed in from Strava', kind:'distance', stat:'END'}
   ];
   var TRIAL_RECORD_XP = 50, TRIAL_XP = 15;    // one paid result a trial a day: a new record, or not
+  // A distance pays by the km instead (the owner, 2026-10-21: 5 or 6 km
+  // shouldn't pay what 1 km does): TRIAL_KM_XP a km, at most TRIAL_KM_XP_MAX
+  // (a typo can't pay much), and TRIAL_RECORD_XP more for a new record.
+  var TRIAL_KM_XP = 5, TRIAL_KM_XP_MAX = 100;
   var TRIAL_DUE_DAYS = 7, TRIAL_COUNTDOWN_MS = 3000;
   var TRIALS_LOG_MAX = 1000, TRIALS_CUSTOM_MAX = 12, TRIAL_NAME_MAX = 40;
-  var TRIAL_VALUE_MAX = {reps:9999, seconds:86400};
+  var TRIAL_VALUE_MAX = {reps:9999, seconds:86400, m:200000};
   // Every country a place can be in (GeoNames' country list, as in data/places.txt).
   var COUNTRY_CODES = ('AD AE AF AG AI AL AM AN AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR '+
     'BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CS CU CV CW CX CY CZ DE DJ DK DM DO DZ '+
@@ -1156,7 +1163,8 @@
   // The built-in TRIALS (some may be hidden) and the player's own, each with
   // its kind (TRIAL_KINDS). A result is logged with the day; the best one is
   // the record. One result a trial a day is paid (the first): a new record
-  // TRIAL_RECORD_XP, else TRIAL_XP, and that XP trains the trial's stat.
+  // TRIAL_RECORD_XP, else TRIAL_XP (a distance: by the km, see trialXp()),
+  // and that XP trains the trial's stat.
   // More results the same day are kept (a record too), unpaid. Removing a
   // result (a typo) keeps what it paid, like a book.
   function trialById(id){
@@ -1195,10 +1203,15 @@
     value = trialValue(t, value);
     if (value===null) return null;
     var best = trialBest(id), record = best===null || beats(t, value, best);
-    return {value:value, record:record, xp:trialPaidToday(id) ? 0 : record ? TRIAL_RECORD_XP : TRIAL_XP};
+    return {value:value, record:record, xp:trialPaidToday(id) ? 0 : trialXp(t, value, record)};
   }
-  // A result as stored: whole reps or seconds, from 1 to the kind's most;
-  // null for anything else.
+  // What a result pays (when today's isn't paid yet).
+  function trialXp(t, value, record){
+    if (t.unit!=='m') return record ? TRIAL_RECORD_XP : TRIAL_XP;
+    return Math.min(TRIAL_KM_XP_MAX, Math.max(1, Math.round(value/1000*TRIAL_KM_XP)))+(record ? TRIAL_RECORD_XP : 0);
+  }
+  // A result as stored: whole reps, seconds or metres, from 1 to the kind's
+  // most; null for anything else.
   function trialValue(t, value){
     var v = Math.round(Number(value));
     if (!t || !isFinite(v) || v<1) return null;
@@ -1238,11 +1251,13 @@
     return trialList().filter(function(t){ return trialDue(t.id); }).length;
   }
   // The next goal: a little past the record (5% more reps, 5 seconds or 5%
-  // longer, 3% or 5 seconds faster). null before the first result.
+  // longer, 3% or 5 seconds faster, 5% or 100 m further, to the next 100 m).
+  // null before the first result.
   function trialGoal(id){
     var t = trialById(id), best = trialBest(id);
     if (!t || best===null) return null;
     if (t.better==='less') return Math.max(1, best - Math.max(5, Math.round(best*0.03)));
+    if (t.unit==='m') return Math.min(TRIAL_VALUE_MAX.m, Math.ceil((best + Math.max(100, best*0.05))/100)*100);
     return Math.min(TRIAL_VALUE_MAX[t.unit], best + Math.max(t.unit==='seconds' ? 5 : 1, Math.round(best*0.05)));
   }
   // The player's own trial: a name, a kind, a stat. Returns it, or null (no
@@ -1291,11 +1306,16 @@
     app.state.trials.active = null;
     return ms===null ? null : Math.max(0, Math.round(ms/1000));
   }
-  // Typed results: reps as a number; a time as m:ss (or h:mm:ss), or seconds.
+  // Typed results: reps as a number; a time as m:ss (or h:mm:ss), or
+  // seconds; a distance in km ("5.4", "5,4 km").
   function parseTrialValue(id, text){
     var t = trialById(id);
     text = String(text===undefined || text===null ? '' : text).trim();
     if (!t || !text) return null;
+    if (t.unit==='m'){
+      var km = /^(\d+(?:[.,]\d+)?)\s*(?:km)?$/i.exec(text);
+      return km ? trialValue(t, Number(km[1].replace(',', '.'))*1000) : null;
+    }
     if (t.unit==='seconds' && /^\d+(:\d{1,2}){1,2}$/.test(text)){
       var parts = text.split(':').map(Number);
       if (parts.slice(1).some(function(p){ return p>59; })) return null;
@@ -1303,9 +1323,11 @@
     }
     return /^\d+([.,]\d+)?$/.test(text) ? trialValue(t, Number(text.replace(',', '.'))) : null;
   }
-  // A value as shown: "32" (reps), "1:30" or "1:02:05" (a time).
+  // A value as shown: "32" (reps), "1:30" or "1:02:05" (a time), "5.43"
+  // (a distance, km: to the 10 m).
   function trialValueText(id, value){
     var t = trialById(id), v = Math.round(Number(value)) || 0;
+    if (t && t.unit==='m') return String(Math.round(v/10)/100);
     if (!t || t.unit!=='seconds') return String(v);
     var h = Math.floor(v/3600), m = Math.floor(v%3600/60), sec = v%60;
     return (h ? h+':'+(m<10 ? '0' : '') : '')+m+':'+(sec<10 ? '0' : '')+sec;
@@ -1900,6 +1922,8 @@
   ST.TRIAL_KINDS = TRIAL_KINDS;
   ST.TRIAL_RECORD_XP = TRIAL_RECORD_XP;
   ST.TRIAL_XP = TRIAL_XP;
+  ST.TRIAL_KM_XP = TRIAL_KM_XP;
+  ST.TRIAL_KM_XP_MAX = TRIAL_KM_XP_MAX;
   ST.TRIAL_DUE_DAYS = TRIAL_DUE_DAYS;
   ST.TRIAL_NAME_MAX = TRIAL_NAME_MAX;
   ST.TRIALS_CUSTOM_MAX = TRIALS_CUSTOM_MAX;
