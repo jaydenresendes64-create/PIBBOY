@@ -4,6 +4,8 @@ Only results actually run are listed. Command: `node --test` (Node's built-in ru
 
 | Date | Scope | Result |
 |------|-------|--------|
+| 2026-10-23 | Full suite with `tests/errors.test.js` | 369 pass, 0 fail |
+| 2026-10-23 | Chromium: error log (normal use, thrown error, rejection, copy, clear); a11y names and Tab focus rings | as intended |
 | 2026-10-23 | Full suite with `tests/mobile.test.js` | 367 pass, 0 fail |
 | 2026-10-23 | Chromium phone mode: every field's text size; layout at 320/390px | all 16px; no clipping, no sideways scroll |
 | 2026-10-22 | Full suite after the design fixes | 365 pass, 0 fail |

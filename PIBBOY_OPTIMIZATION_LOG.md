@@ -2,6 +2,19 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — Error log (plan task 25); accessibility checks
+- New `js/errors.js` (first script; APP_SHELL; sw VERSION stamped): uncaught errors and unhandled
+  rejections kept on this device (latest 20, "Script error." and failed resources left out), a
+  notice once a session; `index.html` + `js/events.js`: Settings → About "Errors: N · last … — …",
+  Copy the error list (clipboard), Clear. Checked first that normal use makes none (Chromium, every
+  tab, online and offline: 0).
+- Accessibility, no change needed: Chromium's accessibility tree gives every control on every
+  screen a name; 44 controls reached by Tab on VITALS all show the amber focus ring (one false
+  alarm on the date field: it does, read too early).
+- Tests: new `tests/errors.test.js` (2); `node --test` → 369 pass, 0 fail. Chromium: a thrown error
+  and a rejected promise → one notice, About "Errors: 2 · last …", Copy → both lines on the
+  clipboard, Clear → "Errors: none".
+
 ## 2026-10-23 — No more iPhone zoom when typing (plan task 24)
 - Measured every field on every screen and form (Chromium, phone mode): 19 of 20 had text under
   16px (12.8–14.4px: the pulse, the streak date, the quest/item/book/wallet forms, the map search,

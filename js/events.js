@@ -420,6 +420,7 @@
     box.hidden = false;
     box.scrollTop = 0;
     refreshUndo();
+    renderErrors();
     document.body.classList.add('modal-open');
     el('settings-btn').setAttribute('aria-expanded', 'true');
     el('settings-close').focus();
@@ -542,6 +543,23 @@
   }
   function doReset(){
     replaceState(ST.defaultState(), 'reset');
+  }
+
+  // ---------- the app's errors (js/errors.js), in Settings → About ----------
+  function renderErrors(){
+    var l = ST.errors ? ST.errors.list() : [], last = l[l.length-1];
+    var line = el('error-log'), copy = el('errors-copy-btn'), clear = el('errors-clear-btn');
+    if (!line || !copy || !clear) return;
+    copy.hidden = clear.hidden = !last;
+    if (!last){ line.textContent = 'Errors: none'; return; }
+    var d = new Date(last.t);
+    line.textContent = 'Errors: '+l.length+' · last '+d.toLocaleDateString('en-US', {month:'short', day:'numeric'})+' at '+
+      (d.getHours()<10 ? '0' : '')+d.getHours()+':'+(d.getMinutes()<10 ? '0' : '')+d.getMinutes()+' — '+last.message;
+  }
+  function copyErrors(){
+    var text = ST.errors ? ST.errors.text() : '';
+    var copied = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(text) : Promise.reject(new Error('no clipboard'));
+    copied.then(function(){ R.showNotice('Error list copied'); }, function(){ R.showNotice('Couldn’t copy: long-press the line above to select it'); });
   }
 
   // ---------- undo the last replace ----------
@@ -804,6 +822,8 @@
     'reset-btn': showResetConfirm,
     'reset-confirm-btn': doReset,
     'reset-cancel-btn': function(){ el('reset-confirm-area').innerHTML = ''; },
+    'errors-copy-btn': copyErrors,
+    'errors-clear-btn': function(){ if (ST.errors) ST.errors.clear(); renderErrors(); },
     'undo-btn': askUndo,
     'undo-confirm-btn': doUndo,
     'undo-cancel-btn': function(){ el('reset-confirm-area').innerHTML = ''; }
@@ -862,6 +882,7 @@
   // ---------- events ----------
   function setupEvents(){
     ST.storage.onChange(checkBobbleheads);
+    if (ST.errors) ST.errors.onChange = renderErrors;
     document.body.addEventListener('click', onClick);
 
     // A main quest's objective and a holding's rate go into the state as

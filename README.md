@@ -189,6 +189,7 @@ Plain HTML, CSS and JavaScript: no framework, no build step.
 ```
 index.html          markup
 css/terminal.css    styles
+js/errors.js        what goes wrong, kept on the phone (the latest 20) and shown in Settings → About
 js/state.js         data model, defaults, reward rules, migrating and checking saves and backups
 js/storage.js       saving: two copies (IndexedDB and localStorage), backup files
 js/ai.js            journal analysis client + offline keyword rules
@@ -272,6 +273,10 @@ waits; it's put in when you leave the app (your changes saved first), so the nex
 it's there. If the app opens with one already waiting and you haven't touched anything yet, it's put
 in right away. Old and new files are never mixed, and an older version can never save over data a
 newer one wrote (it stops and shows a "Reopen" banner instead).
+**Errors** (Settings → About): if something in the app goes wrong, a notice says so once (your data
+is safe), and About shows how many and the latest; **Copy the error list** puts it on the clipboard to
+paste in a message. Kept on the phone only (the latest 20), never sent anywhere.
+
 **Undo last replace** (Settings → Data): before an import, a reset or adding from the old terminal,
 the data as it was is kept on the phone (one copy, the latest). Settings then says when and what it
 holds, asks, and puts it back, keeping what was there instead, so the undo can be undone too.

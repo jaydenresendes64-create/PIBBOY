@@ -18,6 +18,7 @@ Plain scripts (not ES modules, so `index.html` still opens from disk) sharing
 
 | File | Role |
 |---|---|
+| `js/errors.js` | Loaded first: `window` errors and unhandled rejections kept in localStorage (`status_terminal_errors_v1`, latest 20, "Script error." left out), one notice a session; `ST.errors.list/record/clear/text`; Settings → About line + Copy/Clear (events.js `renderErrors`) |
 | `js/state.js` | Data model (DATA MODEL comment at top), `DEFAULT_STATE`, `migrate()`, `sanitizeImported()`, rewards (`gainXp`, `grantSkill`, `grantStat`, `completeMain`), wallet/Caps (`capsValue`, `capsProgress`, `syncCapsQuests`), streaks, sales |
 | `js/storage.js` | Two copies of the state (IndexedDB + localStorage, `savedAt`), newest wins; cross-tab sync; flush on hide; backups export/import; `requestPersistence()` |
 | `js/ai.js` | Journal: offline EN/FR keyword rules (whole words, accents ignored) + optional `api/analyze.js` client (unused on Pages) |
