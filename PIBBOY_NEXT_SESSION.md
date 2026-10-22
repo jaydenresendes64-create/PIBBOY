@@ -3,7 +3,7 @@
 ## State
 - Branch `claude/laughing-dijkstra-14x4dd`, based on `main` at the PR #38 merge (9047de7). Every
   commit after it is **local only** until the owner authorizes a push (`git log 9047de7..HEAD`).
-- `node --test`: 352 pass, 0 fail at the last commit. `sw.js` CACHE v37 (one bump for this deploy;
+- `node --test`: 355 pass, 0 fail at the last commit. `sw.js` CACHE v37 (one bump for this deploy;
   no app file added or removed, APP_SHELL unchanged).
 - Done this campaign (details in `PIBBOY_OPTIMIZATION_LOG.md`, status in `PIBBOY_OPTIMIZATION_PLAN.md`):
   urge record (outcomes, intensity, trigger, copes, notes, patterns, Undo, YOUR WORDS, trigger tips,
@@ -18,8 +18,7 @@
 3. Service-worker instant-open / version-consistent opens: not started; needs a clear yes.
 
 ## Next candidates
-1. Event-driven quest objectives (HANDOFF §8 step 0).
-2. The owner's feedback on the new urge screen and check-in anchors.
+1. The owner's feedback on the new urge screen and check-in anchors.
 
 ## Resume
 ```

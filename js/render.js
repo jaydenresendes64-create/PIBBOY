@@ -527,6 +527,31 @@
     '</div>';
   }
 
+  // A places quest's progress: the cities and regions on the MAP (in its
+  // country) against the target, filling on its own (ST.syncPlacesQuests).
+  function placesRowHtml(m){
+    var target = num(m.placesTarget), count = Math.min(ST.placesCount(m), target);
+    var pct = m.completed ? 100 : num(ST.placesProgress(m));
+    return '<div class="streak-row caps-row">'+
+      '<span class="streak-days">'+(m.completed ? target : count)+' / '+target+' PLACES</span>'+
+      '<div class="streak-bar"><div class="streak-fill" style="width:'+pct+'%"></div></div>'+
+      '<span class="progress-pct">'+pct+'%</span>'+
+    '</div>';
+  }
+  // A country's name in English (the phone's own list), else its code.
+  var regionNames = null;
+  function countryLabel(cc){
+    try{
+      regionNames = regionNames || new Intl.DisplayNames(['en'], {type:'region'});
+      return regionNames.of(cc) || cc;
+    }catch(e){ return cc; }
+  }
+  function countryOptionsHtml(){
+    return '<option value="">anywhere</option>'+ST.COUNTRY_CODES.map(function(cc){ return {cc:cc, name:countryLabel(cc)}; })
+      .sort(function(a, b){ return a.name.localeCompare(b.name); })
+      .map(function(c){ return '<option value="'+c.cc+'">'+escapeHtml(c.name)+'</option>'; }).join('');
+  }
+
   // A side quest's skill gains, under its XP: "+3 KNOWLEDGE".
   function gainsHtml(gains){
     return (gains || []).map(function(g){
@@ -537,7 +562,7 @@
   function mainQuestHtml(m){
     var bonus = m.bonus || [];
     var streak = m.progressType==='streak';
-    var caps = m.progressType==='caps';
+    var caps = m.progressType==='caps', places = m.progressType==='places';
     var html = '<div class="main-quest-card'+(m.questName?' has-name':'')+(m.completed?' completed':'')+'">'+
       '<div class="main-quest-head">'+
         questTitleHtml('main', m)+
@@ -545,7 +570,7 @@
         '<button class="remove-btn" data-action="main-remove" data-id="'+attr(m.id)+'" aria-label="Remove main quest: '+about(m.questName, m.title)+'">&times;</button>'+
       '</div>'+
       '<input type="text" class="main-title-input" data-id="'+attr(m.id)+'" maxlength="60" value="'+escapeHtml(m.title)+'" aria-label="Objective">'+
-      (streak ? streakRowHtml(m) : caps ? capsRowHtml(m) :
+      (streak ? streakRowHtml(m) : caps ? capsRowHtml(m) : places ? placesRowHtml(m) :
         '<div class="progress-row">'+
           '<input type="range" min="0" max="100" value="'+num(m.progress)+'" class="main-progress-input" data-id="'+attr(m.id)+'" aria-label="Progress"'+(m.completed?' disabled':'')+'>'+
           '<span class="progress-pct">'+num(m.progress)+'%</span>'+
@@ -557,6 +582,7 @@
           ' aria-label="Complete quest: '+about(m.questName, m.title)+'">Complete quest &middot; +'+num(m.xp)+' XP</button>')+
       '<div class="main-xp-note">'+(streak && !m.completed ? '<span>'+streakNote(m)+' ·</span> ' : '')+
         (caps && !m.completed ? '<span>Follows your wallet ·</span> ' : '')+
+        (places && !m.completed ? '<span>Follows your MAP'+(m.placesCc ? ', in '+escapeHtml(countryLabel(m.placesCc)) : '')+' ·</span> ' : '')+
         '<span>'+(m.completed?'Completed — ':'On completion: ')+'+'+num(m.xp)+' XP</span></div>';
     if (bonus.length){
       html += '<div class="bonus-label">Bonus objectives</div><div class="bonus-list">';
@@ -609,7 +635,12 @@
         '<option value="percent">Percentage</option>'+
         '<option value="streak">Day streak</option>'+
         '<option value="caps">Caps goal</option>'+
+        '<option value="places">Places to reveal</option>'+
       '</select>'+
+      '<label class="days-field" id="new-main-places-field" hidden>'+
+        '<input type="number" id="new-main-places" value="5" min="1" max="'+ST.PLACES_TARGET_MAX+'" aria-label="Places to reveal"><span>places in</span>'+
+        '<select id="new-main-cc" aria-label="Where">'+countryOptionsHtml()+'</select>'+
+      '</label>'+
       '<label class="days-field" id="new-main-caps-field" hidden>'+
         '<input type="number" id="new-main-caps" value="5" min="0.01" step="0.01" aria-label="Target caps"><span>caps</span>'+
       '</label>'+
@@ -671,6 +702,7 @@
     keepTyped(tab, function(){ tab.innerHTML = html; });
     el('new-main-days-field').hidden = el('new-main-type').value!=='streak';
     el('new-main-caps-field').hidden = el('new-main-type').value!=='caps';
+    el('new-main-places-field').hidden = el('new-main-type').value!=='places';
   }
 
   function renderWallet(){

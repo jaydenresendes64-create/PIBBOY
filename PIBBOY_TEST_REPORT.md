@@ -4,6 +4,8 @@ Only results actually run are listed. Command: `node --test` (Node's built-in ru
 
 | Date | Scope | Result |
 |------|-------|--------|
+| 2026-10-22 | Full suite with `tests/placesquest.test.js` | 355 pass, 0 fail |
+| 2026-10-22 | Chromium: places quest from the form, places revealed, Complete, reload | bar follows, paid once, kept, no page errors |
 | 2026-10-22 | Full suite after notes on earlier urges | 352 pass, 0 fail |
 | 2026-10-22 | Chromium 320 px: note added, edited, cleared on an older urge, reload | kept / removed as intended, no page errors |
 | 2026-10-22 | Chromium 320 px sweep: every tab + Settings (with urges, a late round, a check-in) | no sideways scroll, no page errors |

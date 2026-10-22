@@ -112,11 +112,17 @@
       var target = Number(el('new-main-caps').value);
       quest.progressType = 'caps';
       quest.capsTarget = isFinite(target) && target>0 ? clamp(target, 0.01, 1e6) : 5;
+    } else if (el('new-main-type').value==='places'){
+      var cc = el('new-main-cc').value;
+      quest.progressType = 'places';
+      quest.placesTarget = readWhole('new-main-places', 5, 1, ST.PLACES_TARGET_MAX);
+      quest.placesCc = ST.COUNTRY_CODES.indexOf(cc)!==-1 ? cc : '';
     }
     app.state.quests.mains.push(quest);
     R.clearTyped('new-main-');
     app.addOpen = null;
     syncCaps();
+    ST.syncPlacesQuests();
     renderQuests(); scheduleSave();
   }
   // Caps quests follow the wallet: after any change to it (a row added,
@@ -395,7 +401,8 @@
     clearQuestions();
     el('reset-confirm-area').innerHTML = '';
     renderAll();
-    if (syncCaps()) renderQuests();
+    var moved = ST.syncPlacesQuests();
+    if (syncCaps() || moved) renderQuests();
     ST.storage.saveNow();
     closeSettings(false);
   }
@@ -785,11 +792,13 @@
   // What the state as it is now has earned: the streaks' milestones
   // reached, chem-free and the player's own (state.js claimCleanMilestones),
   // and the bobbleheads found (findBobbleheads): a banner each, their XP,
-  // and the STATUS tab drawn again. Runs after every change
+  // and the STATUS tab drawn again; places quests that moved are drawn
+  // again too (syncPlacesQuests). Runs after every change
   // (storage.onChange), once at startup for what a save already earned, and
   // when a new day starts (the streaks' counts go up by themselves).
   function checkBobbleheads(){
     if (!app.state) return;
+    if (ST.syncPlacesQuests()) renderQuests();      // a place revealed or removed: places quests move
     var milestones = ST.claimCleanMilestones();
     milestones.forEach(function(m){
       R.showMilestone(m.days, m.name);
@@ -820,6 +829,7 @@
       } else if (e.target.id==='new-main-type'){
         el('new-main-days-field').hidden = e.target.value!=='streak';
         el('new-main-caps-field').hidden = e.target.value!=='caps';
+        el('new-main-places-field').hidden = e.target.value!=='places';
       } else if (e.target.id==='new-item-cat'){
         el('new-item-price').hidden = e.target.value!=='SELL';
       } else if (e.target.id==='new-book-skill'){

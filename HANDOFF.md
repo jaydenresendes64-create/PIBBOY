@@ -155,6 +155,13 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   on return) redraws at 4:00, and a Log tap on a form drawn before 4:00 redraws with a notice
   instead of logging unseen values. Dailies, streak, urges' daily cap, trials keep midnight
   (`todayStr`). Tests in `tests/vitalsday.test.js`; checked live with a fake clock (Toronto).
+- **Places quests (2026-10-22, HANDOFF §8 step 0):** main quest `progressType:'places'`, `placesTarget`
+  (1-PLACES_TARGET_MAX), `placesCc` (a COUNTRY_CODES entry or '' anywhere). state.js `placesCount()` =
+  cities + regions on the MAP now (in that country), `placesProgress()`, `questProgress()` (mainReady
+  uses it), `syncPlacesQuests()` (true when a bar moved). events.js runs it after every change
+  (`checkBobbleheads`, the storage change hook) and on a new state; render.js `placesRowHtml()`, the
+  form's "Places to reveal" with a country list from `Intl.DisplayNames`. No migrate step (a new
+  type; old saves have none); the sanitizer checks both fields. `tests/placesquest.test.js`.
 - **Last 7 days (2026-10-22):** state.js `weekSummary()` → `{week, before}` (calendar days: today and
   the 6 before, then the 7 before those): XP and check-ins/dailies/quests/trial records from
   `state.history`, urges ridden out / given in to from `urges.log`, trials from `trials.log`. No new
@@ -707,8 +714,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 
 ## 8. Exact next engineering steps
 
-0. Next on the event core (owner's call): event-driven quest objectives ("reveal 5 cities in Morocco"
-   progressing by themselves from PLACE_DISCOVERED events), (done: the weekly summary, `weekSummary()`, on
+0. Next on the event core (owner's call): (done 2026-10-22: places quests, "reveal 5 cities in Morocco",
+   `progressType:'places'`, see §3), (done: the weekly summary, `weekSummary()`, on
    STATUS and in the RobCo boot), bobbleheads based on events.
 
 1. Collect the owner's phone feedback and adjust: VITALS insight wording (`PRIORITY`, `ACTION`,

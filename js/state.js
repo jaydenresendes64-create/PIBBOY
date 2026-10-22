@@ -97,10 +97,13 @@
  *   id, questName, title, xp, completed,          // completed ones stay in the list
  *   skillGains: [SkillGain],
  *   bonus: [ { id, name, xp, done } ],             // bonus objectives
- *   progressType: 'percent'|'streak'|'caps',       // saves from before streaks: 'percent'
- *   progress: number(0-100),                       // percent: the slider; caps: follows the wallet; at 100 the
- *                                                  // quest waits for its Complete button (mainReady)
+ *   progressType: 'percent'|'streak'|'caps'|'places',   // saves from before streaks: 'percent'
+ *   progress: number(0-100),                       // percent: the slider; caps: follows the wallet; places:
+ *                                                  // follows the MAP; at 100 the quest waits for its
+ *                                                  // Complete button (mainReady)
  *   capsTarget: number,                            // caps quests only: the wallet's CAPS to reach (syncCapsQuests)
+ *   placesTarget: number(1-PLACES_TARGET_MAX),     // places quests only: cities and regions revealed on the
+ *   placesCc: country code|'',                     // MAP, in that country ('' anywhere) (syncPlacesQuests)
  *   // streak quests only: a check-in a day; reaching streakTarget completes it
  *   streakTarget: number(1-STREAK_MAX_DAYS),
  *   streakDays: number,                            // days in a row, up to lastCheckIn...
@@ -172,6 +175,7 @@
   var LOG_MAX = 200;
   // The MAP tab (see "map" above).
   var CITY_RADIUS_MIN = 1000, CITY_RADIUS_MAX = 30000;
+  var PLACES_TARGET_MAX = 999;        // a places quest: at most this many to reveal
   var PIN_RADIUS_MIN = 100, PIN_RADIUS_MAX = 5000;
   var PLACE_NAME_MAX = 80, PLACE_NOTE_MAX = 500;
   var ROUTE_NAME_MAX = 120, ROUTE_STOPS_MAX = 25, ROUTE_PATH_MAX = 200000;
@@ -520,6 +524,33 @@
     var target = Number(m.capsTarget);
     if (!(target>0)) return 0;
     return Math.floor(clamp(capsValue()/target*100, 0, 100));
+  }
+  // A places quest's count: the cities and regions on the MAP now (in its
+  // country, when it has one). A place removed counts no more; a quest
+  // completed stays completed.
+  function placesCount(m){
+    var map = app.state.map || {}, cc = m.placesCc || '';
+    return (map.cities || []).concat(map.regions || []).filter(function(p){ return !cc || p.cc===cc; }).length;
+  }
+  function placesProgress(m){
+    var target = Number(m.placesTarget);
+    if (!(target>0)) return 0;
+    return Math.floor(clamp(placesCount(m)/target*100, 0, 100));
+  }
+  // What a quest's bar shows, 0-100: the wallet, the MAP, or the slider.
+  function questProgress(m){
+    return m.progressType==='caps' ? capsProgress(m) : m.progressType==='places' ? placesProgress(m) : Number(m.progress)||0;
+  }
+  // Every open places quest brought up to date with the MAP: true when one
+  // moved (its bar is drawn again; the reward still waits for its tap).
+  function syncPlacesQuests(){
+    var moved = false;
+    app.state.quests.mains.forEach(function(m){
+      if (m.progressType!=='places' || m.completed) return;
+      var p = placesProgress(m);
+      if (p!==m.progress){ m.progress = p; moved = true; }
+    });
+    return moved;
   }
   // Brings every open caps quest's progress up to date with the wallet and
   // returns the ones that reached their target (their Complete button shows:
@@ -880,7 +911,7 @@
   // A streak quest completes with the check-in that reaches its target.
   function mainReady(m){
     if (!m || m.completed || m.progressType==='streak') return false;
-    return (m.progressType==='caps' ? capsProgress(m) : Number(m.progress)||0) >= 100;
+    return questProgress(m) >= 100;
   }
   // Completes a main quest: its XP and skill gains, once. Returns null when
   // it was completed already, else award()'s result.
@@ -1761,8 +1792,12 @@
       m.id = safeId(m.id);
       fixQuestName(m);
       m.title = text(m.title, 60);
-      m.progressType = m.progressType==='streak' || m.progressType==='caps' ? m.progressType : 'percent';
+      m.progressType = ['streak', 'caps', 'places'].indexOf(m.progressType)!==-1 ? m.progressType : 'percent';
       if (m.progressType==='caps') m.capsTarget = clamp(num(m.capsTarget, 5), 0.01, 1e6);
+      if (m.progressType==='places'){
+        m.placesTarget = clamp(Math.round(num(m.placesTarget, 5)), 1, PLACES_TARGET_MAX);
+        m.placesCc = COUNTRY_CODES.indexOf(m.placesCc)!==-1 ? m.placesCc : '';
+      }
       m.progress = clamp(Math.round(num(m.progress, 0)), 0, 100);
       if (m.progressType==='streak'){
         m.streakTarget = clamp(Math.round(num(m.streakTarget, 7)), 1, STREAK_MAX_DAYS);
@@ -2189,6 +2224,11 @@
   ST.capsText = capsText;
   ST.capsProgress = capsProgress;
   ST.syncCapsQuests = syncCapsQuests;
+  ST.placesCount = placesCount;
+  ST.placesProgress = placesProgress;
+  ST.questProgress = questProgress;
+  ST.syncPlacesQuests = syncPlacesQuests;
+  ST.PLACES_TARGET_MAX = PLACES_TARGET_MAX;
   ST.escapeHtml = escapeHtml;
   ST.catLabel = catLabel;
 

@@ -158,10 +158,12 @@ light, a faint amber volume) on a collector's stand with its plate and rivets; t
 are dim outlines. Tap one to see what it is and when it was found; the ones still hidden say
 how to find them. A save from before them finds the ones it already earned, all at once.
 
-Main quests track their progress three ways: a **percentage** slider, a **day streak** (one check-in a
-day; missing a day starts it over), or a **Caps goal**: the bar follows the wallet by itself (`1.50 / 5 CAPS`)
-up to the target. A quest saved before Caps goals existed whose objective is a Caps amount ("Obtain 5
-Caps") switches to one automatically, once. A percentage or Caps quest at 100% never completes by
+Main quests track their progress four ways: a **percentage** slider, a **day streak** (one check-in a
+day; missing a day starts it over), a **Caps goal**: the bar follows the wallet by itself (`1.50 / 5 CAPS`)
+up to the target, or **Places to reveal**: the bar follows the cities and regions on your MAP, anywhere
+or in one country (`2 / 5 PLACES`, "Follows your MAP, in Morocco"); a place removed counts no more until
+the quest is done. A quest saved before Caps goals existed whose objective is a Caps amount ("Obtain 5
+Caps") switches to one automatically, once. A percentage, Caps or Places quest at 100% never completes by
 itself: a **COMPLETE QUEST · +XP** button appears, and its tap pays the reward. A slip of the finger on
 the slider, or a typo in the wallet, pays nothing (slide back, or fix the wallet, and the button goes).
 A streak quest completes with the check-in that reaches its target.

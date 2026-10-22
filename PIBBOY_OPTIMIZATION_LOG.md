@@ -2,6 +2,17 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-22 — Places quests (plan task 20)
+- New main quest type `places` (data model updated; sanitizer validates `placesTarget`, `placesCc`; no
+  migrate step: old saves have no such quest). `js/state.js` count/progress/sync; `mainReady` via
+  `questProgress`. `js/events.js`: synced after every change and on a new state, the form reads the
+  type, count and country. `js/render.js`: the row (`2 / 5 PLACES`), "Follows your MAP, in …", the
+  form option with a country list (`Intl.DisplayNames`, English names, code if unsupported).
+- Tests: new `tests/placesquest.test.js` (3: sanitize incl. hostile values and idempotence; count by
+  country, Complete once, completed left alone; the screen); `node --test` → 355 pass, 0 fail.
+  Chromium 360 px: form (Morocco, 2) → Fes + Lyon revealed → 1/2 → Rabat → 2/2, Complete shown → tap
+  → +1000 XP → reload: kept completed; first layout squeezed the bar, country moved to the note line.
+
 ## 2026-10-22 — Notes on earlier urges (plan task 19)
 - `js/vitals.js`: `urgeEntry()`, `urgeLine()` (shared by the list and the box), a Note button per
   urge in Last urges; the note box shows that urge's line, its note (escaped) and Cancel; saving it
