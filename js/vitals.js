@@ -325,7 +325,7 @@
   // ---------- the VITALS tab ----------
   function countRowHtml(key, label, value){
     return '<div class="count-row"><span>'+label+'</span><div class="count-ctl">'+
-      '<button class="step-btn" data-vital="rad" data-key="'+key+'" data-dir="-1" aria-label="One less, '+label+'">-</button>'+
+      '<button class="step-btn" data-vital="rad" data-key="'+key+'" data-dir="-1" aria-label="One less, '+label+'">&minus;</button>'+
       '<span class="count-num">'+num(value)+'</span>'+
       '<button class="step-btn" data-vital="rad" data-key="'+key+'" data-dir="1" aria-label="One more, '+label+'">+</button>'+
     '</div></div>';
