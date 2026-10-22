@@ -1,30 +1,35 @@
 # PIBBOY — next session
 
 ## State
-- Branch `claude/laughing-dijkstra-14x4dd`, based on `main` at the PR #38 merge (9047de7), pushed
-  with the owner's OK on 2026-10-22: PR #39 (jaydenresendes64-create/PIBBOY), not merged yet.
-- `node --test`: 355 pass, 0 fail at the last commit. `sw.js` CACHE v37 (one bump for this deploy;
-  no app file added or removed, APP_SHELL unchanged).
-- Done this campaign (details in `PIBBOY_OPTIMIZATION_LOG.md`, status in `PIBBOY_OPTIMIZATION_PLAN.md`):
-  urge record (outcomes, intensity, trigger, copes, notes, patterns, Undo, YOUR WORDS, trigger tips,
-  logged at the round's start, history paging, notes on earlier urges, intensity anchors); places
-  quests that follow the MAP; backup import comparison and an
-  all-features round-trip test (also Export → Import in Chromium); Last 7 days on STATUS and in the
-  boot; check-in levels defined on screen; ITEMS 3D recovery after GPU context loss; no stale weather.
-- Known failures: none. Last sweep: every tab and Settings at 320 px, no sideways scroll, no errors.
+- Branch `claude/laughing-dijkstra-14x4dd`, based on `main` at the PR #38 merge (9047de7), pushed:
+  PR #39 (jaydenresendes64-create/PIBBOY), open, **not merged** (merging to `main` deploys; only
+  with the owner's explicit OK). Every commit is pushed; nothing is local only.
+- `node --test`: 365 pass, 0 fail. GitHub "Tests" workflow green on the pushed commits checked.
+- `sw.js` VERSION is a hash of the app files: after any app file change run `node tools/stamp-sw.js`
+  (the tests fail otherwise). `DATA_SCHEMA` (js/state.js) is 1: raise it when a version saves fields
+  an older one would drop.
+- Done this campaign (details: `PIBBOY_OPTIMIZATION_LOG.md`; status: `PIBBOY_OPTIMIZATION_PLAN.md`):
+  urge decoder record and insights; places quests; Last 7 days; check-in levels defined; backup
+  comparison, round-trip test, Undo last replace; ITEMS 3D context recovery; no stale weather;
+  **instant open** (cache-first whole versions, updates when the app goes to the background) with the
+  storage guard (older code never writes over newer data).
+- Known failures: none.
+
+## Known risks
+- Versions deployed before DATA_SCHEMA (all of `main` today) don't check it: one left open in a
+  second tab during the deploy of PR #39 could save over new fields once. After that, older code stops.
+- An update shows after the app has been in the background once (or at an untouched open), not on the
+  open that downloads it.
+- Not tested on a real iPhone: the update hand-off while a Home Screen app is suspended, the new
+  urge screen, check-in anchors, places quests, Undo last replace.
 
 ## Waiting on the owner
-1. Merging PR #39 (merging to `main` deploys), after a look on the iPhone if wanted.
-2. French caps objectives (plan task 9): would change existing quests on the phone; needs a yes.
-3. Service-worker instant-open / version-consistent opens: not started; needs a clear yes.
-
-## Next candidates
-1. The owner's feedback on the new urge screen, the check-in anchors and places quests.
-2. Known limitations left as they are (HANDOFF §6): scroll ticks only on window scroll; MAP opens on
-   Montréal; routes need a connection when added.
+1. Merge PR #39 (deploys), ideally after a look on the iPhone.
+2. French caps goals: "not yet". Opt-in plan in HANDOFF §8 step 3, not built.
+3. MAP clouds (30 fps) and ITEMS model copies (30 fps): GPU cost vs looks (HANDOFF §4).
 
 ## Resume
 ```
-cd PIBBOY && git status && git log --oneline 9047de7..HEAD && node --test
+cd PIBBOY && git status && git log --oneline -5 && node --test && node tools/stamp-sw.js --check
 ```
-Ask the owner before any further `git push`.
+Pushing this branch is authorized for follow-up commits; never merge or deploy without the owner.
