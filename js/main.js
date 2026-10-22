@@ -11,6 +11,7 @@
   function boot(){
     ST.storage.onSaveFailed(ST.render.showSaveWarning);
     ST.storage.onExternalChange(ST.events.adoptState);
+    ST.storage.onNewerVersion(ST.render.showNewerVersion);
     if (ST.mascot) ST.mascot.init('vitals');     // decoration: the app runs without it
     if (ST.crt) ST.crt.init();                    // decoration too
     if (ST.tilt) ST.tilt.init();
@@ -42,13 +43,6 @@
       ST.render.updateAiIndicator();
     });
 
-    // Don't lose the last half-second of changes when the tab is closed,
-    // refreshed or sent to the background.
-    function leaving(){
-      if (!ST.app.state) return;
-      ST.events.commitEdits();
-      ST.storage.flush();
-    }
     document.addEventListener('visibilitychange', function(){
       if (document.visibilityState==='hidden') leaving();
       else newDay();
@@ -59,6 +53,13 @@
     // the chem-free streak's count goes up, maybe to a milestone.
     window.addEventListener('pageshow', newDay);
     setInterval(newDay, 60000);
+  }
+  // Don't lose the last half-second of changes when the tab is closed,
+  // refreshed or sent to the background (or before an update reloads it).
+  function leaving(){
+    if (!ST.app.state) return;
+    ST.events.commitEdits();
+    ST.storage.flush();
   }
   function newDay(){
     ST.render.refreshIfNewDay();
@@ -109,11 +110,67 @@
 
   document.addEventListener('DOMContentLoaded', boot);
 
-  // Offline use and installing on a phone (see sw.js). Service workers need
-  // http(s), so there is none when index.html is opened straight from disk.
+  // ---------- opening at once, and updates (sw.js) ----------
+  // The app opens from its cache. A new version downloads whole in the
+  // background and waits; it's put in when the app goes to the background,
+  // its changes saved first (leaving()), and the page reloads on it, so old
+  // and new files never run together. Waiting already when the app opens,
+  // it's put in at once unless the app was touched. Back on screen after
+  // UPDATE_CHECK_MS, the app asks for a new version again (a phone keeps a
+  // Home Screen app running for days without reopening it).
+  var UPDATE_CHECK_MS = 30*60*1000;
+  var registration = null, touched = false;
+  function watchUpdates(reg){
+    var sw = navigator.serviceWorker, controlled = !!sw.controller, reloading = false, checked = Date.now();
+    registration = reg;
+    sw.addEventListener('controllerchange', function(){
+      if (!controlled){ controlled = true; return; }       // the first version: nothing to swap
+      if (reloading) return;
+      reloading = true;
+      leaving();
+      location.reload();
+    });
+    document.addEventListener('visibilitychange', function(){
+      if (document.visibilityState==='hidden'){ putIn(); return; }
+      if (Date.now()-checked>UPDATE_CHECK_MS){ checked = Date.now(); reg.update().catch(function(){}); }
+    });
+    if (!touched) putIn();
+    function putIn(){
+      if (!reg.waiting || !controlled) return;
+      leaving();
+      reg.waiting.postMessage({type:'SKIP_WAITING'});
+    }
+  }
+  ['pointerdown', 'keydown'].forEach(function(type){
+    document.addEventListener(type, function(){ touched = true; }, {capture:true, once:true});
+  });
+  // "Reopen" (a newer version saved the data, storage.js): that version,
+  // fetched if it isn't here yet, rather than this one again from the cache.
+  ST.reopen = function(){
+    var reg = registration;
+    if (!reg){ location.reload(); return; }
+    var ready = reg.waiting ? Promise.resolve() : reg.update().then(function(){ return installed(reg); });
+    ready.then(function(){
+      if (reg.waiting && navigator.serviceWorker.controller) reg.waiting.postMessage({type:'SKIP_WAITING'});
+      else location.reload();
+    }, function(){ location.reload(); });
+  };
+  // Resolves once a version being downloaded is installed (or isn't), 20 s at most.
+  function installed(reg){
+    return new Promise(function(resolve){
+      var w = reg.installing;
+      if (!w){ resolve(); return; }
+      var timer = setTimeout(resolve, 20000);
+      w.addEventListener('statechange', function(){
+        if (w.state!=='installing'){ clearTimeout(timer); resolve(); }
+      });
+    });
+  }
+  // Service workers need http(s), so there is none when index.html is
+  // opened straight from disk.
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
     window.addEventListener('load', function(){
-      navigator.serviceWorker.register('sw.js').catch(function(){});
+      navigator.serviceWorker.register('sw.js').then(watchUpdates).catch(function(){});
     });
   }
 })(window.StatusTerminal);

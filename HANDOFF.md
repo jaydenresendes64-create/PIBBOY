@@ -1,7 +1,8 @@
 # PIBBOY — technical handoff
 
-State as of the swinging arms PR (2026-10-19, after PR #32). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-320/320 tests pass locally. `sw.js` cache: `v32`.
+State as of PR #39 and its follow-ups (2026-10-22). Live: https://jaydenresendes64-create.github.io/PIBBOY/
+`node --test` passes locally and on GitHub (Tests workflow). `sw.js` VERSION: a hash of the app's
+files, written by `node tools/stamp-sw.js`; `DATA_SCHEMA` (js/state.js): 1.
 
 ## 1. What it is
 
@@ -26,13 +27,13 @@ Plain scripts (not ES modules, so `index.html` still opens from disk) sharing
 | `js/render.js` | Builds every tab's HTML (escapes everything), toasts/banners, `switchTab` |
 | `js/items3d.js` | ITEMS 3D wireframe models (Three.js, dynamic `import()`), one shared WebGLRenderer copied into small 2D canvases |
 | `js/mascot.js` | Mascot gesture scheduling (moves are CSS keyframes, per body part: see §3 Look & feel) |
-| `js/insight.js` | VITALS words, read-only (`ST.insight`): `readings()` (STATUS / TREND / PRIORITY / ACTION / PATTERN from the logged check-ins), `urgeContext()` + `urgeMessages()` (the urge decoder's messages, context first), `urgeReflection()`, `resetLine()`, `urgeHint()`; keeps no data |
+| `js/insight.js` | VITALS words, read-only (`ST.insight`): `readings()` (STATUS / TREND / PRIORITY / ACTION / PATTERN from the logged check-ins), `urgeContext()` + `urgeMessages()` (the urge decoder's messages, context first), `urgeReflection()`, `resetLine()`, `urgeHint()`, `urgePatterns()` (from the urge log); keeps no data |
 | `js/vitals.js` | VITALS tab with its CHECK-IN / TRIALS sub-tabs (`app.vitalsView`; check-in, urge decoder + its timer's clock, chem-free streak card, last 7 days), the morning path (`order`, `fieldReport`, `nextStep`) and Check-in first (`locked`); its buttons use `data-vital` (its own listeners), the rules are in state.js |
 | `js/trials.js` | VITALS → TRIALS screen (`ST.trials.html()` drawn by vitals.js `render()`): cards, the open trial's panel (3-2-1, stopwatch/countdown clock, tap counter, save confirm, last results), the timer loop + wake lock; buttons use `data-trial` (its own listeners), the rules are in state.js |
 | `js/crt.js`, `js/tilt.js` | CRT flicker; 3D tilt (DeviceOrientation/mouse) incl. glass glare parallax |
 | `js/events.js` | All user actions → state change → re-render → debounced save |
 | `js/main.js` | Boot: load → setup events → render → `syncCaps()` → SW registration |
-| `sw.js` | Service worker: network-first app files with a 2.5 s timeout (then the cached copy, refreshed in the background), APP_SHELL precache (big `HEAVY` files may fail without stopping the install), vector tiles cache (≤800); tested in `tests/sw.test.js` with a fake network |
+| `sw.js` | Service worker: cache first, one whole version at a time (`CACHE` = prefix + `VERSION`, a hash of APP_SHELL's files from `tools/stamp-sw.js`); install precaches APP_SHELL past the HTTP cache (big `HEAVY` files may fail without stopping it; a core file failing keeps the old version); a later version waits for the page's `SKIP_WAITING` (js/main.js `watchUpdates`: when the app goes to the background, or at an untouched open); region shapes in `status-terminal-data` (stale-while-revalidate, kept across versions); vector tiles cache (≤800); tested in `tests/sw.test.js` with a fake network |
 | `css/terminal.css` | All styles (palette variables in `:root`) |
 | `vendor/three/three.pibboy.min.js` | Three.js r186, tree-shaken (parts in `tools/three-entry.mjs`, built by `tools/build-three.mjs`) |
 | `tests/*.test.js` | `node --test` (Node built-in runner, vm harness in `tests/helpers.js`, no deps) |
@@ -155,6 +156,68 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   on return) redraws at 4:00, and a Log tap on a form drawn before 4:00 redraws with a notice
   instead of logging unseen values. Dailies, streak, urges' daily cap, trials keep midnight
   (`todayStr`). Tests in `tests/vitalsday.test.js`; checked live with a fake clock (Toronto).
+- **Instant open (2026-10-22, owner's yes):** sw.js cache first, whole versions (`VERSION` hash of
+  APP_SHELL from `tools/stamp-sw.js`; `tests/sw.test.js` fails if stale), the first version takes
+  over at once, a later one waits; js/main.js `watchUpdates()`: `reg.update()` when back on screen
+  after 30 min, `SKIP_WAITING` when the app goes to the background (after `leaving()` saved) or at an
+  open where it's already waiting and nothing was touched, one reload on `controllerchange`;
+  `ST.reopen()` fetches the new version for the stale banner. js/storage.js stamps every copy with
+  `DATA_SCHEMA` and never adopts or writes over a higher one (`goStale`, `showNewerVersion`).
+  Measured: reopen on a 1.5 s-latency link 4.1–4.5 s → 79–87 ms. Checked in Chromium with a real
+  worker: offline open, deploy while in use (old files kept until the background, then new, unsaved
+  change kept, old cache deleted), deploy found while away (put in at the next untouched open), the
+  move from the live network-first worker (v36) to this one.
+- **Places quests (2026-10-22, HANDOFF §8 step 0):** main quest `progressType:'places'`, `placesTarget`
+  (1-PLACES_TARGET_MAX), `placesCc` (a COUNTRY_CODES entry or '' anywhere). state.js `placesCount()` =
+  cities + regions on the MAP now (in that country), `placesProgress()`, `questProgress()` (mainReady
+  uses it), `syncPlacesQuests()` (true when a bar moved). events.js runs it after every change
+  (`checkBobbleheads`, the storage change hook) and on a new state; render.js `placesRowHtml()`, the
+  form's "Places to reveal" with a country list from `Intl.DisplayNames`. No migrate step (a new
+  type; old saves have none); the sanitizer checks both fields. `tests/placesquest.test.js`.
+- **Last 7 days (2026-10-22):** state.js `weekSummary()` → `{week, before}` (calendar days: today and
+  the 6 before, then the 7 before those): XP and check-ins/dailies/quests/trial records from
+  `state.history`, urges ridden out / given in to from `urges.log`, trials from `trials.log`. No new
+  data. render.js `weekHtml()` (STATUS, above Lifetime, hidden when both weeks are empty; each cell
+  shows the week before in brackets, never a minus); boot.js a `LAST 7 DAYS` line once the week has
+  XP or urges. `historySummary(days)` stays (rolling hours, by type). `tests/week.test.js`.
+- **Backup import comparison (2026-10-22):** state.js `stateSummary(s)` (level, lifetimeXp, logged
+  check-ins, urges, quests done, journal entries, places, `last` = latest history/urge `t` or logged
+  check-in day at 4:00) and `compareBackup(here, backup)` (`older`, `lose` per count, never negative);
+  events.js `importQuestion()` puts both lines and the warning before "Replace all data with this
+  backup?". Nothing changes before "Yes, replace" (tested: state byte-identical, a non-backup file
+  refused). `tests/backup.test.js`; checked in Chromium with a real file.
+- **Urge decoder record (2026-10-22, owner's "autonomous engineering mission" prompt: trigger and
+  intensity tracking, history, user-defined coping, patterns, reflection):** state.js `urges.active`
+  gets `intensity` (0-10, 0 = not noted), `trigger` (`URGE_TRIGGERS`, '' none), `copes` (ids); log
+  entries get `outcome` ('won' | 'lapsed'), the same three, `note` (≤ `URGE_NOTE_MAX` 140), `hour`,
+  `t` (ms; 0/-1 for entries from before); `urges.copes` = the player's ways (`DEFAULT_COPES`, 6
+  generic ones, then theirs; ≤ `COPES_MAX` 12, names ≤ 30, no two the same). No migrate step:
+  `DEFAULT_STATE.urges.copes` reaches old saves through `deepMergeDefaults` (an emptied list stays
+  empty), and `sanitizeVitals` rebuilds every field (old entries read as ridden out: they were).
+  `setUrgeDetail(key, value)`, `urgeLapsed()` (any time a timer exists: logged, no award, no penalty,
+  no streak lapse), `noteUrge(t, words)`, `addCope`/`removeCope` (logged ids stay, unnamed),
+  `urgesToday()` counts only ridden-out urges (the XP cap must not count lapses). insight.js:
+  `copeStats`/`bestCope` (≥ 2 uses on this need, else ≥ 3 on any, won more than half),
+  `urgeContext().cope` → first message `ctx-cope`; `urgeContext().note` (`lastNote()`: the latest
+  note on a ridden-out urge, this need first, else any) → `ctx-note` (style YOUR WORDS); the trigger
+  tapped → `ctx-trigger` (`TRIGGER_TIPS`, one practical step each) and `ctx-trigger-past` (urges with
+  that trigger before, 2 at least); vitals.js jumps `app.urgeAngle` to `ctx-trigger` on the tap;
+  patterns add `pat-strong` (rated ≥ 7 vs 1-6, 3 each, told at a 25-point difference); `urgePatterns()` (≥ 3 logged): best way,
+  top trigger (≥ 3), day part with ≥ 40% (≥ 5 timed), intensity last half vs first half of the last
+  10 rated (≥ 6, |Δ| ≥ 1), ridden-out count; observational wording only. vitals.js: the running and
+  over phases show `urgeDetailsHtml()` (range, trigger chips, cope chips with aria-pressed, + Mine /
+  Edit), "I gave in"; after an outcome `app.urgeNote` asks one line (`urgeNoteHtml`, Enter saves);
+  log entries take `date`/`hour` from the round's start (`urgeStarted`), `t` from the tap; the cap
+  counts that day (`urgesOn`, `urgePays`); the over card says when it started once LATE_MS has passed;
+  after a lapse it also offers "Tapped by mistake? Undo": state.js `undoLapse()` takes that latest
+  entry off the log and puts back the urge it ended (`app.urgeUndo`, in memory only; never a
+  ridden-out urge, never while another runs);
+  the start phase shows the patterns and **Last urges** (`app.urgeHistory`: how many shown, 8 at a
+  time with "N more", focus on the first added; each with a Note button: `urge-note-edit` opens the
+  same box on that entry, its line above and its note in it; saved empty, the note is removed). Tests:
+  `tests/urges.test.js` (details, outcomes and the cap, notes, copes, documents with hostile input,
+  patterns with exact wording, the suggestion, the screen, inert hostile text); checked end to end
+  in Chromium (details → lapse → note → history → reload).
 - **VITALS readings + urge decoder messages (2026-10-12, owner's "OPUS ULTRA CODE" prompt):**
   `js/insight.js`, pure and read-only (no new data, no migration, no XP: tested that the state is
   byte-identical after every call and that an edit after logging still pays nothing). `readings()`
@@ -525,10 +588,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   as="font" crossorigin>`): in at 0.64 s instead of 1.24 s on a 300 ms connection, before the first
   paint, so the text no longer jumps. Opening, first 4 s: busy 1356 → 509 ms, style 523 → 64 ms.
   `tests/perf.test.js` keeps the rules: whatever loops animates only transform/opacity, no width
-  transition, fonts preloaded (and cached by sw.js). Not changed, to decide with the owner: the
-  service worker waits up to `NET_MS` (2.5 s) for the network on every open (so a new version shows
-  at once; a weak signal delays the opening by that much): cache-first with a full new version
-  installed in the background would open instantly but show updates one open later; the MAP's clouds
+  transition, fonts preloaded (and cached by sw.js). Done 2026-10-22 (owner's yes): cache-first opens
+  with whole versions installed in the background (see "Instant open" below). Still to decide: the MAP's clouds
   drift at 30 frames a second while the map is still, and ITEMS copies a WebGL picture into each
   model's canvas at 30 fps (`drawImage`): both cost GPU time on a phone, not measurable here
   (headless Chromium draws WebGL on the processor).
@@ -579,8 +640,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
    - The turn: 0.6 s or more, enough drawings to be smooth, no head jump, and the parts take over
      without a pop (2026-10-19).
    - Taps go through him; Reduce Motion: he stands still, centred; he never covers the name or level.
-   - Bump `CACHE` in sw.js with every change, or the phone keeps the old one ("je ne vois aucun
-     changement", 2026-10-11).
+   - Run `node tools/stamp-sw.js` with every change, or the phone keeps the old one ("je ne vois aucun
+     changement", 2026-10-11); the tests fail until it's done.
 
 ## 5. Workflow
 
@@ -594,7 +655,8 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 - The working copy now has CRLF line endings (git autocrlf after pulls): scripted text edits must
   normalize `
 ` first (the Edit tool is fine).
-- Bump `CACHE` in `sw.js` when files are added/removed; add new app files to `APP_SHELL`.
+- `node tools/stamp-sw.js` after any app file change (tests check VERSION); add new app files to `APP_SHELL`.
+- Raise `DATA_SCHEMA` (js/state.js) when a version saves fields an older one would drop.
 - Code the owner brings from other AIs (Grok, ChatGPT): diff it against the repo, test it, and take
   only the good parts; never paste whole files over newer ones. Grok's first `sw.js` broke opening
   offline (fixed before merging); its later "places worker" and "PER/LUK + quest skillGains" passes
@@ -610,16 +672,21 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 ## 6. Known bugs / limitations
 
 - Caps linking regex only matches English objectives ("Obtain/Get/Reach/Earn/Have/Save N Caps"); a
-  French objective ("Obtenir 5 caps") is not auto-converted.
+  French objective ("Obtenir 5 caps") is not auto-converted (on purpose: opt-in plan in §8 step 3).
 - Scroll ticks only follow window scrolling (not inner scroll areas such as the custom-sounds panel).
-- Right after a deploy, one open on a weak signal (>2.5 s) may mix old cached and new files; the next
-  open is whole again.
+- An update shows after the app has been in the background once (or at an open where it's already
+  downloaded and nothing was touched), not on the open that downloads it. The very first deploy of
+  the cache-first worker comes through the old network-first one (checked in Chromium: data kept).
+- Versions deployed before `DATA_SCHEMA` don't check it: one of them left open in a second tab during
+  the first deploy of 2026-10-22 could still save over new fields; from then on, older code stops.
 - The MAP opens on Montréal (`HOME` in `map.js`), not on the whole world.
 - Routes need a connection when added (OSRM's public demo server; if it ever goes away, another
   OSRM/Valhalla server with CORS can replace `ROUTER` in `routes.js` and the CSP). Removing a city
   doesn't remove the routes through it.
-- 3D models: canvases are small (78×44 CSS px) and weren't reviewed on a real phone yet; after a
-  WebGL context loss they stay hidden until reload.
+- 3D models: canvases are small (78×44 CSS px) and weren't reviewed on a real phone yet. After a
+  WebGL context loss (iOS, app in the background) they hide until the context is restored, or until
+  ITEMS next opens with a new renderer (`makeRenderer`/`renew` in items3d.js; checked in Chromium
+  with WEBGL_lose_context, 2026-10-22).
 - Custom sounds and 3D tilt choice are per device/origin; on iPhone the Home Screen app and Safari
   have separate storage.
 
@@ -661,16 +728,30 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
 
 ## 8. Exact next engineering steps
 
-0. Next on the event core (owner's call): event-driven quest objectives ("reveal 5 cities in Morocco"
-   progressing by themselves from PLACE_DISCOVERED events), a weekly summary from `historySummary(7)`
-   (e.g. a line in the RobCo boot), bobbleheads based on events.
+0. Next on the event core (owner's call): (done 2026-10-22: places quests, "reveal 5 cities in Morocco",
+   `progressType:'places'`, see §3), (done: the weekly summary, `weekSummary()`, on
+   STATUS and in the RobCo boot), bobbleheads based on events.
 
 1. Collect the owner's phone feedback and adjust: VITALS insight wording (`PRIORITY`, `ACTION`,
    `POOL` in js/insight.js are plain lists, easy to edit or extend; the thresholds are `LINES`),
    `canvas.item-model` size in `css/terminal.css`, `.crt-glare` opacity, `.device-plate` opacity.
 2. (Done: the SETTINGS panel, PR #10.)
-3. Extend `CAPS_OBJECTIVE` in `state.js` with French verbs (obtenir|avoir|atteindre|gagner) — a new
-   one-time migration flag is needed since `capsQuestsLinked` is already set on existing saves.
+3. French caps objectives — owner's answer 2026-10-22: **not yet**; no migration, nothing automatic.
+   Safe plan for when it's wanted (opt-in, never silent):
+   - No load-time change: `linkCapsQuests()` and its `capsQuestsLinked` flag stay as they are; a
+     second automatic link is ruled out (it would overwrite a manual % the owner chose).
+   - `CAPS_OBJECTIVE` gains French forms (obtenir|avoir|atteindre|gagner|économiser, "caps" or
+     "capsules", decimal comma) but is used only to *offer*: an open percentage quest whose
+     objective matches shows "Follow the wallet? (5 CAPS)" and "Keep manual" on its card.
+   - "Follow the wallet" (a tap) sets `progressType:'caps'`, `capsTarget`, and keeps the slider's
+     value in `manualProgress`; "Back to manual %" on a caps quest restores it. "Keep manual" sets
+     `capsOffer:false` so it's never asked again. Both fields go through `sanitizeImported()`
+     (`manualProgress` 0-100, `capsOffer` boolean), with a test; old saves need no migrate step.
+   - The new-quest form: an objective that reads as a caps amount, with "Percentage" picked, gets a
+     hint to pick "Caps goal" (no switch by itself).
+   - Never offered on completed quests, streak or places quests. Tests: regex cases (FR/EN, "5,5"),
+     a French percent quest unchanged after load/import, conversion only on the tap, revert gives the
+     same %, export → import identical.
 4. (Done: caps quests re-sync after import, reset and another window's save.)
 5. Optional next features the owner showed interest in: STATUS 3D globe with revealed places
    (`SphereGeometry` already in the Three bundle; reuse items3d's shared renderer), Fallout-style

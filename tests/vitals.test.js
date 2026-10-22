@@ -133,7 +133,10 @@ test('urges: paid only once the 20 minutes are over, 3 times a day at most, alwa
   assert.equal(ST.urgeAgain(), true);                       // still strong: another round
   assert.deepEqual([s.urges.active.rounds, ST.urgeLeft()], [2, ST.URGE_MS]);
   app.setNow('2026-10-09T12:40:00');
-  assert.deepEqual(app.plain(ST.urgeWon()), { xp: 40, leveled: false, skillGains: [{ skill: 'SURVIVAL', amount: 1 }] });
+  const won = app.plain(ST.urgeWon());
+  assert.deepEqual([won.xp, won.leveled, won.skillGains], [40, false, [{ skill: 'SURVIVAL', amount: 1 }]]);
+  assert.deepEqual(won.entry, { date: '2026-10-9', need: 'LONELY', rounds: 2, outcome: 'won', intensity: 0, trigger: '', copes: [], note: '',
+    hour: 12, t: app.context.Date.now() });
   assert.equal(s.urges.active, null);
   for (let i = 0; i < 3; i++) { ST.startUrge('ANGRY'); app.setNow(app.context.Date.now() + ST.URGE_MS); ST.urgeWon(); }
   assert.equal(s.urges.log.length, 4);
@@ -161,14 +164,15 @@ test('the in-Claude version\'s backup: its dates read, junk dropped or brought w
   assert.deepEqual(app.plain(s.chems), { cleanSince: '2026-9-20', best: 12, totalClean: 0, claimed: [7, 14, 30], lapses: ['2026-9-19'] });
   assert.deepEqual(app.plain(s.vitals), [{ date: '2026-10-8', logged: false, energy: 1, mood: 5, hunger: 5, tension: 5, sleep: 5, craving: 5,
     pulse: null, radN: 0, radT: 0 }]);                      // one entry a day: the later one
-  assert.deepEqual(app.plain(s.urges), { active: null, log: [{ date: '2026-10-1', need: 'NONE', rounds: 1 }] });
+  assert.deepEqual(app.plain(s.urges), { active: null, log: [{ date: '2026-10-1', need: 'NONE', rounds: 1, outcome: 'won', intensity: 0,
+    trigger: '', copes: [], note: '', hour: -1, t: 0 }], copes: app.plain(ST.defaultState().urges.copes) });   // logged then: ridden out
 });
 
 test('a save from before VITALS gets none of it yet, and a current one comes back identical', () => {
   const old = load({ stats: { STR: 4 }, quests: {}, chems: [], urges: 'x' });
   assert.deepEqual(app.plain(old.vitals), []);
   assert.deepEqual(app.plain(old.chems), { cleanSince: null, best: 0, totalClean: 0, claimed: [], lapses: [] });
-  assert.deepEqual(app.plain(old.urges), { active: null, log: [] });
+  assert.deepEqual(app.plain(old.urges), { active: null, log: [], copes: app.plain(ST.defaultState().urges.copes) });
   assert.deepEqual(app.plain(old.statTrain), { STR: 0, END: 0, CHA: 0, INT: 0, AGI: 0 });
   const s = fresh();
   app.setNow('2026-10-09T12:00:00');
@@ -255,6 +259,11 @@ test('the streak card (on VITALS now): set the start, the day and the next miles
 test('VITALS: the sliders, the check-in button, the urge decoder\'s steps and the table', () => {
   const empty = screens(() => {}).vitals;
   assert.equal((empty.match(/class="vital-range"/g) || []).length, 6);
+  // each level says what its 0 and 10 mean, read out with the slider
+  assert.equal((empty.match(/aria-describedby="vs-\w+"/g) || []).length, 6);
+  assert.match(empty, /id="vr-sleep"[^>]*aria-describedby="vs-sleep"[\s\S]*<span class="vital-scale" id="vs-sleep"><span>0 awful night<\/span><span>great 10<\/span>/);
+  assert.match(empty, /id="vs-craving"><span>0 none<\/span><span>overwhelming 10<\/span>/);
+  assert.match(empty, /Each level is how you are now; Sleep is how last night went\./);
   assert.match(empty, /data-vital="vitals-log">Log check-in \+15 XP</);
   assert.match(empty, /data-vital="urge-start" data-key="HUNGRY"/);
   assert.match(empty, /href="tel:18002652626"/);

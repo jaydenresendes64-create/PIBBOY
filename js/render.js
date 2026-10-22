@@ -218,15 +218,31 @@
     SKILL_KEYS.forEach(function(k){ html += skillRowHtml(k); });
     html += '<p class="vital-fine">Tap a skill: where its points came from. They come from quests, books, the journal and urges ridden out.</p>';
     html += bobbleheadsHtml();
+    html += weekHtml();
     html += '<div class="panel-title">Lifetime</div><div class="stats-grid">'+
       statsCell(commas(state.lifetimeXp||0), 'Total XP earned')+
       statsCell(state.quests.side.filter(function(q){return q.done;}).length, 'Side quests done')+
       statsCell(commas(ST.logEntryCount()), 'Log entries')+
       statsCell(commas(ST.cleanTotal()), 'Chem-free days, all runs')+
-      statsCell(state.urges.log.length, 'Urges ridden out')+
+      statsCell(state.urges.log.filter(function(u){ return u.outcome!=='lapsed'; }).length, 'Urges ridden out')+
       statsCell(state.vitals.filter(function(v){ return v.logged; }).length, 'Vitals check-ins')+
     '</div>';
     el('tab-status').innerHTML = html;
+  }
+  // The last 7 days next to the 7 before (ST.weekSummary): XP, check-ins,
+  // urges, dailies, trials. Nothing when both weeks are empty.
+  function weekHtml(){
+    var sum = ST.weekSummary(), w = sum.week, b = sum.before;
+    function any(o){ return Object.keys(o).some(function(k){ return o[k]; }); }
+    if (!any(w) && !any(b)) return '';
+    return '<div class="panel-title">Last 7 days</div><div class="stats-grid">'+
+      statsCell('+'+commas(w.xp), 'XP (the 7 before: +'+commas(b.xp)+')')+
+      statsCell(w.checkins+'/7', 'Check-ins (the 7 before: '+b.checkins+')')+
+      statsCell(w.urgesWon, 'Urges ridden out'+(w.urgesLapsed ? ' · '+w.urgesLapsed+' given in to' : ''))+
+      statsCell(w.dailies, 'Dailies done (the 7 before: '+b.dailies+')')+
+      statsCell(w.trials, 'Trials logged'+(w.records ? ' · '+w.records+' record'+(w.records>1 ? 's' : '') : ''))+
+      statsCell(w.quests, 'Quests completed')+
+    '</div>';
   }
   function statsCell(value, label){
     return '<div class="stats-cell"><div class="stats-num">'+escapeHtml(value)+'</div><div class="stats-label">'+label+'</div></div>';
@@ -511,6 +527,33 @@
     '</div>';
   }
 
+  // A places quest's progress: the cities and regions on the MAP (in its
+  // country) against the target, filling on its own (ST.syncPlacesQuests).
+  function placesRowHtml(m){
+    var target = num(m.placesTarget), count = Math.min(ST.placesCount(m), target);
+    var pct = m.completed ? 100 : num(ST.placesProgress(m));
+    return '<div class="streak-row caps-row">'+
+      '<span class="streak-days">'+(m.completed ? target : count)+' / '+target+' PLACES</span>'+
+      '<div class="streak-bar"><div class="streak-fill" style="width:'+pct+'%"></div></div>'+
+      '<span class="progress-pct">'+pct+'%</span>'+
+    '</div>';
+  }
+  // A country's name in English (the phone's own list), else its code.
+  var regionNames = null;
+  function countryLabel(cc){
+    try{
+      regionNames = regionNames || new Intl.DisplayNames(['en'], {type:'region'});
+      return regionNames.of(cc) || cc;
+    }catch(e){ return cc; }
+  }
+  // The form's country list, sorted by name: made once (QUESTS is drawn often).
+  var countryOptions = null;
+  function countryOptionsHtml(){
+    return countryOptions || (countryOptions = '<option value="">anywhere</option>'+ST.COUNTRY_CODES.map(function(cc){ return {cc:cc, name:countryLabel(cc)}; })
+      .sort(function(a, b){ return a.name.localeCompare(b.name); })
+      .map(function(c){ return '<option value="'+c.cc+'">'+escapeHtml(c.name)+'</option>'; }).join(''));
+  }
+
   // A side quest's skill gains, under its XP: "+3 KNOWLEDGE".
   function gainsHtml(gains){
     return (gains || []).map(function(g){
@@ -521,7 +564,7 @@
   function mainQuestHtml(m){
     var bonus = m.bonus || [];
     var streak = m.progressType==='streak';
-    var caps = m.progressType==='caps';
+    var caps = m.progressType==='caps', places = m.progressType==='places';
     var html = '<div class="main-quest-card'+(m.questName?' has-name':'')+(m.completed?' completed':'')+'">'+
       '<div class="main-quest-head">'+
         questTitleHtml('main', m)+
@@ -529,7 +572,7 @@
         '<button class="remove-btn" data-action="main-remove" data-id="'+attr(m.id)+'" aria-label="Remove main quest: '+about(m.questName, m.title)+'">&times;</button>'+
       '</div>'+
       '<input type="text" class="main-title-input" data-id="'+attr(m.id)+'" maxlength="60" value="'+escapeHtml(m.title)+'" aria-label="Objective">'+
-      (streak ? streakRowHtml(m) : caps ? capsRowHtml(m) :
+      (streak ? streakRowHtml(m) : caps ? capsRowHtml(m) : places ? placesRowHtml(m) :
         '<div class="progress-row">'+
           '<input type="range" min="0" max="100" value="'+num(m.progress)+'" class="main-progress-input" data-id="'+attr(m.id)+'" aria-label="Progress"'+(m.completed?' disabled':'')+'>'+
           '<span class="progress-pct">'+num(m.progress)+'%</span>'+
@@ -541,6 +584,7 @@
           ' aria-label="Complete quest: '+about(m.questName, m.title)+'">Complete quest &middot; +'+num(m.xp)+' XP</button>')+
       '<div class="main-xp-note">'+(streak && !m.completed ? '<span>'+streakNote(m)+' ·</span> ' : '')+
         (caps && !m.completed ? '<span>Follows your wallet ·</span> ' : '')+
+        (places && !m.completed ? '<span>Follows your MAP'+(m.placesCc ? ', in '+escapeHtml(countryLabel(m.placesCc)) : '')+' ·</span> ' : '')+
         '<span>'+(m.completed?'Completed — ':'On completion: ')+'+'+num(m.xp)+' XP</span></div>';
     if (bonus.length){
       html += '<div class="bonus-label">Bonus objectives</div><div class="bonus-list">';
@@ -593,7 +637,12 @@
         '<option value="percent">Percentage</option>'+
         '<option value="streak">Day streak</option>'+
         '<option value="caps">Caps goal</option>'+
+        '<option value="places">Places to reveal</option>'+
       '</select>'+
+      '<label class="days-field" id="new-main-places-field" hidden>'+
+        '<input type="number" id="new-main-places" value="5" min="1" max="'+ST.PLACES_TARGET_MAX+'" aria-label="Places to reveal"><span>places in</span>'+
+        '<select id="new-main-cc" aria-label="Where">'+countryOptionsHtml()+'</select>'+
+      '</label>'+
       '<label class="days-field" id="new-main-caps-field" hidden>'+
         '<input type="number" id="new-main-caps" value="5" min="0.01" step="0.01" aria-label="Target caps"><span>caps</span>'+
       '</label>'+
@@ -655,6 +704,7 @@
     keepTyped(tab, function(){ tab.innerHTML = html; });
     el('new-main-days-field').hidden = el('new-main-type').value!=='streak';
     el('new-main-caps-field').hidden = el('new-main-type').value!=='caps';
+    el('new-main-places-field').hidden = el('new-main-type').value!=='places';
   }
 
   function renderWallet(){
@@ -1009,6 +1059,19 @@
     sound('error');
     toast('xp-toast save-warning', 'Changed in another window — your last change wasn’t saved', 4000).style.animationDuration = '4s';
   }
+  // A newer version of the app saved on this phone (storage.js): this one
+  // stops saving; a banner says so, with a way to reopen.
+  function showNewerVersion(){
+    if (document.getElementById('stale-banner')) return;
+    var bar = document.createElement('div');
+    bar.id = 'stale-banner';
+    bar.className = 'stale-banner';
+    bar.setAttribute('role', 'alert');
+    bar.innerHTML = '<span>A newer version of PIBBOY saved your data. Changes here won’t be saved.</span>'+
+      '<button type="button" id="stale-reload">Reopen</button>';
+    document.body.appendChild(bar);
+    bar.querySelector('#stale-reload').addEventListener('click', function(){ if (ST.reopen) ST.reopen(); else location.reload(); });
+  }
   // The saved data exists but couldn't be read (storage.js). Nothing is
   // shown or saved, so it stays as it is for the next try.
   function showLoadError(){
@@ -1080,6 +1143,7 @@
     showSaveWarning: showSaveWarning,
     showConflictWarning: showConflictWarning,
     showLoadError: showLoadError,
+    showNewerVersion: showNewerVersion,
     clearTyped: clearTyped,
     playCheck: playCheck,
     switchTab: switchTab,

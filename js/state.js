@@ -49,9 +49,15 @@
  *               pulse: number(PULSE_MIN-PULSE_MAX)|null,   // check-in was paid (logVitals)
  *               radN, radT: number(0-RAD_COUNT_MAX) } ],
  *   urges: {                                // VITALS' urge decoder
- *     active: { start: ms, need: one of URGE_NEEDS, rounds: number }|null,   // the timer running
- *     log: [ { date:'YYYY-M-D', need, rounds } ]   // the urges ridden out, the latest URGES_MAX
- *   },
+ *     active: { start: ms, need: one of URGE_NEEDS, rounds: number,   // the timer running, and what
+ *               intensity: 0-10, trigger: URGE_TRIGGERS key|'',       // was noted meanwhile (0 / '' /
+ *               copes: [cope id] }|null,                              // []: not noted)
+ *     log: [ { date:'YYYY-M-D', need, rounds, outcome: 'won'|'lapsed',   // each urge decoded, the latest
+ *              intensity, trigger, copes, note: string,   // URGES_MAX: ridden out or given in to; note:
+ *              hour: 0-23|-1, t: ms|0 } ],              // one line after it; date/hour: when its last round
+ *                                                       // started; t: when logged; hour/t: -1/0 before 2026-10
+ *     copes: [ { id, name } ]                 // the player's ways of riding one out (DEFAULT_COPES at
+ *   },                                      // first, then theirs; at most COPES_MAX)
  *   trials: {                               // VITALS → TRIALS: tests to repeat about once a week
  *     custom: [ { id, name, kind: TRIAL_KINDS key, stat: one of STAT_KEYS } ],   // the player's own
  *     hidden: [ id ],                       // built-in TRIALS put away
@@ -91,10 +97,13 @@
  *   id, questName, title, xp, completed,          // completed ones stay in the list
  *   skillGains: [SkillGain],
  *   bonus: [ { id, name, xp, done } ],             // bonus objectives
- *   progressType: 'percent'|'streak'|'caps',       // saves from before streaks: 'percent'
- *   progress: number(0-100),                       // percent: the slider; caps: follows the wallet; at 100 the
- *                                                  // quest waits for its Complete button (mainReady)
+ *   progressType: 'percent'|'streak'|'caps'|'places',   // saves from before streaks: 'percent'
+ *   progress: number(0-100),                       // percent: the slider; caps: follows the wallet; places:
+ *                                                  // follows the MAP; at 100 the quest waits for its
+ *                                                  // Complete button (mainReady)
  *   capsTarget: number,                            // caps quests only: the wallet's CAPS to reach (syncCapsQuests)
+ *   placesTarget: number(1-PLACES_TARGET_MAX),     // places quests only: cities and regions revealed on the
+ *   placesCc: country code|'',                     // MAP, in that country ('' anywhere) (syncPlacesQuests)
  *   // streak quests only: a check-in a day; reaching streakTarget completes it
  *   streakTarget: number(1-STREAK_MAX_DAYS),
  *   streakDays: number,                            // days in a row, up to lastCheckIn...
@@ -166,6 +175,11 @@
   var LOG_MAX = 200;
   // The MAP tab (see "map" above).
   var CITY_RADIUS_MIN = 1000, CITY_RADIUS_MAX = 30000;
+  var PLACES_TARGET_MAX = 999;        // a places quest: at most this many to reveal
+  // The saved data's format (storage.js stamps every copy with it). Raise it
+  // by one whenever a version saves fields an older version would drop:
+  // an older version then stops saving instead of writing over them.
+  var DATA_SCHEMA = 1;
   var PIN_RADIUS_MIN = 100, PIN_RADIUS_MAX = 5000;
   var PLACE_NAME_MAX = 80, PLACE_NOTE_MAX = 500;
   var ROUTE_NAME_MAX = 120, ROUTE_STOPS_MAX = 25, ROUTE_PATH_MAX = 200000;
@@ -184,6 +198,15 @@
   var URGE_NEEDS = ['HUNGRY','ANGRY','LONELY','TIRED','NONE'];
   var URGE_MS = 20*60*1000;           // one round of the urge timer
   var URGE_XP = 40, URGE_XP_PER_DAY = 3, URGE_SKILL = 'SURVIVAL', URGES_MAX = 300;
+  // What set an urge off, noted while its timer runs (optional), and the
+  // player's ways of riding one out (their own list; these at first).
+  var URGE_TRIGGERS = ['STRESS','BOREDOM','PEOPLE','ALONE','HABIT','SAW','GOOD','BODY'];
+  var URGE_TRIGGER_LABELS = {STRESS:'Stress', BOREDOM:'Boredom', PEOPLE:'People around', ALONE:'Alone',
+    HABIT:'Usual time or place', SAW:'Something I saw', GOOD:'Celebrating', BODY:'Pain or discomfort'};
+  var DEFAULT_COPES = [{id:'walk', name:'Walk outside'}, {id:'water', name:'Cold water'},
+    {id:'call', name:'Text or call someone'}, {id:'eat', name:'Eat something'},
+    {id:'shower', name:'Shower'}, {id:'move', name:'Push-ups or stairs'}];
+  var COPES_MAX = 12, COPE_NAME_MAX = 30, URGE_NOTE_MAX = 140;
   var TRAIN_PER_POINT = 300;          // training XP for one S.P.E.C.I.A.L. point
   // TRIALS (see "trials" above). A kind says how a trial is measured: the
   // most reps in one set (a tap counter helps), the most reps in a set time,
@@ -272,7 +295,7 @@
     chems:{ cleanSince:null, best:0, totalClean:0, claimed:[], lapses:[] },
     streaks:[],
     vitals:[],
-    urges:{ active:null, log:[] },
+    urges:{ active:null, log:[], copes:DEFAULT_COPES },
     trials:{ custom:[], hidden:[], log:[], active:null }
   };
 
@@ -299,6 +322,11 @@
     ownForm: null,              // one of the player's own streaks being edited (its id), or 'new' (VITALS)
     ownConfirm: null,           // {id, what: 'lapse'|'remove'}: that streak's question awaits its answer
     urgeAngle: 0,               // which of the urge decoder's messages shows ("Another angle"), from 0 each round
+    urgeNote: null,             // t of the urge just logged, whose one-line note is asked for
+    urgeUndo: null,             // {t, active}: the lapse just logged and the urge it ended (undoLapse)
+    urgeCopeAdd: false,         // the "+ Mine" box for a new way of riding one out is open
+    urgeCopeEdit: false,        // the ways show their × (removable)
+    urgeHistory: 0,             // how many of the decoder's last urges are unfolded (0: folded)
     vitalsView: 'checkin',      // VITALS shows 'checkin' or 'trials'
     trialOpen: null,            // id of the trial whose panel (timer, result) is open
     trialCount: null,           // {id, n}: the tap counter of that trial's set
@@ -311,7 +339,8 @@
   function el(id){ return document.getElementById(id); }
   function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
   function genId(){ return 'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
-  function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+  function dayStr(d){ return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+  function todayStr(){ return dayStr(new Date()); }
   function todayDisplay(){ return new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
   // A saved date ('YYYY-M-D') as shown: "Sep 24, 2026", or '' when it isn't one.
   function dateText(date){
@@ -499,6 +528,33 @@
     var target = Number(m.capsTarget);
     if (!(target>0)) return 0;
     return Math.floor(clamp(capsValue()/target*100, 0, 100));
+  }
+  // A places quest's count: the cities and regions on the MAP now (in its
+  // country, when it has one). A place removed counts no more; a quest
+  // completed stays completed.
+  function placesCount(m){
+    var map = app.state.map || {}, cc = m.placesCc || '';
+    return (map.cities || []).concat(map.regions || []).filter(function(p){ return !cc || p.cc===cc; }).length;
+  }
+  function placesProgress(m){
+    var target = Number(m.placesTarget);
+    if (!(target>0)) return 0;
+    return Math.floor(clamp(placesCount(m)/target*100, 0, 100));
+  }
+  // What a quest's bar shows, 0-100: the wallet, the MAP, or the slider.
+  function questProgress(m){
+    return m.progressType==='caps' ? capsProgress(m) : m.progressType==='places' ? placesProgress(m) : Number(m.progress)||0;
+  }
+  // Every open places quest brought up to date with the MAP: true when one
+  // moved (its bar is drawn again; the reward still waits for its tap).
+  function syncPlacesQuests(){
+    var moved = false;
+    app.state.quests.mains.forEach(function(m){
+      if (m.progressType!=='places' || m.completed) return;
+      var p = placesProgress(m);
+      if (p!==m.progress){ m.progress = p; moved = true; }
+    });
+    return moved;
   }
   // Brings every open caps quest's progress up to date with the wallet and
   // returns the ones that reached their target (their Complete button shows:
@@ -713,6 +769,35 @@
     return out;
   }
 
+  // The last 7 days (today and the 6 before, calendar days) and the 7 before
+  // them, from what's recorded: XP gained, check-ins logged, urges ridden out
+  // and given in to, dailies done, trials logged (records among them), quests
+  // completed. {week, before}.
+  function weekSummary(){
+    var today = dayNumber(todayStr());
+    function empty(){ return {xp:0, checkins:0, urgesWon:0, urgesLapsed:0, dailies:0, trials:0, records:0, quests:0}; }
+    var week = empty(), before = empty();
+    function slot(day){ var d = today - day; return d>=0 && d<7 ? week : d>=7 && d<14 ? before : null; }
+    (app.state.history||[]).forEach(function(e){
+      var w = slot(dayNumber(dayStr(new Date(Number(e.t) || 0))));
+      if (!w) return;
+      w.xp += Number(e.xp) || 0;
+      if (e.type==='VITALS_CHECKIN') w.checkins++;
+      else if (e.type==='DAILY_DONE') w.dailies++;
+      else if (e.type==='QUEST_COMPLETED') w.quests++;
+      else if (e.type==='TRIAL_DONE' && e.data && Number(e.data.record)) w.records++;
+    });
+    ((app.state.urges && app.state.urges.log) || []).forEach(function(u){
+      var w = slot(dayNumber(u.date));
+      if (w){ if (u.outcome==='lapsed') w.urgesLapsed++; else w.urgesWon++; }
+    });
+    ((app.state.trials && app.state.trials.log) || []).forEach(function(r){
+      var w = slot(dayNumber(r.date));
+      if (w) w.trials++;
+    });
+    return {week:week, before:before};
+  }
+
   // ---------- centralized reward logic ----------
   // Every reward goes through award(): the perks taken change it (withPerks,
   // from the PERKS table below), its skill gains and XP are given, and it's
@@ -830,7 +915,7 @@
   // A streak quest completes with the check-in that reaches its target.
   function mainReady(m){
     if (!m || m.completed || m.progressType==='streak') return false;
-    return (m.progressType==='caps' ? capsProgress(m) : Number(m.progress)||0) >= 100;
+    return questProgress(m) >= 100;
   }
   // Completes a main quest: its XP and skill gains, once. Returns null when
   // it was completed already, else award()'s result.
@@ -1122,11 +1207,15 @@
 
   // ---------- the urge decoder ----------
   // Name the real need, then a timer of URGE_MS (urges.active, so it keeps
-  // running when the app is closed). At zero: ridden out (urgeWon: URGE_XP
-  // and +1 SURVIVAL, at most URGE_XP_PER_DAY times a day; logged either
-  // way), or another round.
+  // running when the app is closed). Meanwhile, optionally: how strong it is,
+  // what set it off, what's being done about it (setUrgeDetail). At zero:
+  // ridden out (urgeWon: URGE_XP and +1 SURVIVAL, at most URGE_XP_PER_DAY
+  // times a day; logged either way), or another round; or given in to, at
+  // any point (urgeLapsed: logged, nothing paid, nothing taken). Each logged
+  // urge can take a one-line note (noteUrge).
   function startUrge(need){
-    app.state.urges.active = {start:Date.now(), need:URGE_NEEDS.indexOf(need)!==-1 ? need : 'NONE', rounds:1};
+    app.state.urges.active = {start:Date.now(), need:URGE_NEEDS.indexOf(need)!==-1 ? need : 'NONE', rounds:1,
+      intensity:0, trigger:'', copes:[]};
     return app.state.urges.active;
   }
   // What's left of the round, in ms: 0 when it's over or none runs.
@@ -1142,21 +1231,113 @@
     return true;
   }
   function cancelUrge(){ app.state.urges.active = null; }
-  function urgesToday(){
-    var today = todayStr();
-    return app.state.urges.log.filter(function(u){ return u.date===today; }).length;
+  function copeById(id){
+    return (app.state.urges.copes || []).filter(function(c){ return c.id===id; })[0] || null;
   }
-  // Ridden out, once the round is over: null before that (or when none
-  // runs); else award()'s result, or {xp:0, capped:true} past the day's cap.
-  function urgeWon(){
-    var u = app.state.urges, a = u.active;
-    if (!a || urgeLeft()>0) return null;
-    var paid = urgesToday()<URGE_XP_PER_DAY;
-    u.log.push({date:todayStr(), need:a.need, rounds:a.rounds||1});
+  // A detail of the running urge: 'intensity' (1-10, 0 to clear), 'trigger'
+  // (one of URGE_TRIGGERS; the same again clears it), 'cope' (one of the
+  // player's ways: on, or off again). Returns the urge, or null.
+  function setUrgeDetail(key, value){
+    var a = app.state.urges.active;
+    if (!a) return null;
+    if (key==='intensity'){
+      var n = Math.round(Number(value));
+      if (!isFinite(n)) return null;
+      a.intensity = clamp(n, 0, 10);
+    } else if (key==='trigger'){
+      if (URGE_TRIGGERS.indexOf(value)===-1) return null;
+      a.trigger = a.trigger===value ? '' : value;
+    } else if (key==='cope'){
+      if (!copeById(value)) return null;
+      a.copes = (a.copes || []).indexOf(value)===-1 ? (a.copes || []).concat(value) : a.copes.filter(function(c){ return c!==value; });
+    } else return null;
+    return a;
+  }
+  function ridden(u){ return u.outcome!=='lapsed'; }
+  // Ridden out on a day (what that day's XP cap counts).
+  function urgesOn(date){
+    return app.state.urges.log.filter(function(u){ return u.date===date && ridden(u); }).length;
+  }
+  function urgesToday(){ return urgesOn(todayStr()); }
+  // An urge belongs to the day and hour its round started, however late
+  // its end is tapped ("come back at zero" can mean the next morning).
+  function urgeStarted(a){ return new Date(num(a.start, 0) || Date.now()); }
+  // Riding the running urge out still pays: its day's cap isn't reached.
+  function urgePays(){
+    var a = app.state.urges.active;
+    return !!a && urgesOn(dayStr(urgeStarted(a)))<URGE_XP_PER_DAY;
+  }
+  // The running urge, logged with how it ended (`t`: when, its id).
+  function logUrge(outcome){
+    var u = app.state.urges, a = u.active, started = urgeStarted(a);
+    var entry = {date:dayStr(started), need:a.need, rounds:a.rounds||1, outcome:outcome,
+      intensity:clamp(Math.round(num(a.intensity)), 0, 10), trigger:URGE_TRIGGERS.indexOf(a.trigger)!==-1 ? a.trigger : '',
+      copes:(a.copes || []).filter(copeById), note:'', hour:started.getHours(), t:Date.now()};
+    u.log.push(entry);
     if (u.log.length>URGES_MAX) u.log = u.log.slice(-URGES_MAX);
     u.active = null;
-    if (!paid) return {xp:0, leveled:false, skillGains:[], capped:true};
-    return award('URGE_RESISTED', {need:a.need, rounds:a.rounds||1}, URGE_XP, [{skill:URGE_SKILL, amount:1}]);
+    return entry;
+  }
+  // Ridden out, once the round is over: null before that (or when none
+  // runs); else award()'s result (with the logged `entry`), or {xp:0,
+  // capped:true, entry} past the day's cap.
+  function urgeWon(){
+    var a = app.state.urges.active;
+    if (!a || urgeLeft()>0) return null;
+    var paid = urgePays();
+    var entry = logUrge('won');
+    if (!paid) return {xp:0, leveled:false, skillGains:[], capped:true, entry:entry};
+    var r = award('URGE_RESISTED', {need:entry.need, rounds:entry.rounds}, URGE_XP, [{skill:URGE_SKILL, amount:1}]);
+    r.entry = entry;
+    return r;
+  }
+  // Given in to (any time the timer runs or is over): logged, no XP, no
+  // penalty; a lapse on a streak stays the player's own call. The entry, or null.
+  function urgeLapsed(){
+    var a = app.state.urges.active;
+    if (!a) return null;
+    var active = JSON.parse(JSON.stringify(a)), entry = logUrge('lapsed');
+    app.urgeUndo = {t:entry.t, active:active};
+    return entry;
+  }
+  // "I gave in" tapped by mistake: the lapse just logged is taken off the
+  // log and its urge runs again where it was (timer, details). Only the
+  // latest entry, only while no other urge runs. The urge, or null.
+  function undoLapse(){
+    var u = app.state.urges, undo = app.urgeUndo, last = u.log[u.log.length-1];
+    app.urgeUndo = null;
+    if (!undo || u.active || !last || last.t!==undo.t || last.outcome!=='lapsed') return null;
+    u.log.pop();
+    u.active = undo.active;
+    return u.active;
+  }
+  // One line about a logged urge (its t): what helped, what set it off.
+  function noteUrge(t, words){
+    var log = app.state.urges.log, i;
+    for (i=log.length-1;i>=0;i--){
+      if (log[i].t && log[i].t===Number(t)){
+        log[i].note = String(words===undefined || words===null ? '' : words).replace(/\s+/g, ' ').trim().slice(0, URGE_NOTE_MAX);
+        return log[i];
+      }
+    }
+    return null;
+  }
+  // The player's ways of riding one out: a new one (a name not there yet),
+  // or one removed (what's logged keeps it, unnamed).
+  function addCope(name){
+    var list = app.state.urges.copes = app.state.urges.copes || [];
+    name = String(name===undefined || name===null ? '' : name).replace(/\s+/g, ' ').trim().slice(0, COPE_NAME_MAX);
+    if (!name || list.length>=COPES_MAX) return null;
+    if (list.some(function(c){ return c.name.toLowerCase()===name.toLowerCase(); })) return null;
+    var c = {id:genId(), name:name};
+    list.push(c);
+    return c;
+  }
+  function removeCope(id){
+    var u = app.state.urges, before = (u.copes || []).length;
+    u.copes = (u.copes || []).filter(function(c){ return c.id!==id; });
+    if (u.active && u.active.copes) u.active.copes = u.active.copes.filter(function(c){ return c!==id; });
+    return u.copes.length<before;
   }
 
   // ---------- TRIALS: tests to repeat about once a week ----------
@@ -1331,6 +1512,40 @@
     if (!t || t.unit!=='seconds') return String(v);
     var h = Math.floor(v/3600), m = Math.floor(v%3600/60), sec = v%60;
     return (h ? h+':'+(m<10 ? '0' : '') : '')+m+':'+(sec<10 ? '0' : '')+sec;
+  }
+
+  // ---------- what a document holds (before a backup replaces the data) ----------
+  // A summary of a state (sanitized): its level and XP, how much is in it,
+  // and when it was last used (its latest reward, check-in or urge; null
+  // for none). So a backup can be compared with what's here before it
+  // replaces everything.
+  function stateSummary(s){
+    var last = 0;
+    (s.history || []).forEach(function(e){ last = Math.max(last, num(e.t, 0)); });
+    (s.urges && s.urges.log || []).forEach(function(u){ last = Math.max(last, num(u.t, 0)); });
+    (s.vitals || []).forEach(function(v){
+      var m = DATE.exec(v.date || '');
+      if (m && v.logged) last = Math.max(last, new Date(+m[1], +m[2]-1, +m[3], VITALS_DAY_START).getTime());
+    });
+    var quests = s.quests || {};
+    return {
+      level: num(s.level, 1), lifetimeXp: num(s.lifetimeXp, 0),
+      checkins: (s.vitals || []).filter(function(v){ return v.logged; }).length,
+      urges: (s.urges && s.urges.log || []).length,
+      questsDone: (quests.mains || []).filter(function(m){ return m.completed; }).length + (quests.side || []).filter(function(q){ return q.done; }).length,
+      journal: (s.log || []).length, places: (s.map && s.map.discovered || []).length,
+      last: last || null
+    };
+  }
+  // A backup about to replace `here`: what would be lost (XP, check-ins,
+  // urges, journal entries, places that only `here` has) and whether it
+  // was last used before `here` was. Counts only, never a guess.
+  function compareBackup(here, backup){
+    var a = stateSummary(here), b = stateSummary(backup);
+    return {here:a, backup:b,
+      older: !!(a.last && (!b.last || b.last<a.last)),
+      lose: {xp:Math.max(0, a.lifetimeXp-b.lifetimeXp), checkins:Math.max(0, a.checkins-b.checkins), urges:Math.max(0, a.urges-b.urges),
+        journal:Math.max(0, a.journal-b.journal), places:Math.max(0, a.places-b.places)}};
   }
 
   // ---------- the old terminal's data ----------
@@ -1581,8 +1796,12 @@
       m.id = safeId(m.id);
       fixQuestName(m);
       m.title = text(m.title, 60);
-      m.progressType = m.progressType==='streak' || m.progressType==='caps' ? m.progressType : 'percent';
+      m.progressType = ['streak', 'caps', 'places'].indexOf(m.progressType)!==-1 ? m.progressType : 'percent';
       if (m.progressType==='caps') m.capsTarget = clamp(num(m.capsTarget, 5), 0.01, 1e6);
+      if (m.progressType==='places'){
+        m.placesTarget = clamp(Math.round(num(m.placesTarget, 5)), 1, PLACES_TARGET_MAX);
+        m.placesCc = COUNTRY_CODES.indexOf(m.placesCc)!==-1 ? m.placesCc : '';
+      }
       m.progress = clamp(Math.round(num(m.progress, 0)), 0, 100);
       if (m.progressType==='streak'){
         m.streakTarget = clamp(Math.round(num(m.streakTarget, 7)), 1, STREAK_MAX_DAYS);
@@ -1698,13 +1917,40 @@
       byDay[date] = out;
     });
     s.vitals = Object.keys(byDay).map(function(d){ return byDay[d]; }).sort(byDate).slice(-VITALS_MAX);
+    // The urges: the player's ways first (a name each, no two the same), then
+    // what the timer and the log say about them (urges logged before
+    // outcomes were kept were all ridden out).
     var urges = s.urges, a = urges.active, start = a && typeof a==='object' ? num(a.start, 0) : 0;
+    var copeIds = {}, names = {};
+    var copes = records(urges.copes, function(){}).map(function(c){
+      return {id:safeId(c.id), name:text(c.name, COPE_NAME_MAX).replace(/\s+/g, ' ').trim()};
+    }).filter(function(c){
+      var key = c.name.toLowerCase();
+      if (!c.name || copeIds[c.id] || names[key]) return false;
+      copeIds[c.id] = true; names[key] = true;
+      return true;
+    }).slice(0, COPES_MAX);
+    function urgeDetails(u, out){
+      out.intensity = clamp(Math.round(num(u.intensity, 0)), 0, 10);
+      out.trigger = URGE_TRIGGERS.indexOf(u.trigger)!==-1 ? u.trigger : '';
+      out.copes = (Array.isArray(u.copes) ? u.copes : []).filter(function(id, i, list){
+        return typeof id==='string' && SAFE_ID.test(id) && list.indexOf(id)===i;
+      }).slice(0, COPES_MAX);
+      return out;
+    }
     s.urges = {
-      active: start>0 ? {start:start, need:urgeNeed(a.need), rounds:rounds(a.rounds)} : null,
+      active: start>0 ? urgeDetails(a, {start:start, need:urgeNeed(a.need), rounds:rounds(a.rounds)}) : null,
       log: records(urges.log, function(){}).map(function(u){
-        return {date:normalizeDate(u.date), need:urgeNeed(u.need), rounds:rounds(u.rounds)};
-      }).filter(function(u){ return u.date; }).slice(-URGES_MAX)
+        var hour = Math.round(num(u.hour, -1));
+        var out = urgeDetails(u, {date:normalizeDate(u.date), need:urgeNeed(u.need), rounds:rounds(u.rounds), outcome:u.outcome==='lapsed' ? 'lapsed' : 'won'});
+        out.note = text(u.note, URGE_NOTE_MAX).replace(/\s+/g, ' ').trim();
+        out.hour = hour>=0 && hour<=23 ? hour : -1;
+        out.t = Math.max(0, Math.round(num(u.t, 0)));
+        return out;
+      }).filter(function(u){ return u.date; }).slice(-URGES_MAX),
+      copes: copes
     };
+    if (s.urges.active) s.urges.active.copes = s.urges.active.copes.filter(function(id){ return copeIds[id]; });
     sanitizeTrials(s);
   }
   // TRIALS: the player's own (a known kind and stat, a name), the built-in
@@ -1882,6 +2128,11 @@
   ST.PULSE_MAX = PULSE_MAX;
   ST.CLEAN_MILESTONES = CLEAN_MILESTONES;
   ST.URGE_NEEDS = URGE_NEEDS;
+  ST.URGE_TRIGGERS = URGE_TRIGGERS;
+  ST.URGE_TRIGGER_LABELS = URGE_TRIGGER_LABELS;
+  ST.COPES_MAX = COPES_MAX;
+  ST.COPE_NAME_MAX = COPE_NAME_MAX;
+  ST.URGE_NOTE_MAX = URGE_NOTE_MAX;
   ST.URGE_MS = URGE_MS;
   ST.URGE_XP = URGE_XP;
   ST.URGE_XP_PER_DAY = URGE_XP_PER_DAY;
@@ -1916,6 +2167,15 @@
   ST.urgeAgain = urgeAgain;
   ST.cancelUrge = cancelUrge;
   ST.urgesToday = urgesToday;
+  ST.urgePays = urgePays;
+  ST.dayStr = dayStr;
+  ST.urgeLapsed = urgeLapsed;
+  ST.undoLapse = undoLapse;
+  ST.setUrgeDetail = setUrgeDetail;
+  ST.noteUrge = noteUrge;
+  ST.addCope = addCope;
+  ST.removeCope = removeCope;
+  ST.copeById = copeById;
   ST.urgeWon = urgeWon;
   ST.mergeOld = mergeOld;
   ST.TRIALS = TRIALS;
@@ -1968,12 +2228,20 @@
   ST.capsText = capsText;
   ST.capsProgress = capsProgress;
   ST.syncCapsQuests = syncCapsQuests;
+  ST.placesCount = placesCount;
+  ST.placesProgress = placesProgress;
+  ST.questProgress = questProgress;
+  ST.syncPlacesQuests = syncPlacesQuests;
+  ST.PLACES_TARGET_MAX = PLACES_TARGET_MAX;
+  ST.DATA_SCHEMA = DATA_SCHEMA;
   ST.escapeHtml = escapeHtml;
   ST.catLabel = catLabel;
 
   ST.migrate = migrate;
   ST.defaultState = defaultState;
   ST.sanitizeImported = sanitizeImported;
+  ST.stateSummary = stateSummary;
+  ST.compareBackup = compareBackup;
   ST.totalHoldingsCAD = totalHoldingsCAD;
   ST.logEntryCount = logEntryCount;
   ST.addLogEntry = addLogEntry;
@@ -2011,6 +2279,7 @@
   ST.record = record;
   ST.recentEvents = recentEvents;
   ST.historySummary = historySummary;
+  ST.weekSummary = weekSummary;
   ST.completeDaily = completeDaily;
   ST.sellItem = sellItem;
   ST.moveItem = moveItem;

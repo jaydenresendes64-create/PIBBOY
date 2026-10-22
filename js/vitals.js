@@ -40,6 +40,10 @@
 
   var el = ST.el, clamp = ST.clamp, escapeHtml = ST.escapeHtml, app = ST.app;
   var LABELS = {energy:'Energy', mood:'Mood', hunger:'Hunger', tension:'Tension', sleep:'Sleep', craving:'Craving'};
+  // What 0 and 10 mean on each level (insight.js LINES reads them the same
+  // way: low sleep, energy, mood; high hunger, tension, craving).
+  var SCALE = {energy:['drained', 'full'], mood:['very low', 'great'], hunger:['not hungry', 'starving'],
+    tension:['relaxed', 'very tense'], sleep:['awful night', 'great'], craving:['none', 'overwhelming']};
   var SHORT = {energy:'EN', mood:'MO', hunger:'HU', tension:'TE', sleep:'SL', craving:'CR'};
   // What to do first, for each need (the owner's words).
   var TIPS = {
@@ -189,11 +193,92 @@
   }
 
   // ---------- the urge decoder ----------
+  var OUTCOME_WORDS = {won:'ridden out', lapsed:'given in to'};
+  var LATE_MS = 60*60*1000;           // over for an hour: the card says when the round started
+  function attr(v){ return escapeHtml(String(v)); }
+  // What's noted about the running urge (all of it optional, to fill the
+  // wait): how strong, what set it off, what's being done about it, from
+  // the player's own list (+ Mine adds one; Edit shows their ×).
+  function urgeDetailsHtml(a){
+    var copes = app.state.urges.copes || [], on = a.copes || [], editing = app.urgeCopeEdit, v = num(a.intensity);
+    return '<div class="urge-details">'+
+      '<div class="vital-row"><label for="urge-intensity">How strong</label>'+
+        '<input type="range" class="urge-range" id="urge-intensity" min="0" max="10" step="1" value="'+v+'" aria-describedby="urge-intensity-scale">'+
+        '<span class="vital-val" id="urge-intensity-val">'+(v ? v : '–')+'</span>'+
+        '<span class="vital-scale" id="urge-intensity-scale"><span>0 unrated</span><span>extreme 10</span></span></div>'+
+      '<p class="urge-ask">What set it off?</p><div class="urge-chips">'+
+        ST.URGE_TRIGGERS.map(function(t){
+          return '<button class="chip" data-vital="urge-trigger" data-key="'+t+'" aria-pressed="'+(a.trigger===t)+'">'+escapeHtml(ST.URGE_TRIGGER_LABELS[t])+'</button>';
+        }).join('')+'</div>'+
+      '<p class="urge-ask">What I’m doing about it:</p><div class="urge-chips">'+
+        copes.map(function(c){
+          return editing
+            ? '<button class="chip removable" data-vital="cope-remove" data-key="'+attr(c.id)+'" aria-label="Remove: '+attr(c.name)+'">'+escapeHtml(c.name)+' ×</button>'
+            : '<button class="chip" data-vital="urge-cope" data-key="'+attr(c.id)+'" aria-pressed="'+(on.indexOf(c.id)!==-1)+'">'+escapeHtml(c.name)+'</button>';
+        }).join('')+
+        (!editing && copes.length<ST.COPES_MAX ? '<button class="chip add" data-vital="cope-add-open" aria-expanded="'+!!app.urgeCopeAdd+'">+ Mine</button>' : '')+
+        (copes.length ? '<button class="chip quiet" data-vital="cope-edit">'+(editing ? 'Done' : 'Edit')+'</button>' : '')+
+      '</div>'+
+      (app.urgeCopeAdd && !editing ? '<div class="vital-btns cope-add"><input type="text" class="date-input name-input" id="cope-name" maxlength="'+ST.COPE_NAME_MAX+'" '+
+          'autocomplete="off" placeholder="A way that works for you" aria-label="A new way to ride out an urge">'+
+        '<button class="vital-btn" data-vital="cope-add">Add</button><button class="vital-btn quiet" data-vital="cope-add-close">Cancel</button></div>' : '')+
+    '</div>';
+  }
+  // A logged urge by its t (its id), or null.
+  function urgeEntry(t){
+    var log = app.state.urges.log, i;
+    for (i=log.length-1;i>=0;i--) if (log[i].t && log[i].t===Number(t)) return log[i];
+    return null;
+  }
+  // "Oct 20 21h · TIRED · 8/10 · stress · ridden out · Walk outside"
+  function urgeLine(u){
+    var cope = (u.copes || []).map(ST.copeById).filter(Boolean).map(function(c){ return c.name; }).join(', ');
+    return [shortDay(u.date)+(u.hour>=0 ? ' '+pad2(u.hour)+'h' : ''), u.need, u.intensity ? u.intensity+'/10' : '',
+      u.trigger ? String(ST.URGE_TRIGGER_LABELS[u.trigger] || '').toLowerCase() : '', OUTCOME_WORDS[u.outcome]+(u.rounds>1 ? ' ('+u.rounds+' rounds)' : ''), cope]
+      .filter(Boolean).join(' · ');
+  }
+  // One line about an urge (optional): just after it's logged, or later on
+  // one from Last urges (its line kept in the box; emptied, it's removed).
+  function urgeNoteHtml(){
+    var log = app.state.urges.log, entry = urgeEntry(app.urgeNote);
+    if (!entry) return '';
+    var past = entry!==log[log.length-1] || !!entry.note;
+    var ask = ST.insight ? ST.insight.urgeReflection({need:entry.need, rounds:entry.rounds, seed:Math.floor(entry.t/60000)}) : null;
+    return '<div class="urge-reflect">'+
+      '<p class="urge-tip">'+(past ? escapeHtml(urgeLine(entry))+'. One line about it? (empty removes it)' :
+        (entry.outcome==='won' ? 'Ridden out. ' : 'Logged. It’s information, not a verdict. ')+'One line for next time? (optional)')+'</p>'+
+      '<div class="vital-btns"><input type="text" class="date-input name-input" id="urge-note" maxlength="'+ST.URGE_NOTE_MAX+'" autocomplete="off" '+
+        'value="'+attr(entry.note || '')+'" placeholder="'+attr(ask ? ask.text : 'What helped? What set it off?')+'" aria-label="A note about this urge">'+
+      '<button class="vital-btn" data-vital="urge-note-save">Save</button><button class="vital-btn quiet" data-vital="urge-note-skip">'+(past ? 'Cancel' : 'Skip')+'</button></div>'+
+      (entry.outcome==='lapsed' && app.urgeUndo && app.urgeUndo.t===entry.t ?
+        '<div class="vital-btns"><button class="vital-btn quiet" data-vital="urge-undo">Tapped by mistake? Undo</button></div>' : '')+
+    '</div>';
+  }
+  // The decoder's last urges, newest first: HISTORY_STEP on a tap, then as
+  // many more on each "more", back to the oldest kept.
+  var HISTORY_STEP = 8;
+  function urgeHistoryHtml(){
+    var log = app.state.urges.log;
+    if (!log.length) return '';
+    var shown = app.urgeHistory ? Math.min(log.length, Math.max(HISTORY_STEP, num(app.urgeHistory))) : 0;
+    var html = '<div class="vital-btns"><button class="vital-btn quiet" data-vital="urge-history" aria-expanded="'+!!shown+'">'+
+      (shown ? 'Hide' : 'Last urges')+' ('+log.length+')</button></div>';
+    if (!shown) return html;
+    var left = log.length-shown;
+    return html+'<ul class="urge-history">'+log.slice(-shown).reverse().map(function(u){
+      return '<li class="'+(u.outcome==='lapsed' ? 'lapsed' : '')+'"><span class="urge-history-text">'+escapeHtml(urgeLine(u))+
+        (u.note ? '<span class="urge-history-note">“'+escapeHtml(u.note)+'”</span>' : '')+'</span>'+
+        (u.t ? '<button class="chip quiet" data-vital="urge-note-edit" data-key="'+num(u.t)+'" aria-label="Note on this urge: '+attr(urgeLine(u))+'">Note</button>' : '')+'</li>';
+    }).join('')+'</ul>'+
+    (left>0 ? '<div class="vital-btns"><button class="vital-btn quiet" data-vital="urge-history-more">'+Math.min(left, HISTORY_STEP)+' more ('+left+' older)</button></div>' : '');
+  }
   function urgeCardHtml(){
     var a = app.state.urges.active, left = ST.urgeLeft();
     var html = '<div class="vital-card urge-card" id="urge-card"><div class="vital-head">Urge decoder</div>';
     if (!a){
-      html += (ST.insight ? insightLine(ST.insight.urgeHint(), 'vital-sub reading') : '')+
+      var patterns = ST.insight ? ST.insight.urgePatterns() : [];
+      html += (app.urgeNote ? urgeNoteHtml() : '')+
+        (ST.insight ? insightLine(ST.insight.urgeHint(), 'vital-sub reading') : '')+
         '<p class="urge-tip">Before acting on it, name the real need. Right now I am mostly:</p>'+
         '<div class="urge-grid">'+
           ['HUNGRY','ANGRY','LONELY','TIRED'].map(function(n){
@@ -202,6 +287,8 @@
           '<button class="vital-btn quiet wide" data-vital="urge-start" data-key="NONE">None of these</button>'+
         '</div>'+
         (ST.urgesToday()>0 ? '<p class="vital-sub">Ridden out today: '+ST.urgesToday()+' · SURVIVAL '+num(app.state.skills.SURVIVAL)+'</p>' : '')+
+        (patterns.length ? '<div class="urge-patterns">'+patterns.map(function(m){ return insightLine(m, 'vital-sub reading'); }).join('')+'</div>' : '')+
+        urgeHistoryHtml()+
         '<p class="vital-fine">'+HELP_LINE+'</p>';
     } else if (left>0){
       var said = ST.insight ? ST.insight.urgeMessages() : [];
@@ -210,18 +297,25 @@
         '<p class="vital-sub urge-note">'+(num(a.rounds)>1 ? 'Round '+num(a.rounds)+'. ' : '')+'Leave this room. Come back at zero.</p>'+
         (said.length ? '<div class="urge-angle" aria-live="polite">'+insightLine(said[num(app.urgeAngle) % said.length], 'urge-said')+'</div>' : '')+
         '<div class="vital-btns">'+(said.length>1 ? '<button class="vital-btn" data-vital="urge-angle">Another angle</button>' : '')+
+          '<button class="vital-btn quiet" data-vital="urge-lapse">I gave in</button>'+
           '<button class="vital-btn quiet" data-vital="urge-cancel">Cancel</button></div>'+
+        urgeDetailsHtml(a)+
         '<p class="vital-fine">'+HELP_LINE+'</p>';
     } else {
-      var paid = ST.urgesToday()<ST.URGE_XP_PER_DAY;
+      var paid = ST.urgePays(), started = new Date(num(a.start));
       html += '<div class="urge-clock">00:00</div>'+
         '<p class="urge-tip">Twenty minutes down. Did it pass?</p>'+
+        // Back long after zero: when it was, which is when it's logged.
+        (Date.now()-num(a.start)-ST.URGE_MS>LATE_MS ? '<p class="vital-sub urge-when">This round started '+escapeHtml(shortDay(ST.dayStr(started)))+' at '+
+          pad2(started.getHours())+':'+pad2(started.getMinutes())+'; it’s logged then.</p>' : '')+
         (ST.insight ? insightLine(ST.insight.urgeReflection(), 'vital-sub reading') : '')+
         '<div class="urge-grid">'+
           '<button class="vital-btn hot" data-vital="urge-won">Rode it out'+
             (paid ? '<span class="btn-sub">+'+ST.URGE_XP+' XP · +1 SURVIVAL</span>' : '')+'</button>'+
           '<button class="vital-btn" data-vital="urge-again">Still strong</button>'+
+          '<button class="vital-btn quiet wide" data-vital="urge-lapse">I gave in</button>'+
         '</div>'+
+        urgeDetailsHtml(a)+
         '<p class="vital-fine">Still strong: run another 20 minutes somewhere else, or call the support line, 24/7: '+
           '<a href="tel:18002652626">1-800-265-2626</a>. Chest pain with short breath, sweating or nausea: call 911.</p>';
     }
@@ -396,8 +490,9 @@
       var v = e ? num(e[k]) : last ? clamp(Math.round(num(last[k])), 0, 10) : 5;
       html += '<div class="vital-row">'+
         '<label for="vr-'+k+'">'+LABELS[k]+'</label>'+
-        '<input type="range" class="vital-range" id="vr-'+k+'" data-key="'+k+'" min="0" max="10" step="1" value="'+v+'">'+
+        '<input type="range" class="vital-range" id="vr-'+k+'" data-key="'+k+'" min="0" max="10" step="1" value="'+v+'" aria-describedby="vs-'+k+'">'+
         '<span class="vital-val" id="vv-'+k+'">'+v+'</span>'+
+        '<span class="vital-scale" id="vs-'+k+'"><span>0 '+SCALE[k][0]+'</span><span>'+SCALE[k][1]+' 10</span></span>'+
       '</div>';
     });
     html += '<div class="count-row"><label for="pulse-input">Resting pulse, bpm</label>'+
@@ -409,7 +504,7 @@
           : '<button class="vital-btn hot" data-vital="vitals-log">Log check-in +'+ST.VITALS_XP+' XP</button>')+
       '</div>'+
       '<p class="vital-sub train-line">Trains '+trainText('INT')+'</p>'+
-      '<p class="vital-fine">0 is none, 10 is maximum. Take the pulse before getting up, counted over 60 seconds.</p>';
+      '<p class="vital-fine">Each level is how you are now; Sleep is how last night went. Take the pulse before getting up, counted over 60 seconds.</p>';
     return html;
   }
   function shown(){
@@ -542,6 +637,22 @@
   }
 
   // ---------- taps ----------
+  function refocus(sel){
+    var b = el('tab-vitals') && el('tab-vitals').querySelector(sel);
+    if (b) b.focus();
+  }
+  // A new way of riding urges out, from its box: taken on for the running urge too.
+  function addCope(){
+    var box = el('cope-name');
+    if (!box || !box.value.trim()){ if (box) box.focus(); return; }
+    var c = ST.addCope(box.value);
+    if (!c){ ST.render.showNotice('Already on the list, or the list is full'); box.focus(); return; }
+    if (app.state.urges.active) ST.setUrgeDetail('cope', c.id);
+    app.urgeCopeAdd = false;
+    save(true);
+    redrawUrge();
+    refocus('[data-vital="urge-cope"][data-key="'+c.id+'"]');
+  }
   function redraw(focus){
     render();
     var btn = focus && el('tab-vitals').querySelector(focus);
@@ -644,7 +755,7 @@
       var b = document.querySelector('[data-vital="urge-angle"]');
       if (b) b.focus();
     },
-    'urge-cancel': function(){ ST.cancelUrge(); render(); save(); },
+    'urge-cancel': function(){ ST.cancelUrge(); app.urgeCopeAdd = false; render(); save(); },
     // A reward is saved first: drawing the screen afterwards can't lose it.
     'urge-won': function(){
       var r = ST.urgeWon();
@@ -652,8 +763,76 @@
       save(true);
       if (r.capped) ST.render.showNotice('Logged — today’s XP for urges is used up');
       else { sound('complete'); showReward(r); }
-      render();
+      app.urgeNote = r.entry ? r.entry.t : null;
+      app.urgeCopeAdd = false;
+      redraw('#urge-note');
       ST.render.renderStatus();     // the Lifetime count, the skill
+    },
+    // Given in to: logged as it was (no XP, nothing taken away), then the note.
+    'urge-lapse': function(){
+      var e = ST.urgeLapsed();
+      if (!e) return;
+      save(true);
+      app.urgeNote = e.t;
+      app.urgeCopeAdd = false;
+      redraw('#urge-note');
+      ST.render.showNotice('Logged. No XP lost, nothing reset.');
+      ST.render.renderStatus();     // the last 7 days
+    },
+    // What's noted while the timer runs: only the urge card is drawn again.
+    'urge-trigger': function(btn, key){
+      var a = ST.setUrgeDetail('trigger', key);
+      if (!a) return;
+      // The trigger just noted: what to do about it shows at once.
+      if (a.trigger && ST.insight){
+        var i = ST.insight.urgeMessages().map(function(m){ return m.id; }).indexOf('ctx-trigger');
+        if (i!==-1) app.urgeAngle = i;
+      }
+      redrawUrge(); refocus('[data-vital="urge-trigger"][data-key="'+key+'"]'); save();
+    },
+    'urge-cope': function(btn, key){
+      if (!ST.setUrgeDetail('cope', key)) return;
+      redrawUrge(); refocus('[data-vital="urge-cope"][data-key="'+key+'"]'); save();
+    },
+    'cope-add-open': function(){ app.urgeCopeAdd = true; redrawUrge(); refocus('#cope-name'); },
+    'cope-add-close': function(){ app.urgeCopeAdd = false; redrawUrge(); refocus('[data-vital="cope-add-open"]'); },
+    'cope-add': function(){ addCope(); },
+    'cope-edit': function(){ app.urgeCopeEdit = !app.urgeCopeEdit; app.urgeCopeAdd = false; redrawUrge(); refocus('[data-vital="cope-edit"]'); },
+    'cope-remove': function(btn, key){
+      if (ST.removeCope(key)) save(true);
+      if (!(app.state.urges.copes || []).length) app.urgeCopeEdit = false;
+      redrawUrge(); refocus('[data-vital="cope-edit"]');
+    },
+    'urge-note-save': function(){
+      var box = el('urge-note'), words = box ? box.value.trim() : '', entry = urgeEntry(app.urgeNote);
+      if (entry && (words || entry.note) && ST.noteUrge(entry.t, words)) save(true);
+      app.urgeNote = null;
+      redraw('[data-vital="urge-start"]');
+    },
+    // A note on an urge from Last urges: the box opens above, with its line.
+    'urge-note-edit': function(btn, key){
+      if (!urgeEntry(key)) return;
+      app.urgeNote = Number(key);
+      app.urgeUndo = null;
+      redraw('#urge-note');
+    },
+    'urge-note-skip': function(){ app.urgeNote = null; redraw('[data-vital="urge-start"]'); },
+    // The lapse taken back: the urge runs again where it was.
+    'urge-undo': function(){
+      app.urgeNote = null;
+      if (ST.undoLapse()){ save(true); ST.render.showNotice('Taken back. The urge is still running.'); }
+      redraw('[data-vital="urge-angle"]');
+      ST.render.renderStatus();
+    },
+    'urge-history': function(){ app.urgeHistory = app.urgeHistory ? 0 : HISTORY_STEP; redrawUrge(); refocus('[data-vital="urge-history"]'); },
+    // Older ones under the list; the focus goes to the first one added.
+    'urge-history-more': function(){
+      var before = Math.max(HISTORY_STEP, num(app.urgeHistory));
+      app.urgeHistory = before + HISTORY_STEP;
+      redrawUrge();
+      var items = el('urge-card') && el('urge-card').querySelectorAll('.urge-history li');
+      var first = items && items[before];
+      if (first){ first.setAttribute('tabindex', '-1'); first.focus(); }
     },
     'rad': function(btn, key){
       var dir = parseInt(btn.getAttribute('data-dir') || '0', 10);
@@ -703,12 +882,24 @@
   }
   function onInput(e){
     var t = e.target;
+    if (app.state && t.id==='urge-intensity'){
+      var a = ST.setUrgeDetail('intensity', t.value), shown = el('urge-intensity-val');
+      if (a && shown) shown.textContent = a.intensity ? a.intensity : '–';
+      save();
+      return;
+    }
     if (!app.state || !t.classList || !t.classList.contains('vital-range')) return;
     var v = ST.setVital(t.getAttribute('data-key'), t.value);
     if (v===null) return;
     var label = el('vv-'+t.getAttribute('data-key'));
     if (label) label.textContent = v;
     save();
+  }
+  // Enter in a box: what its button does.
+  function onKey(e){
+    if (e.key!=='Enter' || !app.state) return;
+    if (e.target.id==='cope-name'){ e.preventDefault(); addCope(); }
+    else if (e.target.id==='urge-note'){ e.preventDefault(); ACTIONS['urge-note-save'](); }
   }
   function onChange(e){
     if (!app.state || e.target.id!=='pulse-input') return;
@@ -737,6 +928,7 @@
     document.body.addEventListener('click', onClick);
     document.body.addEventListener('input', onInput);
     document.body.addEventListener('change', onChange);
+    document.body.addEventListener('keydown', onKey);
     document.addEventListener('visibilitychange', function(){
       if (document.visibilityState==='hidden'){ stop(); return; }
       if (!app.state) return;

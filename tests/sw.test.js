@@ -1,7 +1,8 @@
-// sw.js, the service worker: the app's files come from the network, or from
-// the kept copy when the network is down or too slow; a big file that can't
-// be downloaded doesn't stop the install. Runs sw.js with a fake network and
-// a fake cache storage (its timers 100 times faster).
+// sw.js, the service worker: the app opens from its cache at once (cache
+// first), one whole version at a time, named by a hash of its files; a new
+// version waits for the page's SKIP_WAITING; the region shapes are kept
+// across versions. Runs sw.js with a fake network and a fake cache storage
+// (its timers 100 times faster).
 'use strict';
 
 const test = require('node:test');
@@ -10,6 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { ROOT } = require('./helpers');
+const { shellVersion, stampedVersion } = require('../tools/stamp-sw');
 
 const BASE = 'https://example.test/PIBBOY/';
 const SPEED = 100;
@@ -50,7 +52,7 @@ class FakeCache {
   text(file) { const res = this.map.get(keyOf(file)); return res ? res.clone().text() : Promise.resolve(null); }
 }
 
-// net: {down, delay (real ms), broken: [files that fail]}.
+// net: {down, delay (real ms), broken: [files that fail], active: a version already runs}.
 function loadSw(net) {
   const fetch = req => {
     const url = typeof req === 'string' ? req : req.url;
@@ -65,10 +67,13 @@ function loadSw(net) {
     delete: name => Promise.resolve(stores.delete(name))
   };
   const handlers = {};
+  const calls = { skipWaiting: 0, fetched: [] };
+  const counted = req => { calls.fetched.push(typeof req === 'string' ? req : req.url); return fetch(req); };
   const context = vm.createContext({
     self: { location: new URL('sw.js', BASE), addEventListener: (type, fn) => { handlers[type] = fn; },
-      skipWaiting: () => Promise.resolve(), clients: { claim: () => Promise.resolve() } },
-    caches, fetch, Request: FakeRequest, Response, Headers, URL,
+      registration: { active: net.active ? {} : null },
+      skipWaiting: () => { calls.skipWaiting++; return Promise.resolve(); }, clients: { claim: () => Promise.resolve() } },
+    caches, fetch: counted, Request: FakeRequest, Response, Headers, URL,
     setTimeout: (fn, ms) => setTimeout(fn, ms / SPEED)
   });
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8'), context);
@@ -85,50 +90,102 @@ function loadSw(net) {
     handlers.install({ waitUntil: p => { done = p; } });
     return done;
   }
-  return { cache, get, install, net };
+  function activate() {
+    let done;
+    handlers.activate({ waitUntil: p => { done = p; } });
+    return done;
+  }
+  const message = data => handlers.message({ data });
+  return { cache, get, install, activate, message, net, calls, caches, context };
 }
 async function keep(sw, file, text) { (await sw.cache()).put(file, new Response(text)); }
 
-test('online: the network copy, kept for next time', async () => {
+test('the version is a hash of the app\'s files: sw.js changes exactly when one of them does', () => {
+  assert.equal(stampedVersion(), shellVersion(), 'run: node tools/stamp-sw.js');
   const sw = loadSw({});
-  const req = sw.get('js/state.js');
-  assert.equal(await (await req.answer).text(), 'net js/state.js');
-  await req.done();
-  assert.equal(await (await sw.cache()).text('js/state.js'), 'net js/state.js');
+  assert.equal(sw.context.CACHE, 'status-terminal-' + shellVersion());
 });
 
-test('offline: the kept copy; a page opened offline falls back to index.html', async () => {
-  const sw = loadSw({ down: true });
-  await keep(sw, 'js/state.js', 'kept state');
-  await keep(sw, 'index.html', 'kept index');
-  assert.equal(await (await sw.get('js/state.js').answer).text(), 'kept state');
-  assert.equal(await (await sw.get('./?from=home', 'navigate').answer).text(), 'kept index');
-  assert.equal((await sw.get('js/never-kept.js').answer).type, 'error');
-});
-
-test('slow network: the kept copy after NET_MS, and the fresh one is kept for the next open', async () => {
-  const sw = loadSw({ delay: 100 });                    // 10 s at the real speed
-  await keep(sw, 'js/render.js', 'kept render');
-  const req = sw.get('js/render.js');
-  const started = Date.now();
-  assert.equal(await (await req.answer).text(), 'kept render');
-  assert.ok(Date.now() - started < 90, 'answered before the network');
-  await wait(120);
-  await req.done();
-  assert.equal(await (await sw.cache()).text('js/render.js'), 'net js/render.js');
-});
-
-test('slow network and nothing kept yet: it waits for the network', async () => {
-  const sw = loadSw({ delay: 60 });
-  assert.equal(await (await sw.get('js/map.js').answer).text(), 'net js/map.js');
-});
-
-test('install: a big file that fails is skipped; an app file that fails stops the install', async () => {
+test('install: every app file cached past the browser cache; a big one that fails is skipped; an app file that fails stops it', async () => {
   const ok = loadSw({ broken: ['vendor/three/three.pibboy.min.js'] });
   await ok.install();
-  assert.equal(await (await ok.cache()).text('index.html'), 'net index.html');
-  assert.equal(await (await ok.cache()).text('vendor/three/three.pibboy.min.js'), null);
-
+  const cache = await ok.cache();
+  assert.equal(await cache.text('index.html'), 'net index.html');
+  assert.equal(await cache.text('js/state.js'), 'net js/state.js');
+  assert.equal(await cache.text('vendor/three/three.pibboy.min.js'), null);
   const bad = loadSw({ broken: ['js/state.js'] });
-  await assert.rejects(bad.install());
+  await assert.rejects(bad.install());                                  // the version before stays, whole
+});
+
+test('cache first: a kept app file is served at once, without the network (offline, slow or online)', async () => {
+  for (const net of [{ down: true }, { delay: 100 }, {}]) {
+    const sw = loadSw(net);
+    await keep(sw, 'js/render.js', 'kept render');
+    const started = Date.now();
+    assert.equal(await (await sw.get('js/render.js?v=2').answer).text(), 'kept render');
+    assert.ok(Date.now() - started < 50);
+    assert.deepEqual(sw.calls.fetched, [], 'no network asked');
+  }
+});
+
+test('any page of the app opens the kept index.html, whatever its address', async () => {
+  const sw = loadSw({ down: true });
+  await keep(sw, 'index.html', 'kept index');
+  assert.equal(await (await sw.get('./?from=home', 'navigate').answer).text(), 'kept index');
+  assert.equal(await (await sw.get('index.html', 'navigate').answer).text(), 'kept index');
+});
+
+test('an app file the install skipped: the network, then kept; offline, an error (never another version\'s copy)', async () => {
+  const sw = loadSw({});
+  const req = sw.get('vendor/three/three.pibboy.min.js');
+  assert.equal(await (await req.answer).text(), 'net vendor/three/three.pibboy.min.js');
+  await req.done();
+  assert.equal(await (await sw.cache()).text('vendor/three/three.pibboy.min.js'), 'net vendor/three/three.pibboy.min.js');
+  const off = loadSw({ down: true });
+  assert.equal((await off.get('js/state.js').answer).type, 'error');
+});
+
+test('region shapes: the network the first time, then the kept copy at once, refreshed in the background, kept across versions', async () => {
+  const sw = loadSw({});
+  const first = sw.get('data/regions/MA.json');
+  assert.equal(await (await first.answer).text(), 'net data/regions/MA.json');
+  await first.done();
+  const data = await sw.caches.open('status-terminal-data');
+  await data.put('data/regions/MA.json', new Response('kept MA'));
+  sw.net.delay = 100;
+  const again = sw.get('data/regions/MA.json');
+  const started = Date.now();
+  assert.equal(await (await again.answer).text(), 'kept MA');
+  assert.ok(Date.now() - started < 50);
+  await again.done();
+  assert.equal(await data.text('data/regions/MA.json'), 'net data/regions/MA.json');
+  assert.equal(await (await sw.cache()).text('data/regions/MA.json'), null, 'not in a version\'s cache');
+});
+
+test('activate: older versions go; the region shapes and map tiles stay', async () => {
+  const sw = loadSw({});
+  for (const name of ['status-terminal-v37', 'status-terminal-0123456789ab', 'status-terminal-data', 'status-terminal-vector-tiles', 'other-app']) await sw.caches.open(name);
+  await sw.cache();
+  await sw.activate();
+  assert.deepEqual((await sw.caches.keys()).sort(), ['other-app', sw.context.CACHE, 'status-terminal-data', 'status-terminal-vector-tiles'].sort());
+});
+
+test('the first version takes over at once; a later one waits for the page\'s SKIP_WAITING', async () => {
+  const first = loadSw({});
+  await first.install();
+  assert.equal(first.calls.skipWaiting, 1);
+  const later = loadSw({ active: true });
+  await later.install();
+  assert.equal(later.calls.skipWaiting, 0);
+  later.message({ type: 'other' });
+  assert.equal(later.calls.skipWaiting, 0);
+  later.message({ type: 'SKIP_WAITING' });
+  assert.equal(later.calls.skipWaiting, 1);
+});
+
+test('the AI function and other sites\' files are left to the browser (never cached here)', async () => {
+  const sw = loadSw({});
+  assert.equal(await sw.get('api/analyze').answer, undefined);          // no respondWith: straight to the network
+  assert.equal(await sw.get('https://api.open-meteo.com/v1/forecast').answer, undefined);
+  assert.deepEqual(sw.calls.fetched, []);
 });

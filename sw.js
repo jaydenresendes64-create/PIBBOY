@@ -1,50 +1,53 @@
 /**
- * Service worker — lets the app open without a connection, which (with
- * manifest.webmanifest) also makes it installable on a phone.
+ * Service worker — opens the app at once, online or not (which, with
+ * manifest.webmanifest, also makes it installable on a phone).
  *
- * The app's own files: network first. While online every request goes to
- * GitHub Pages, checked against the server rather than the browser's own
- * 10-minute cache ('no-cache'), so a new version shows up on the next
- * open, with all its files from the same version. Each response is copied
- * into the cache on the way through, and the cached copy is only used when
- * the network fails or takes longer than NET_MS (a weak signal): the app
- * then opens from the cache at once, and the network's answer, when it
- * comes, refreshes the copy for the next open. (Just after an update on a
- * weak signal, that one open may mix old and new files.) So this file
- * doesn't need to change when the app does; bump CACHE only to throw the
- * old copies away. At install, a big file (HEAVY) that can't be downloaded
- * is skipped rather than stopping the install; it's kept on first use.
+ * The app's own files (APP_SHELL): cache first. A version is the set of
+ * those files, named by VERSION (a hash of them, written by
+ * tools/stamp-sw.js; tests/sw.test.js checks it). Installing a version
+ * downloads all of them, past the browser's own cache, into its own cache
+ * (CACHE); if one can't be downloaded the install fails and the version
+ * before stays in use, whole. Every open is then served from that cache,
+ * without waiting for the network, so the files of one version are never
+ * mixed with another's. A file missing from it (a big one skipped at
+ * install, HEAVY) comes from the network and is kept.
  *
- * The fonts are the app's own files too (fonts/), so they're there offline
- * from the first visit.
+ * Updates: the browser checks sw.js on every open (and js/main.js asks again
+ * when the app comes back to the screen). A new VERSION means a new sw.js:
+ * it installs in the background and waits. The page puts it in when the app
+ * goes to the background (its changes saved first): it asks for
+ * SKIP_WAITING, this worker takes over and the page reloads, so the next
+ * look at the app is the new version. Data never goes through here: an
+ * older version that still runs can't write over newer data (storage.js).
  *
- * The optional AI function (api/) is never cached.
+ * Other files of the app's site (the region shapes, data/regions/) are kept
+ * in DATA_CACHE across versions: shown from there, refreshed in the
+ * background. The optional AI function (api/) is never cached.
  *
  * The MAP tab: MapLibre (vendor/maplibre/), the map's style
  * (data/map-style.json, whose labels use the app's own fonts) and the city
- * and region list (data/places.txt) are cached at install with the app, so
- * the map and city search work offline from the first open; the region
- * shapes (data/regions/) are cached like the app's files, the first time
- * each is used. The map's data (vector tiles, from OpenFreeMap) are kept in
- * their own cache as they're seen, at most TILE_MAX of them (the oldest go
- * first), so the places already looked at still show offline. Only tiles
- * actually shown are kept, never fetched ahead (OpenFreeMap's terms forbid
- * bulk downloads). A kept tile older than TILE_REFRESH_MS is shown, then
- * fetched again in the background. Offline, a tile never seen fails, and
- * the map draws its faint grid there (js/map.js).
+ * and region list (data/places.txt) are part of APP_SHELL, so the map and
+ * city search work offline from the first open. The map's data (vector
+ * tiles, from OpenFreeMap) are kept in their own cache as they're seen, at
+ * most TILE_MAX of them (the oldest go first), so the places already looked
+ * at still show offline. Only tiles actually shown are kept, never fetched
+ * ahead (OpenFreeMap's terms forbid bulk downloads). A kept tile older than
+ * TILE_REFRESH_MS is shown, then fetched again in the background. Offline, a
+ * tile never seen fails, and the map draws its faint grid there (js/map.js).
  */
 'use strict';
 
 var CACHE_PREFIX = 'status-terminal-';
-var CACHE = CACHE_PREFIX + 'v36';
+var VERSION = '786fe3fb52f8';                       // node tools/stamp-sw.js
+var CACHE = CACHE_PREFIX + VERSION;
+var DATA_CACHE = CACHE_PREFIX + 'data';             // kept across versions
 var TILE_CACHE = CACHE_PREFIX + 'vector-tiles';     // kept across versions
 var TILE_HOST = 'tiles.openfreemap.org';
 var TILE_MAX = 800;                                 // about 50 MB at most
 var TILE_REFRESH_MS = 30*864e5;                     // OpenFreeMap's data changes every week
 var KEPT_AT = 'x-kept-at';
-var NET_MS = 2500;                                  // give up on GitHub Pages and use the cache
 
-// Cached at install, so the app opens offline after the first visit.
+// One version of the app: cached at install, so it opens offline after the first visit.
 var APP_SHELL = [
   './',
   'index.html',
@@ -60,6 +63,9 @@ var APP_SHELL = [
   'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png'
 ];
+var SHELL = {};
+APP_SHELL.forEach(function(file){ SHELL[new URL(file, self.location).href] = true; });
+var INDEX = new URL('index.html', self.location).href;
 var API_URL = new URL('api/', self.location).href;
 
 // Heavy files: one failure must not block install (addAll is all-or-nothing).
@@ -84,69 +90,72 @@ self.addEventListener('install', function(event){
           return cache.add(req(url)).catch(function(){});
         }));
       });
-    }).then(function(){ return self.skipWaiting(); })
+    }).then(function(){
+      // The first version takes over at once (no page runs another one);
+      // a later one waits for the page's SKIP_WAITING.
+      if (!self.registration || !self.registration.active) return self.skipWaiting();
+    })
   );
 });
 
+self.addEventListener('message', function(event){
+  if (event.data && event.data.type==='SKIP_WAITING') self.skipWaiting();
+});
+
 self.addEventListener('activate', function(event){
-  // Only this app's old caches: every GitHub Pages project of the same
+  // Only this app's old versions: every GitHub Pages project of the same
   // account shares one origin, and so one cache storage.
   event.waitUntil(
     caches.keys().then(function(keys){
       return Promise.all(keys.filter(function(key){
-        return key.indexOf(CACHE_PREFIX)===0 && key!==CACHE && key!==TILE_CACHE;
+        return key.indexOf(CACHE_PREFIX)===0 && key!==CACHE && key!==DATA_CACHE && key!==TILE_CACHE;
       }).map(function(key){ return caches.delete(key); }));
     }).then(function(){ return self.clients.claim(); })
   );
 });
 
-// Stores a copy of a good response.
-function keep(event, request, response){
-  if (response.status===200){
+// Stores a copy of a good response in `name`.
+function keep(event, name, request, response){
+  if (response && response.status===200){
     var copy = response.clone();
-    event.waitUntil(caches.open(CACHE).then(function(cache){ return cache.put(request, copy); }));
+    event.waitUntil(caches.open(name).then(function(cache){ return cache.put(request, copy); }).catch(function(){}));
   }
   return response;
 }
-function fromCache(request, options){
-  return caches.open(CACHE).then(function(cache){ return cache.match(request, options); });
+function fromCache(name, request){
+  return caches.open(name).then(function(cache){ return cache.match(request); });
 }
-
-// The app's files: the network (past the HTTP cache), else the cached copy;
-// a page opened offline falls back to the cached index.html.
-function networkFirst(event){
-  var request = event.request;
-  var navigating = request.mode==='navigate';
-  // A navigation request can't be copied with new options: fetch its URL.
-  var fresh = navigating
-    ? new Request(request.url, {credentials:'same-origin', cache:'no-cache'})
-    : new Request(request, {cache:'no-cache'});
-  var timedOut = false;
-  var clock = new Promise(function(resolve){
-    setTimeout(function(){ timedOut = true; resolve(null); }, NET_MS);
-  });
-  var live = fetch(fresh).then(function(response){
+// The network, past the browser's 10-minute HTTP cache.
+function fresh(request){
+  return fetch(new Request(request.url, {credentials:'same-origin', cache:'no-cache'})).then(function(response){
     // A page may not be answered with a redirected response: pass its body on.
-    if (navigating && response.redirected){
+    if (request.mode==='navigate' && response.redirected){
       response = new Response(response.body, {status:response.status, statusText:response.statusText, headers:response.headers});
     }
-    return keep(event, request, response);
+    return response;
   });
-  // Offline, the network fails at once: the cached copy, like a slow network.
-  var quick = live.catch(function(){ return null; });
-  return Promise.race([quick, clock]).then(function(response){
-    if (response) return response;
-    return fromCache(request, {ignoreSearch:navigating}).then(function(cached){
-      if (cached){
-        // Network still running: refresh the cache for the next open.
-        if (timedOut) event.waitUntil(quick);
-        return cached;
-      }
-      return live.catch(function(){ return navigating ? fromCache('index.html') : undefined; });
-    }).then(function(response){
-      return response || Response.error();
-    });
-  });
+}
+
+// The app's files (`key`: its address without ?query): this version's
+// cached copy, at once; the network only for a file the install skipped
+// (then kept). Any page of the app opens index.html.
+function appFile(event, key){
+  var request = event.request;
+  return fromCache(CACHE, key).then(function(cached){
+    if (cached) return cached;
+    return fresh(request).then(function(response){ return keep(event, CACHE, key, response); });
+  }).catch(function(){ return Response.error(); });
+}
+
+// The site's other files (region shapes): the kept copy at once, refreshed
+// in the background; the network the first time.
+function dataFile(event){
+  var request = event.request;
+  return fromCache(DATA_CACHE, request.url).then(function(cached){
+    var update = fresh(request).then(function(response){ return keep(event, DATA_CACHE, request.url, response); });
+    if (cached){ event.waitUntil(update.catch(function(){})); return cached; }
+    return update;
+  }).catch(function(){ return Response.error(); });
 }
 
 // A map tile: the kept copy, else the network (then kept, with the time it
@@ -191,7 +200,9 @@ self.addEventListener('fetch', function(event){
   var url = new URL(request.url);
   if (url.origin===self.location.origin){
     if (request.url.indexOf(API_URL)===0) return;      // never cached
-    event.respondWith(networkFirst(event));
+    url.search = '';
+    if (request.mode==='navigate') event.respondWith(appFile(event, INDEX));
+    else event.respondWith(SHELL[url.href] ? appFile(event, url.href) : dataFile(event));
   } else if (url.protocol==='https:' && url.hostname===TILE_HOST){
     event.respondWith(tile(event));
   }

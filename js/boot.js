@@ -60,6 +60,12 @@
       var due = ST.trialsDue();
       out.push(dots('TRIALS', 14)+(due ? due+' DUE THIS WEEK' : 'ALL DONE THIS WEEK'));
     }
+    // The last 7 days, once something happened in them.
+    if (ST.weekSummary){
+      var wk = ST.weekSummary().week;
+      if (wk.xp || wk.urgesWon || wk.urgesLapsed) out.push(dots('LAST 7 DAYS', 14)+'+'+ST.commas(wk.xp)+' XP · '+wk.checkins+' CHECK-IN'+(wk.checkins===1 ? '' : 'S')+
+        ' · '+wk.urgesWon+' URGE'+(wk.urgesWon===1 ? '' : 'S')+' RIDDEN OUT');
+    }
     if ((state.unspentSpecialPoints||0)>0) out.push(dots('S.P.E.C.I.A.L.', 14)+state.unspentSpecialPoints+' POINT'+(state.unspentSpecialPoints>1 ? 'S' : '')+' TO ASSIGN');
     if ((state.unspentPerkPoints||0)>0) out.push(dots('PERKS', 14)+state.unspentPerkPoints+' TO CHOOSE (PERK CHART)');
     var days = ST.backupDays(), rads = ST.rads();

@@ -112,11 +112,17 @@
       var target = Number(el('new-main-caps').value);
       quest.progressType = 'caps';
       quest.capsTarget = isFinite(target) && target>0 ? clamp(target, 0.01, 1e6) : 5;
+    } else if (el('new-main-type').value==='places'){
+      var cc = el('new-main-cc').value;
+      quest.progressType = 'places';
+      quest.placesTarget = readWhole('new-main-places', 5, 1, ST.PLACES_TARGET_MAX);
+      quest.placesCc = ST.COUNTRY_CODES.indexOf(cc)!==-1 ? cc : '';
     }
     app.state.quests.mains.push(quest);
     R.clearTyped('new-main-');
     app.addOpen = null;
     syncCaps();
+    ST.syncPlacesQuests();
     renderQuests(); scheduleSave();
   }
   // Caps quests follow the wallet: after any change to it (a row added,
@@ -395,7 +401,8 @@
     clearQuestions();
     el('reset-confirm-area').innerHTML = '';
     renderAll();
-    if (syncCaps()) renderQuests();
+    var moved = ST.syncPlacesQuests();
+    if (syncCaps() || moved) renderQuests();
     ST.storage.saveNow();
     closeSettings(false);
   }
@@ -430,8 +437,7 @@
       var imported = ST.sanitizeImported(raw);
       if (!imported) throw new Error('Not a Status Terminal backup');
       pendingImport = imported;
-      el('reset-confirm-area').innerHTML =
-        '<span class="reset-warning">Replace all data with this backup?</span>'+
+      el('reset-confirm-area').innerHTML = importQuestion(ST.compareBackup(app.state, imported))+
         '<button id="import-confirm-btn">Yes, replace</button>'+
         '<button id="import-cancel-btn">Cancel</button>';
     }).catch(function(){
@@ -439,6 +445,25 @@
       if (ST.sfx) ST.sfx.play('error');
       el('reset-confirm-area').innerHTML = '<span class="reset-warning">That file isn’t a Status Terminal backup.</span>';
     });
+  }
+  // Before a backup replaces everything: what it holds next to what's here,
+  // and a warning when it's older or would lose things only this phone has.
+  function importQuestion(c){
+    function when(t){ return t ? 'last used '+new Date(t).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) : 'never used'; }
+    function line(label, x){
+      return '<span class="import-line">'+label+': level '+x.level+' · '+ST.commas(x.lifetimeXp)+' XP · '+x.checkins+' check-ins · '+
+        x.urges+' urges · '+ST.escapeHtml(when(x.last))+'</span>';
+    }
+    var lost = [];
+    if (c.lose.xp) lost.push(ST.commas(c.lose.xp)+' XP');
+    if (c.lose.checkins) lost.push(c.lose.checkins+' check-in'+(c.lose.checkins===1 ? '' : 's'));
+    if (c.lose.urges) lost.push(c.lose.urges+' urge'+(c.lose.urges===1 ? '' : 's'));
+    if (c.lose.journal) lost.push(c.lose.journal+' journal entr'+(c.lose.journal===1 ? 'y' : 'ies'));
+    if (c.lose.places) lost.push(c.lose.places+' place'+(c.lose.places===1 ? '' : 's'));
+    return '<span class="import-compare">'+line('This backup', c.backup)+line('On this phone', c.here)+'</span>'+
+      (c.older || lost.length ? '<span class="reset-warning">'+(c.older ? 'This backup is older than what’s on this phone. ' : '')+
+        (lost.length ? 'Replacing loses '+lost.join(', ')+'. ' : '')+'Export a backup of this phone first if you’re unsure.</span>' : '')+
+      '<span class="reset-warning">Replace all data with this backup?</span>';
   }
   function confirmImport(){
     if (!pendingImport) return;
@@ -767,11 +792,13 @@
   // What the state as it is now has earned: the streaks' milestones
   // reached, chem-free and the player's own (state.js claimCleanMilestones),
   // and the bobbleheads found (findBobbleheads): a banner each, their XP,
-  // and the STATUS tab drawn again. Runs after every change
+  // and the STATUS tab drawn again; places quests that moved are drawn
+  // again too (syncPlacesQuests). Runs after every change
   // (storage.onChange), once at startup for what a save already earned, and
   // when a new day starts (the streaks' counts go up by themselves).
   function checkBobbleheads(){
     if (!app.state) return;
+    if (ST.syncPlacesQuests()) renderQuests();      // a place revealed or removed: places quests move
     var milestones = ST.claimCleanMilestones();
     milestones.forEach(function(m){
       R.showMilestone(m.days, m.name);
@@ -802,6 +829,7 @@
       } else if (e.target.id==='new-main-type'){
         el('new-main-days-field').hidden = e.target.value!=='streak';
         el('new-main-caps-field').hidden = e.target.value!=='caps';
+        el('new-main-places-field').hidden = e.target.value!=='places';
       } else if (e.target.id==='new-item-cat'){
         el('new-item-price').hidden = e.target.value!=='SELL';
       } else if (e.target.id==='new-book-skill'){

@@ -248,7 +248,7 @@ test('the decoder on screen: the need\'s tip, one message with its style, "Anoth
   let html = vitals(a);
   assert.match(html, /Lie down for 20 minutes[\s\S]*id="urge-clock"[\s\S]*<div class="urge-angle" aria-live="polite"><p class="urge-said"><span class="field-tag">[A-Z ]+ \/\/<\/span> /);
   assert.ok(html.includes(list[0].text.replace(/“|”/g, m => m)));
-  assert.match(html, /data-vital="urge-angle">Another angle<\/button><button class="vital-btn quiet" data-vital="urge-cancel">Cancel/);
+  assert.match(html, /data-vital="urge-angle">Another angle<\/button><button class="vital-btn quiet" data-vital="urge-lapse">I gave in<\/button><button class="vital-btn quiet" data-vital="urge-cancel">Cancel/);
   const shown = [];
   for (let i = 0; i < list.length + 1; i++) {
     shown.push(list.find(m => vitals(a).includes('</span> ' + m.text.replace(/&/g, '&amp;') + '</p>')).id);

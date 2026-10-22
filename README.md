@@ -15,7 +15,9 @@ skill points at once (a BOOK READ banner), and the book joins the list with the 
 the latest first. Removing a book from the list keeps what it gave.
 
 **VITALS** (its own tab, from your in-Claude version): the day's **check-in**: energy, mood, hunger,
-tension, sleep and craving from 0 to 10, the resting pulse, and two counters (RADS // type N and T).
+tension, sleep and craving from 0 to 10 (each slider says what its 0 and 10 mean: energy drained → full,
+mood very low → great, hunger not hungry → starving, tension relaxed → very tense, sleep is last night,
+awful → great, craving none → overwhelming), the resting pulse, and two counters (RADS // type N and T).
 **Log check-in** gives **+15 XP** once a day and trains Intelligence; what you change after it is
 kept. At the bottom, the last 7 entries with their averages. The **urge decoder**: name the real
 need (hungry, angry, lonely, tired, or none of these), read what to do first, and leave the room for a
@@ -26,8 +28,25 @@ comes first, as questions: a short night or high hunger at today's check-in ("Yo
 morning. Could tiredness be part of this?"), the urges of the same kind you rode out before and how
 many rounds the last one took, a second round, a late hour. The rest change from one urge to the next,
 and none comes back until all have shown. Without a check-in or a history, it uses the general ones.
+While the clock runs you can note, if you want: **how strong** it is (0-10), **what set it off**
+(stress, boredom, people around, alone, usual time or place, something I saw, celebrating, pain or
+discomfort) and **what you're doing about it**: your own list of ways (six to start with; **+ Mine**
+adds one, **Edit** removes). The way you've most often ridden urges out with comes first among the
+messages ("“Walk outside”: you rode it out 3 of the 4 times you used it. Worth a go now?"). Tapping
+what set it off shows one practical thing to do about that trigger at once, and how urges set off
+the same way went before ("Urges set off by being alone before: 2 of 3 ridden out.").
 At zero: one question to look back with (REFLECTION), then **Rode it out** (**+40 XP
-and +1 SURVIVAL**, 3 times a day; logged every time) or **Still strong** (another round). The day of a
+and +1 SURVIVAL**, 3 times a day; logged every time), **Still strong** (another round) or **I gave in**
+(at any point: logged as it was, no XP lost, no streak reset; a lapse on a streak stays your call;
+tapped by mistake? **Undo**, right after, and the urge runs on where it was).
+Each urge is logged at the day and hour its round started, even when you come back to it hours later
+(the card then says when that was), and it counts toward that day's 3 paid urges. Then one line for
+next time, if you want: the next urge brings back the latest one you wrote after
+an urge you rode out (YOUR WORDS, the same need first). Once 3 urges are logged, **patterns** from your own log:
+the way most often ridden out with, what most often sets them off (and how those ended), how the
+strong ones (7 or more) ended next to the milder ones, the time of day most come at,
+the intensity lately, how many were ridden out (counted, never a cause); **Last urges** lists them (8 at a time, **more** for older ones; **Note** on one adds or changes its
+line, and an emptied line removes it). The day of a
 lapse, the streak card and the decoder each show a way back (RESET), without blame. The support
 line (1-800-265-2626, 24/7) and when to call 911 are always on the card. When a round ends, the app says so
 whatever tab is open (a sound and a notice). A small light on the **VITALS** tab key shows, from every
@@ -120,6 +139,11 @@ when the app goes to the background; what was recorded is kept). Each tape plays
 first). The recordings stay on this device only, in their own storage: they are not in the backup
 file (too big), so use a tape's Share button to keep a copy.
 
+**Last 7 days** (STATUS tab, above Lifetime): XP gained, check-ins (out of 7), urges ridden out (and
+given in to), dailies done, trials logged (and records), quests completed, each next to the 7 days
+before; counted from what's recorded only, and hidden until something is. The RobCo boot says it in
+one line.
+
 **Bobbleheads** (STATUS tab): 16 collectibles for real milestones, each with its own trophy on the
 shelf, found by themselves the moment one is reached (a banner showing the trophy, a springy sound,
 +50 XP each): Vault Dweller (level 5: a vault door), Wasteland Veteran (level 10: a medal), Devotion
@@ -134,10 +158,12 @@ light, a faint amber volume) on a collector's stand with its plate and rivets; t
 are dim outlines. Tap one to see what it is and when it was found; the ones still hidden say
 how to find them. A save from before them finds the ones it already earned, all at once.
 
-Main quests track their progress three ways: a **percentage** slider, a **day streak** (one check-in a
-day; missing a day starts it over), or a **Caps goal**: the bar follows the wallet by itself (`1.50 / 5 CAPS`)
-up to the target. A quest saved before Caps goals existed whose objective is a Caps amount ("Obtain 5
-Caps") switches to one automatically, once. A percentage or Caps quest at 100% never completes by
+Main quests track their progress four ways: a **percentage** slider, a **day streak** (one check-in a
+day; missing a day starts it over), a **Caps goal**: the bar follows the wallet by itself (`1.50 / 5 CAPS`)
+up to the target, or **Places to reveal**: the bar follows the cities and regions on your MAP, anywhere
+or in one country (`2 / 5 PLACES`, "Follows your MAP, in Morocco"); a place removed counts no more until
+the quest is done. A quest saved before Caps goals existed whose objective is a Caps amount ("Obtain 5
+Caps") switches to one automatically, once. A percentage, Caps or Places quest at 100% never completes by
 itself: a **COMPLETE QUEST · +XP** button appears, and its tap pays the reward. A slip of the finger on
 the slider, or a typo in the wallet, pays nothing (slide back, or fix the wallet, and the button goes).
 A streak quest completes with the check-in that reaches its target.
@@ -189,7 +215,8 @@ vendor/maplibre/    MapLibre GL JS 6.11.2, the map library (licence: vendor/mapl
 vendor/three/       Three.js r186, only the parts ITEMS uses (licence: vendor/three/LICENSE)
 js/events.js        user actions
 js/main.js          startup
-sw.js               service worker: offline use (network first for the app, so updates show right away)
+sw.js               service worker: opens at once from the saved copy (cache first, one whole version at a
+                    time, stamped by tools/stamp-sw.js), updates put in when the app goes to the background
 manifest.webmanifest name, colours and icons (icons/) for installing on a phone
 images/vaultboy/    the Vault Boy walking on the level gauge (the hand on his hip ahead, the thumb behind):
                     the original one (images/mascot-parts.png) for
@@ -212,7 +239,8 @@ tools/              build-map-data.js, which makes data/ (see "Map data"); build
                     vaultboy-parts.py (amber + parts for the five outfits), vaultboy-walk.py (an outfit's
                     drawn walk from a sheet of poses) and vaultboy-moves.py (his walk on the level gauge,
                     worked out from where his boots go), the same for the Vault Boy; perf-check.js,
-                    how hard the app works on a phone (opening, each tab sitting still: see HANDOFF)
+                    how hard the app works on a phone (opening, each tab sitting still: see HANDOFF);
+                    stamp-sw.js, which writes the app's version (a hash of its files) into sw.js
 fonts/              the two terminal fonts, VT323 and IBM Plex Mono (licence: fonts/OFL.txt)
 api/analyze.js      optional serverless AI function (not used on GitHub Pages, see below)
 tests/              automated tests (see "Run the tests")
@@ -236,10 +264,16 @@ Open the site once while online, then:
 - **iPhone (Safari):** Share → **Add to Home Screen**.
 - **Android (Chrome):** menu ⋮ → **Install app** (or **Add to Home screen**).
 
-It opens full screen like an app and keeps working without a connection. Updates still arrive
-normally: while online the app loads from GitHub Pages like any website (checked against the server
-on every open, so a new version shows up the next time you open it), and the copy saved on the phone
-is only used when there's no connection. Nothing needs to change in `sw.js` when you update the app.
+It opens full screen like an app, **at once**: from the copy saved on the phone, without waiting for
+the network (on a 1.5 s connection: about 80 ms instead of 4.5 s), and the same with no connection.
+Updates: each open asks GitHub Pages, quietly, whether there's a new version (and again when the app
+comes back to the screen after half an hour). A new version downloads whole in the background, then
+waits; it's put in when you leave the app (your changes saved first), so the next time you look,
+it's there. If the app opens with one already waiting and you haven't touched anything yet, it's put
+in right away. Old and new files are never mixed, and an older version can never save over data a
+newer one wrote (it stops and shows a "Reopen" banner instead).
+After changing any app file, run `node tools/stamp-sw.js`: it writes the new version into `sw.js`
+(a hash of the files), and the tests fail until you do.
 The terminal fonts are part of the app (`fonts/`), so they work offline from the very first open and
 nothing is loaded from Google.
 
@@ -252,7 +286,9 @@ in the app to bring it over.
 The **⚙** in the topbar (beside the date) opens Settings, over the app: **Display** (3D tilt, the
 power-on screen and its RobCo boot), **Morning** (Check-in first: the tabs that wait for the day's
 check-in, on this device), **Sound** (sound on/off, Custom sounds), **Data** (Export backup
-= RadAway, with the last backup's date; Import backup; **Add from the old terminal**: from a backup of
+= RadAway, with the last backup's date; Import backup (before anything is replaced, it shows the backup
+next to this phone: level, XP, check-ins, urges, when each was last used, and warns when the backup is
+older or would lose XP, check-ins, urges, journal entries or places); **Add from the old terminal**: from a backup of
 your in-Claude version, it adds only its VITALS check-ins, chem-free streak, urges, training and the
 daily / side quests not here yet, after saying what (adding the same file twice adds nothing); Reset
 progress, which asks first; holotapes and
@@ -292,7 +328,7 @@ the boot sound plays on the first tap). The phone's own volume and silent switch
 
 **RobCo boot** (`js/boot.js`): the first power-on of the day, the terminal then types its startup
 letter by letter, about 2.5 seconds: the RobCo logon, then your real status (level and XP, quests,
-today's dailies, a streak quest's day, S.P.E.C.I.A.L. points waiting, rads and the last backup) and
+today's dailies, a streak quest's day, the last 7 days, S.P.E.C.I.A.L. points waiting, rads and the last backup) and
 the weather outside. A tap shows it all at once; a second tap (or the end) opens the app. Not with
 Power-on off, nor with Reduce Motion.
 
@@ -300,7 +336,8 @@ Power-on off, nor with Reduce Motion.
 tap reads it the Pip-Boy way ("RAD-STORM INCOMING — SEEK SHELTER" when it rains, "NUCLEAR WINTER
 CONDITIONS" in snow, "FOG BANK — WATCH FOR FERAL GHOULS"...). From [Open-Meteo](https://open-meteo.com)
 (free, no key, CC BY 4.0, credited in Settings), asked at most every 30 minutes, for Montréal only
-(never your position), and kept on the phone for offline.
+(never your position), and kept on the phone for offline for 3 hours; an older reading isn't shown
+(the boot says NO SIGNAL) rather than pass for the weather now.
 
 ### Custom sounds (your own clips)
 

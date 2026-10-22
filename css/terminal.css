@@ -424,6 +424,10 @@ button{ cursor:pointer; }
   max-width:calc(100vw - 32px); text-align:center;
   animation:toastUp 1.4s ease-out forwards;
 }
+.stale-banner{ position:fixed; left:12px; right:12px; bottom:calc(12px + env(safe-area-inset-bottom)); z-index:60; display:flex; align-items:center; gap:10px;
+  padding:10px 12px; background:var(--bg); border:1px solid var(--danger); color:var(--danger); font-size:0.8rem; line-height:1.4; }
+.stale-banner span{ flex:1; }
+.stale-banner button{ min-height:36px; padding:0 12px; background:transparent; border:1px solid var(--danger); color:var(--danger); font:inherit; }
 .xp-toast.save-warning{ border-color:var(--danger); color:var(--danger); animation-duration:2.6s; }
 .levelup-banner{
   background:var(--panel-alt); border:1px solid var(--amber); color:var(--amber);
@@ -1383,6 +1387,9 @@ button{ cursor:pointer; }
 .log-xp{ font-size:0.75rem; color:var(--amber); margin-top:2px; }
 
 .reset-warning{ color:var(--danger); }
+/* A backup about to replace everything: it, then this phone, one line each (events.js importQuestion). */
+.import-compare{ display:block; flex-basis:100%; font-size:0.74rem; line-height:1.5; color:var(--text-dim); }
+.import-line{ display:block; }
 
 /* ---------- settings (index.html #settings, js/events.js) ----------
    Over the app, under the toasts (so a backup's RadAway shows) and under
@@ -1591,6 +1598,7 @@ canvas.item-model{
 .vital-row{ display:grid; grid-template-columns:5.2em 1fr 1.8em; gap:8px; align-items:center; padding:5px 0; font-size:0.8rem; }
 .vital-row input[type="range"]{ width:100%; min-height:30px; accent-color:var(--phosphor); }
 .vital-val{ text-align:right; color:var(--amber); }
+.vital-scale{ grid-column:2; display:flex; justify-content:space-between; gap:8px; margin-top:-8px; font-size:0.62rem; color:var(--text-dim); }
 .count-row{
   display:flex; align-items:center; justify-content:space-between; gap:8px;
   padding:7px 0; font-size:0.8rem; border-top:1px solid var(--line);
@@ -1644,6 +1652,32 @@ canvas.item-model{
 .vital-sub.reading{ color:var(--phosphor); margin:8px 0 4px; }
 .reading .inline-go{ padding:4px 10px; margin-left:4px; font-size:0.7rem; min-height:32px; }
 .urge-angle{ border-left:2px solid var(--amber-dim); padding:2px 0 2px 10px; margin:10px 0 0; }
+/* What's noted while the urge timer runs (vitals.js urgeDetailsHtml): how strong, what set it off,
+   what's being done (the player's own ways); chips toggle (aria-pressed), 36px high at least. */
+.urge-details{ margin-top:12px; padding-top:8px; border-top:1px solid var(--line); }
+.urge-details .vital-row input[type="range"]{ accent-color:var(--amber); }
+.urge-ask{ font-size:0.74rem; color:var(--text-dim); margin:10px 0 6px; letter-spacing:0.03em; }
+.urge-chips{ display:flex; flex-wrap:wrap; gap:6px; }
+.chip{
+  border:1px solid var(--line); border-radius:14px; background:var(--bg); color:var(--text-dim);
+  padding:6px 11px; min-height:36px; font-size:0.74rem; line-height:1.2;
+}
+.chip[aria-pressed="true"]{ border-color:var(--amber); color:var(--amber); box-shadow:0 0 6px rgba(255,154,46,0.25); }
+.chip.add{ border-style:dashed; color:var(--phosphor); }
+.chip.removable{ border-color:var(--danger); color:var(--danger); }
+.chip.quiet{ border-color:transparent; text-decoration:underline; }
+.cope-add .name-input{ flex:1 1 160px; }
+/* After an urge is logged: one optional line; the patterns; the last urges. */
+.urge-reflect{ border:1px solid var(--amber-dim); border-radius:3px; padding:8px 10px; margin:6px 0 10px; }
+.urge-reflect .urge-tip{ margin-top:0; }
+.urge-reflect .name-input{ flex:1 1 180px; }
+.urge-patterns{ border-left:2px solid var(--phosphor-dim); padding-left:10px; margin:10px 0 0; }
+.urge-patterns .reading{ margin:2px 0; }
+.urge-history{ list-style:none; margin:8px 0 0; padding:0; font-size:0.74rem; line-height:1.45; }
+.urge-history li{ display:flex; align-items:flex-start; gap:8px; padding:5px 0; border-top:1px solid var(--line); color:var(--phosphor); }
+.urge-history-text{ flex:1; min-width:0; overflow-wrap:anywhere; }
+.urge-history li.lapsed{ color:var(--text-dim); }
+.urge-history-note{ display:block; color:var(--text-dim); font-style:italic; }
 .urge-said{ font-size:0.84rem; line-height:1.45; margin:0; }
 .next-step{
   display:flex; align-items:center; justify-content:space-between; gap:10px;

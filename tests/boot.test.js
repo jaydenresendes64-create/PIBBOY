@@ -35,6 +35,23 @@ test('weather: Open-Meteo\'s answer read, and anything else refused', () => {
   assert.match(W.requestUrl(), /^https:\/\/api\.open-meteo\.com\/v1\/forecast\?latitude=45\.5017&longitude=-73\.5673&current=temperature_2m,weather_code,is_day/);
 });
 
+test('weather: a kept reading stands in while recent (offline, or the server failing); an older one isn\'t the weather now', async () => {
+  const a = loadApp({ files: FILES.boot });
+  const w = a.ST.weather, t0 = new Date('2026-10-22T09:00:00').getTime();
+  a.setNow(t0);
+  a.context.localStorage.setItem('status_terminal_weather', JSON.stringify({ temp: 14, code: 61, isDay: true, at: t0 }));
+  a.setNow(t0 + 60 * 60000);                        // an hour later: asked again, the server fails (no network here)
+  assert.equal((await w.get()).temp, 14);
+  assert.equal(w.current().temp, 14);
+  assert.equal(a.elements['weather-btn'].hidden, false);
+  a.setNow(t0 + w.STALE_MS);                        // three hours: no weather rather than an old one
+  assert.equal(w.current(), null);
+  assert.equal(await w.get(), null);
+  assert.equal(a.elements['weather-btn'].hidden, true);
+  a.ST.app.state = a.ST.defaultState();
+  assert.match(a.ST.boot.lines(a.ST.app.state, w.current()).join('\n'), /WEATHER\.+ NO SIGNAL/);
+});
+
 test('boot: the logon, then MALIK\'s real status, the rads and the weather', () => {
   const s = fresh();
   s.level = 7; s.xp = 450; s.xpToNext = 3000;

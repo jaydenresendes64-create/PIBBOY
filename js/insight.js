@@ -175,7 +175,7 @@
       }
     }
     // Urges ridden out, this week and the one before (the log's days are calendar days).
-    var log = (app.state.urges && app.state.urges.log) || [], now = dayNumber(ST.todayStr());
+    var log = ((app.state.urges && app.state.urges.log) || []).filter(ridden), now = dayNumber(ST.todayStr());
     var thisWeek = 0, lastWeek = 0;
     log.forEach(function(u){
       var d = now - dayNumber(u.date);
@@ -270,9 +270,55 @@
 
   // ---------- the urge decoder ----------
   var NEED_WORDS = {HUNGRY:'hungry', ANGRY:'angry', LONELY:'lonely', TIRED:'tired', NONE:'none of these'};
+  var PATTERN_MIN = 3;                // urges logged (or noted the same way) before a pattern is told
+  function ridden(u){ return u.outcome!=='lapsed'; }
+  // What set an urge off (state.js URGE_TRIGGERS), in a sentence, and one
+  // practical thing to do about each, told once it's tapped.
+  var TRIGGER_WORDS = {STRESS:'stress', BOREDOM:'boredom', PEOPLE:'people around', ALONE:'being alone',
+    HABIT:'the usual time or place', SAW:'something you saw', GOOD:'celebrating', BODY:'pain or discomfort'};
+  var TRIGGER_TIPS = {
+    STRESS: 'Stress wants relief, not this. Two minutes of slow breathing, in for 4 and out for 6, takes the edge off sooner than you’d think.',
+    BOREDOM: 'Boredom wants something to happen. Give your hands a job for the next twenty minutes: dishes, a walk, anything with a start and an end.',
+    PEOPLE: 'The people around set this off. You can step out for a few minutes without explaining: fresh air, the bathroom, a call.',
+    ALONE: 'Being alone makes it louder. Send one message to someone, even just “hey”. A little company turns the volume down.',
+    HABIT: 'This is the usual time or place talking. Change one thing about the next twenty minutes: the room, the route, the order you do things in.',
+    SAW: 'Something you saw started it. Put it out of sight: close the app, turn the phone over, leave the room. Out of sight lowers the pull.',
+    GOOD: 'You’re celebrating. Mark it another way: food you love, a call to share the news, music up loud. A good day doesn’t have to cost tomorrow.',
+    BODY: 'Pain or discomfort is behind it. Look after that first: water, food, a stretch, rest, or what you were told to take for it.'
+  };
+  // Each of the player's ways, from the log: how often it was used (on this
+  // need, when given) and how many of those urges were ridden out.
+  function copeStats(log, copes, need){
+    return copes.map(function(c){
+      var used = log.filter(function(u){ return (!need || u.need===need) && (u.copes || []).indexOf(c.id)!==-1; });
+      return {id:c.id, name:c.name, uses:used.length, won:used.filter(ridden).length};
+    });
+  }
+  // The way most often ridden out with, used at least `least` times and
+  // more often won than not; null when none.
+  function bestCope(log, copes, need, least){
+    var best = null;
+    copeStats(log, copes, need).forEach(function(c){
+      if (c.uses<least || c.won*2<=c.uses) return;
+      if (!best || c.won/c.uses>best.won/best.uses || (c.won/c.uses===best.won/best.uses && c.uses>best.uses)) best = c;
+    });
+    return best;
+  }
   // What's known about this urge, from the state: never more.
+  // The latest line written after an urge ridden out (`log`): on this
+  // need, else on any. {text, ago, date}, or null.
+  function lastNote(log, need){
+    var noted = log.filter(function(x){ return x.note; });
+    var same = noted.filter(function(x){ return x.need===need; });
+    var x = same.length ? same[same.length-1] : noted[noted.length-1];
+    return x ? {text:String(x.note), ago:ST.daysSince(x.date), date:x.date} : null;
+  }
+  function triggerPast(all, trigger){
+    var same = all.filter(function(x){ return x.trigger===trigger; });
+    return same.length>=2 ? {of:same.length, won:same.filter(ridden).length} : null;
+  }
   function urgeContext(){
-    var s = app.state, u = s.urges || {}, a = u.active || null, log = u.log || [];
+    var s = app.state, u = s.urges || {}, a = u.active || null, all = u.log || [], log = all.filter(ridden), copes = u.copes || [];
     var e = ST.vitalsToday(false), checkin = e && e.logged ? e : null;
     var need = a ? a.need : null;
     var same = need ? log.filter(function(x){ return x.need===need; }) : [];
@@ -294,7 +340,13 @@
         return d!==null && d>0 ? {id:x.id, name:x.name, day:d, done:ST.cleanFullDays(x.id), next:ST.nextCleanMilestone(x.id), best:ST.cleanBest(x.id)} : null;
       }).filter(Boolean),
       lapseToday: ST.lapsedToday ? ST.lapsedToday() : lapses.length>0 && lapses[lapses.length-1]===ST.todayStr(),
-      seed: log.length + (a ? Math.floor(num(a.start)/60000) : dayNumber(ST.todayStr()))
+      // The player's way most often ridden out with: on this need (2 tries), else on any (3).
+      cope: need ? (bestCope(all, copes, need, 2) || bestCope(all, copes, null, PATTERN_MIN)) : null,
+      trigger: a && a.trigger ? a.trigger : '',
+      // The urges set off the same way before (2 at least): how many were ridden out.
+      triggerPast: a && a.trigger ? triggerPast(all, a.trigger) : null,
+      note: need ? lastNote(log, need) : null,
+      seed: all.length + (a ? Math.floor(num(a.start)/60000) : dayNumber(ST.todayStr()))
     };
   }
 
@@ -369,6 +421,14 @@
       if (c.hunger>=7 && need!=='HUNGRY') out.push({style:'DECODER', id:'ctx-hunger', text:'Hunger was '+c.hunger+' at check-in. Have you eaten since?'});
       if (c.tension>=7 && need!=='ANGRY') out.push({style:'DECODER', id:'ctx-tension', text:'Tension was '+c.tension+' at check-in. Is this urge some of that tension looking for a way out?'});
     }
+    if (ctx.cope) out.push({style:'STRATEGY', id:'ctx-cope', text:'“'+ctx.cope.name+'”: you rode it out '+ctx.cope.won+' of the '+
+      plural(ctx.cope.uses, 'time')+' you used it. Worth a go now?'});
+    if (ctx.trigger && TRIGGER_TIPS[ctx.trigger]){
+      out.push({style:'STRATEGY', id:'ctx-trigger', text:TRIGGER_TIPS[ctx.trigger]});
+      if (ctx.triggerPast) out.push({style:'REALITY CHECK', id:'ctx-trigger-past', text:'Urges set off by '+TRIGGER_WORDS[ctx.trigger]+' before: '+
+        (ctx.triggerPast.won===ctx.triggerPast.of ? 'all '+ctx.triggerPast.of : ctx.triggerPast.won+' of '+ctx.triggerPast.of)+' ridden out.'});
+    }
+    if (ctx.note) out.push({style:'YOUR WORDS', id:'ctx-note', text:'After an urge you rode out '+agoText(ctx.note.ago, ctx.note.date)+', you wrote: “'+ctx.note.text+'”'});
     if (ctx.rounds>=2) out.push({style:'DIRECT', id:'ctx-round', text:pick([
       'Round '+ctx.rounds+'. Still here after twenty minutes is information, not failure. Change something this time: room, task, company.',
       'Round '+ctx.rounds+'. A longer urge still passes. Do the next twenty somewhere different.'], ctx.seed)});
@@ -399,6 +459,53 @@
     // Once each.
     var seen = {};
     return out.filter(function(m){ if (seen[m.text]) return false; seen[m.text] = true; return true; });
+  }
+
+  // What the decoder's own log shows, once there's enough of it: counted,
+  // never a cause. [{style:'PATTERN', id, text}], the most useful first, at
+  // most 4: the way most often ridden out with, what most often set urges
+  // off (and how those ended), how the strong ones ended next to the others,
+  // the time of day most come at, the intensity lately, how they ended.
+  var STRONG = 7;                     // rated 7 or more: a strong urge
+  var DAY_PARTS = [{name:'morning', from:4, to:12}, {name:'afternoon', from:12, to:17}, {name:'evening', from:17, to:22}, {name:'night', from:22, to:28}];
+  function urgePatterns(){
+    var u = app.state.urges || {}, log = u.log || [], out = [];
+    if (log.length<PATTERN_MIN) return out;
+    var cope = bestCope(log, u.copes || [], null, PATTERN_MIN);
+    if (cope) out.push({id:'pat-cope', text:'“'+cope.name+'”: ridden out '+cope.won+' of the '+plural(cope.uses, 'time')+' you used it.'});
+    var counts = {}, noted = 0, top = null;
+    log.forEach(function(x){ if (x.trigger){ counts[x.trigger] = (counts[x.trigger] || 0) + 1; noted++; } });
+    Object.keys(counts).forEach(function(k){ if (!top || counts[k]>counts[top]) top = k; });
+    if (top && counts[top]>=PATTERN_MIN){
+      var topWon = log.filter(function(x){ return x.trigger===top && ridden(x); }).length;
+      out.push({id:'pat-trigger', text:'Most often set off by: '+(TRIGGER_WORDS[top] || top)+' ('+counts[top]+' of '+noted+' noted); '+
+        (topWon===counts[top] ? 'all' : topWon+' of those')+' ridden out.'});
+    }
+    // Rated STRONG or more next to the rest, 3 of each at least, told when they differ by a quarter.
+    var strong = log.filter(function(x){ return x.intensity>=STRONG; }), milder = log.filter(function(x){ return x.intensity>0 && x.intensity<STRONG; });
+    if (strong.length>=PATTERN_MIN && milder.length>=PATTERN_MIN){
+      var sw = strong.filter(ridden).length, mw = milder.filter(ridden).length;
+      if (Math.abs(sw/strong.length - mw/milder.length)>=0.25) out.push({id:'pat-strong', text:'Rated '+STRONG+' or more: '+sw+' of '+strong.length+
+        ' ridden out. Under '+STRONG+': '+mw+' of '+milder.length+'.'});
+    }
+    var timed = log.filter(function(x){ return x.hour>=0; });
+    if (timed.length>=5){
+      var parts = DAY_PARTS.map(function(p){
+        return {name:p.name, n:timed.filter(function(x){ var h = x.hour<4 ? x.hour+24 : x.hour; return h>=p.from && h<p.to; }).length};
+      }).sort(function(a, b){ return b.n-a.n; });
+      if (parts[0].n*10>=timed.length*4) out.push({id:'pat-time', text:'Most come in the '+parts[0].name+' ('+parts[0].n+' of '+timed.length+').'});
+    }
+    var rated = log.filter(function(x){ return x.intensity>0; }).slice(-10);
+    if (rated.length>=6){
+      var half = Math.floor(rated.length/2), avg = function(l){ return l.reduce(function(t, x){ return t+x.intensity; }, 0)/l.length; };
+      var before = avg(rated.slice(0, half)), lately = avg(rated.slice(half));
+      if (Math.abs(lately-before)>=1) out.push({id:'pat-intensity', text:'Intensity lately: '+lately.toFixed(1)+' on average, '+
+        (lately<before ? 'down' : 'up')+' from '+before.toFixed(1)+'.'});
+    }
+    var won = log.filter(ridden).length;
+    out.push({id:'pat-outcome', text:won===log.length ? 'All '+log.length+' urges decoded here were ridden out.' :
+      won+' of the '+log.length+' urges decoded here were ridden out.'});
+    return out.slice(0, 4).map(function(p){ return {style:'PATTERN', id:p.id, text:p.text}; });
   }
 
   // At zero, before "Rode it out / Still strong": one question to look back with.
@@ -439,7 +546,7 @@
 
   ST.insight = {
     readings: readings, urgeContext: urgeContext, urgeMessages: urgeMessages,
-    urgeReflection: urgeReflection, resetLine: resetLine, urgeHint: urgeHint,
+    urgeReflection: urgeReflection, resetLine: resetLine, urgeHint: urgeHint, urgePatterns: urgePatterns,
     LINES: LINES
   };
 })(window.StatusTerminal);

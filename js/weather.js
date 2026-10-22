@@ -7,8 +7,9 @@
  * no account, CC BY 4.0 (credited in Settings). Asked for HOME (Montréal)
  * only, never the phone's position, at most once every FRESH_MS; the last
  * answer is kept on this device (localStorage), so it shows at once, and
- * offline the last one known is used. It's decoration: without it, nothing
- * else changes.
+ * offline the last one known is used while it's recent (STALE_MS): an older
+ * reading isn't shown as the weather now. It's decoration: without it,
+ * nothing else changes.
  *
  * The helpers at the top don't touch the page, so the tests run them in Node.
  */
@@ -19,6 +20,7 @@
   var API = 'https://api.open-meteo.com/v1/forecast';
   var CACHE_KEY = 'status_terminal_weather';
   var FRESH_MS = 30*60*1000;          // asked again after half an hour
+  var STALE_MS = 3*60*60*1000;        // a kept reading older than this isn't the weather now
   var TIMEOUT_MS = 8000;
 
   // ---------- reading it ----------
@@ -64,14 +66,16 @@
     }catch(e){ return null; }
   }
   function keep(w){ try{ localStorage.setItem(CACHE_KEY, JSON.stringify(w)); }catch(e){} }
+  function recent(w){ return w && Date.now()-w.at < STALE_MS ? w : null; }
   // Resolves with the weather: the kept one while fresh, else asked (the
-  // kept one, however old, when that fails), or null.
+  // kept one while recent, when that fails), or null.
   var asking = null;
   function get(){
     var known = cached();
     if (known && Date.now()-known.at < FRESH_MS) return Promise.resolve(known);
     if (asking) return asking;
-    if (typeof fetch!=='function' || navigator.onLine===false) return Promise.resolve(known);
+    known = recent(known);
+    if (typeof fetch!=='function' || navigator.onLine===false){ show(known); return Promise.resolve(known); }
     var abort = typeof AbortController==='function' ? new AbortController() : null;
     var timer = setTimeout(function(){ if (abort) abort.abort(); }, TIMEOUT_MS);
     asking = fetch(requestUrl(), {signal:abort ? abort.signal : undefined, credentials:'omit'}).then(function(r){
@@ -88,7 +92,7 @@
     });
     return asking;
   }
-  function current(){ return cached(); }
+  function current(){ return recent(cached()); }
 
   // ---------- on the screen ----------
   // The topbar's weather; a tap reads the alert.
@@ -102,18 +106,18 @@
     btn.setAttribute('aria-label', 'Weather in Montréal: '+w.temp+'°C, '+d.text.toLowerCase()+'. '+d.alert);
   }
   function tell(){
-    var w = cached();
+    var w = current();
     if (w && ST.render) ST.render.showNotice(line(w)+' — '+describe(w.code, w.isDay).alert);
   }
   function init(){
-    show(cached());
+    show(current());
     get();
     // Coming back to the app later in the day: fresh weather.
     document.addEventListener('visibilitychange', function(){ if (document.visibilityState==='visible') get(); });
   }
 
   ST.weather = {
-    HOME: HOME, FRESH_MS: FRESH_MS,
+    HOME: HOME, FRESH_MS: FRESH_MS, STALE_MS: STALE_MS,
     describe: describe, fromAnswer: fromAnswer, short: short, line: line, requestUrl: requestUrl,
     get: get, current: current, init: init, tell: tell
   };
