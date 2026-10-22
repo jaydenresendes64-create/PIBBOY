@@ -4,6 +4,7 @@ Only results actually run are listed. Command: `node --test` (Node's built-in ru
 
 | Date | Scope | Result |
 |------|-------|--------|
+| 2026-10-22 | Chromium 320/360/390 px: places quest form with a long country | fits, no errors |
 | 2026-10-22 | Full suite with `tests/undo.test.js` | 365 pass, 0 fail |
 | 2026-10-22 | Chromium 360 px: Reset → Undo last replace → reload | data back and kept, no page errors |
 | 2026-10-22 | Full suite after instant open | 363 pass, 0 fail |

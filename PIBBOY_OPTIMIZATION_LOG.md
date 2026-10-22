@@ -2,6 +2,12 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-22 — Places quest form fits narrow phones
+- The country list took the width of its longest name: at 320–390 px the row ran past the form
+  (select to 460 px, clipped). `css/terminal.css`: the places row takes the form's width, the list
+  what's left (ellipsis). Chromium 320/360/390 px: row and list end at the form's edge; no errors.
+  `node --test` → 365 pass, 0 fail.
+
 ## 2026-10-22 — Undo last replace (plan task 22); audit notes
 - The two destructive operations (Reset progress, Import → Yes, replace) and the old-terminal merge
   had no way back without an exported file. `js/storage.js` `keepPrevious`/`readPrevious`;
