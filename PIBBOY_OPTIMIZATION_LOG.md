@@ -2,6 +2,13 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-22 — Check-in levels defined (plan task 11)
+- The six sliders shared one rule ("0 is none, 10 is maximum"): "mood 0" or "sleep 6" had no stated
+  meaning. `js/vitals.js` `SCALE`: anchors under each slider (`.vital-scale`, `aria-describedby`),
+  read the way insight.js `LINES` reads them; the fine print says Sleep is last night. No data change.
+- Tests: `tests/vitals.test.js` asserts the anchors; `node --test` → 345 pass, 0 fail. Chromium at
+  320/360/390 px: no wrapping, no overlap with the slider, no sideways scroll, no page errors.
+
 ## 2026-10-22 — Review of the branch since the PR #38 merge
 - Read every app-code change of this campaign (state, vitals, insight, events, render, boot).
   One defect: "I gave in" and its Undo didn't redraw STATUS, so "Last 7 days" kept an old

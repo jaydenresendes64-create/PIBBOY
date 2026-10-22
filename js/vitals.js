@@ -40,6 +40,10 @@
 
   var el = ST.el, clamp = ST.clamp, escapeHtml = ST.escapeHtml, app = ST.app;
   var LABELS = {energy:'Energy', mood:'Mood', hunger:'Hunger', tension:'Tension', sleep:'Sleep', craving:'Craving'};
+  // What 0 and 10 mean on each level (insight.js LINES reads them the same
+  // way: low sleep, energy, mood; high hunger, tension, craving).
+  var SCALE = {energy:['drained', 'full'], mood:['very low', 'great'], hunger:['not hungry', 'starving'],
+    tension:['relaxed', 'very tense'], sleep:['awful night', 'great'], craving:['none', 'overwhelming']};
   var SHORT = {energy:'EN', mood:'MO', hunger:'HU', tension:'TE', sleep:'SL', craving:'CR'};
   // What to do first, for each need (the owner's words).
   var TIPS = {
@@ -463,8 +467,9 @@
       var v = e ? num(e[k]) : last ? clamp(Math.round(num(last[k])), 0, 10) : 5;
       html += '<div class="vital-row">'+
         '<label for="vr-'+k+'">'+LABELS[k]+'</label>'+
-        '<input type="range" class="vital-range" id="vr-'+k+'" data-key="'+k+'" min="0" max="10" step="1" value="'+v+'">'+
+        '<input type="range" class="vital-range" id="vr-'+k+'" data-key="'+k+'" min="0" max="10" step="1" value="'+v+'" aria-describedby="vs-'+k+'">'+
         '<span class="vital-val" id="vv-'+k+'">'+v+'</span>'+
+        '<span class="vital-scale" id="vs-'+k+'"><span>0 '+SCALE[k][0]+'</span><span>'+SCALE[k][1]+' 10</span></span>'+
       '</div>';
     });
     html += '<div class="count-row"><label for="pulse-input">Resting pulse, bpm</label>'+
@@ -476,7 +481,7 @@
           : '<button class="vital-btn hot" data-vital="vitals-log">Log check-in +'+ST.VITALS_XP+' XP</button>')+
       '</div>'+
       '<p class="vital-sub train-line">Trains '+trainText('INT')+'</p>'+
-      '<p class="vital-fine">0 is none, 10 is maximum. Take the pulse before getting up, counted over 60 seconds.</p>';
+      '<p class="vital-fine">Each level is how you are now; Sleep is how last night went. Take the pulse before getting up, counted over 60 seconds.</p>';
     return html;
   }
   function shown(){

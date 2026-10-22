@@ -1594,6 +1594,7 @@ canvas.item-model{
 .vital-row{ display:grid; grid-template-columns:5.2em 1fr 1.8em; gap:8px; align-items:center; padding:5px 0; font-size:0.8rem; }
 .vital-row input[type="range"]{ width:100%; min-height:30px; accent-color:var(--phosphor); }
 .vital-val{ text-align:right; color:var(--amber); }
+.vital-scale{ grid-column:2; display:flex; justify-content:space-between; gap:8px; margin-top:-8px; font-size:0.62rem; color:var(--text-dim); }
 .count-row{
   display:flex; align-items:center; justify-content:space-between; gap:8px;
   padding:7px 0; font-size:0.8rem; border-top:1px solid var(--line);

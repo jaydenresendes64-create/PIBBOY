@@ -15,7 +15,9 @@ skill points at once (a BOOK READ banner), and the book joins the list with the 
 the latest first. Removing a book from the list keeps what it gave.
 
 **VITALS** (its own tab, from your in-Claude version): the day's **check-in**: energy, mood, hunger,
-tension, sleep and craving from 0 to 10, the resting pulse, and two counters (RADS // type N and T).
+tension, sleep and craving from 0 to 10 (each slider says what its 0 and 10 mean: energy drained → full,
+mood very low → great, hunger not hungry → starving, tension relaxed → very tense, sleep is last night,
+awful → great, craving none → overwhelming), the resting pulse, and two counters (RADS // type N and T).
 **Log check-in** gives **+15 XP** once a day and trains Intelligence; what you change after it is
 kept. At the bottom, the last 7 entries with their averages. The **urge decoder**: name the real
 need (hungry, angry, lonely, tired, or none of these), read what to do first, and leave the room for a

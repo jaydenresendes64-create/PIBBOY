@@ -259,6 +259,11 @@ test('the streak card (on VITALS now): set the start, the day and the next miles
 test('VITALS: the sliders, the check-in button, the urge decoder\'s steps and the table', () => {
   const empty = screens(() => {}).vitals;
   assert.equal((empty.match(/class="vital-range"/g) || []).length, 6);
+  // each level says what its 0 and 10 mean, read out with the slider
+  assert.equal((empty.match(/aria-describedby="vs-\w+"/g) || []).length, 6);
+  assert.match(empty, /id="vr-sleep"[^>]*aria-describedby="vs-sleep"[\s\S]*<span class="vital-scale" id="vs-sleep"><span>0 awful night<\/span><span>great 10<\/span>/);
+  assert.match(empty, /id="vs-craving"><span>0 none<\/span><span>overwhelming 10<\/span>/);
+  assert.match(empty, /Each level is how you are now; Sleep is how last night went\./);
   assert.match(empty, /data-vital="vitals-log">Log check-in \+15 XP</);
   assert.match(empty, /data-vital="urge-start" data-key="HUNGRY"/);
   assert.match(empty, /href="tel:18002652626"/);
