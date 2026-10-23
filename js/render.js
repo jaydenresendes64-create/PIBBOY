@@ -447,6 +447,17 @@
     return '<svg class="bobble-svg" viewBox="0 0 48 60" aria-hidden="true">'+
       '<g class="bobble-top">'+(TROPHIES[id] || '')+'</g>'+TROPHY_STAND+'</svg>';
   }
+  // Where a long name may break on the shelf's narrow cards: a soft hyphen (shown only when the
+  // word wraps), or after a dot. Without them "Specialist" broke as "Specialis/t" (375-430 px).
+  // The name itself is unchanged: the button's label, the banners and the data keep it whole.
+  var SHELF_BREAKS = {Wasteland:'Waste\u00ADland', Capitalist:'Capital\u00ADist', Globetrotter:'Globe\u00ADtrotter',
+    Specialist:'Special\u00ADist', 'S.P.E.C.I.A.L.ist':'S.P.E.C.\u200BI.A.L.\u200Bist', Collector:'Col\u00ADlector',
+    Archivist:'Archiv\u00ADist'};
+  function shelfName(name){
+    return String(name).split(' ').map(function(w){
+      return Object.prototype.hasOwnProperty.call(SHELF_BREAKS, w) ? SHELF_BREAKS[w] : w;
+    }).join(' ');
+  }
   function bobbleheadsHtml(){
     var s = app.state, all = ST.BOBBLEHEADS;
     var got = all.filter(function(b){ return s.bobbleheads && s.bobbleheads[b.id]; }).length;
@@ -455,7 +466,7 @@
       var date = s.bobbleheads && s.bobbleheads[b.id];
       html += '<button class="bobble'+(date ? ' found' : '')+(app.bobbleOpen===b.id ? ' open' : '')+'" data-action="bobble" data-key="'+b.id+'" '+
         'aria-label="'+escapeHtml(date ? b.name+': found' : 'Bobblehead not found yet')+'" aria-expanded="'+(app.bobbleOpen===b.id)+'">'+
-        bobbleSvg(b.id)+'<span class="bobble-name">'+escapeHtml(date ? b.name : '?')+'</span></button>';
+        bobbleSvg(b.id)+'<span class="bobble-name">'+escapeHtml(date ? shelfName(b.name) : '?')+'</span></button>';
     });
     html += '</div>';
     var open = app.bobbleOpen && all.filter(function(b){ return b.id===app.bobbleOpen; })[0];

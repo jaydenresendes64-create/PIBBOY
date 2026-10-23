@@ -900,7 +900,10 @@ input[type=range]::-moz-range-thumb{
 .bobble-svg .g{ stroke:var(--glint); stroke-width:1.1; opacity:0.85; }
 .bobble-svg .hole{ fill:var(--bg); }
 .bobble:not(.found) .bobble-svg .g, .bobble:not(.found) .bobble-svg .f{ display:none; }   /* not found: an outline only */
-.bobble-name{ font-size:0.66rem; line-height:1.2; text-align:center; overflow-wrap:anywhere; color:var(--text-dim); }
+/* A name breaks between words, or where render.js allows it in a long one (a soft hyphen); a
+   word is cut anywhere else only when nothing else fits (break-word, not anywhere: with anywhere
+   "Specialist" broke as "Speciali/st" before its hyphen). */
+.bobble-name{ font-size:0.66rem; line-height:1.2; text-align:center; overflow-wrap:break-word; color:var(--text-dim); }
 .bobble.found{ border-color:var(--amber-dim); color:var(--amber); }
 .bobble.found .bobble-name{ color:inherit; }
 .bobble.found .bobble-svg{ opacity:1; filter:drop-shadow(0 0 4px rgba(255,154,46,0.55)); }

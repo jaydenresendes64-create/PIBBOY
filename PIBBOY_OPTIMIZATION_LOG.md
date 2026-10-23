@@ -2,6 +2,18 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — Bobblehead names no longer cut mid-word
+- Seen in screenshots with a year of data, then measured with all 16 found at 320–430px: long
+  names were cut anywhere ("Specialis/t", "S.P.E.C.I/.A.L.ist"): 7 of 16 at 375px (a common iPhone
+  width), 4 at 390, "Globetrotter" and "S.P.E.C.I.A.L.ist" at every width.
+- `js/render.js` `shelfName`: on the shelf only, a soft hyphen where a long word may break
+  (Waste-land, Capital-ist, Globe-trotter, Special-ist, Col-lector, Archiv-ist) and a break after a
+  dot in S.P.E.C.I.A.L.ist; the button's label, the banners and the data keep the name whole.
+  `css/terminal.css` `.bobble-name`: `overflow-wrap:break-word` instead of `anywhere` (with
+  anywhere the browser still broke "Speciali/st" before the hyphen).
+- Screenshots at 320, 375, 390 and 430px: every name breaks between words or at its hyphen.
+  Tests: `tests/bobbleheads.test.js` +1 (fails without the change); `node --test` → 391 pass.
+
 ## 2026-10-23 — Backup round trip with a year of data; the copied error list says the version
 - Checked, no change: a year of data through the real buttons in Chromium. Export gives a 575 KB
   file holding exactly the phone's data; on a fresh phone, Import shows the comparison in 90 ms
