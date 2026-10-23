@@ -2,6 +2,21 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — Settings → About shows the version (and a newer one waiting)
+- An update comes in when the app goes to the background, so nothing showed whether the new
+  version was in yet (the thing to check after a merge). `sw.js`: asked `{type:'VERSION'}`, it
+  answers `{version: VERSION}` on the port it was given. `js/main.js`: `ST.appVersion()` asks the
+  controlling worker (2 s at most) and adds whether a version waits. `js/events.js`: opening
+  Settings writes "Version 3b72f452d8b2", with " · a newer one is ready: it comes in when you leave
+  the app" while one waits, or "Version: no offline copy" without a service worker.
+  `index.html`: the line under About.
+- Chromium with the real service worker (a copy of the site, its sw.js really changed mid-test):
+  the installed version shown (= sw.js); after `update()` the newer one waits and the line says so;
+  after the app goes to the background it reloads on the newer one and shows its version; no page
+  error.
+- Tests: `tests/sw.test.js` +1 (the answer, nothing without a port, never puts a version in),
+  new `tests/version.test.js` (2); `node --test` → 389 pass, 0 fail.
+
 ## 2026-10-23 — The slider knob a finger's size
 - Re-reading the PR's diff before a merge: on an iPhone a slider moves only when its knob is
   grabbed, and iOS's own knob is ~28px; the amber one was 22px, so harder to catch on the six

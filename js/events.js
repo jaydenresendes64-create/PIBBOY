@@ -421,6 +421,7 @@
     box.scrollTop = 0;
     refreshUndo();
     renderErrors();
+    renderVersion();
     document.body.classList.add('modal-open');
     el('settings-btn').setAttribute('aria-expanded', 'true');
     el('settings-close').focus();
@@ -543,6 +544,19 @@
   }
   function doReset(){
     replaceState(ST.defaultState(), 'reset');
+  }
+
+  // ---------- the version, in Settings → About ----------
+  // The service worker's VERSION (a hash of the app's files, sw.js), and whether a newer one is
+  // ready: an update comes in when the app goes to the background (main.js watchUpdates).
+  function renderVersion(){
+    var line = el('app-version');
+    if (!line) return;
+    if (!ST.appVersion){ line.textContent = 'Version: no offline copy'; return; }
+    ST.appVersion().then(function(v){
+      line.textContent = !v ? 'Version: no offline copy' :
+        'Version '+v.version+(v.waiting ? ' · a newer one is ready: it comes in when you leave the app' : '');
+    });
   }
 
   // ---------- the app's errors (js/errors.js), in Settings → About ----------

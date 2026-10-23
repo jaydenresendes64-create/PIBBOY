@@ -166,6 +166,22 @@
       else location.reload();
     }, function(){ location.reload(); });
   };
+  // Which version runs, and whether a newer one waits to come in (Settings → About):
+  // {version, waiting}, or null without a service worker (opened from a file, blocked, the very
+  // first visit) or when it doesn't answer within 2 s.
+  ST.appVersion = function(){
+    var sw = navigator.serviceWorker, ctl = sw && sw.controller;
+    if (!ctl || typeof MessageChannel!=='function') return Promise.resolve(null);
+    return new Promise(function(resolve){
+      var channel = new MessageChannel(), timer = setTimeout(function(){ resolve(null); }, 2000);
+      channel.port1.onmessage = function(e){
+        clearTimeout(timer);
+        var v = e.data && e.data.version;
+        resolve(typeof v==='string' && v ? {version:v, waiting:!!(registration && registration.waiting)} : null);
+      };
+      ctl.postMessage({type:'VERSION'}, [channel.port2]);
+    });
+  };
   // Resolves once a version being downloaded is installed (or isn't), 20 s at most.
   function installed(reg){
     return new Promise(function(resolve){

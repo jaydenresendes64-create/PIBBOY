@@ -38,7 +38,7 @@
 'use strict';
 
 var CACHE_PREFIX = 'status-terminal-';
-var VERSION = 'e61ca5c6b2ac';                       // node tools/stamp-sw.js
+var VERSION = '3b72f452d8b2';                       // node tools/stamp-sw.js
 var CACHE = CACHE_PREFIX + VERSION;
 var DATA_CACHE = CACHE_PREFIX + 'data';             // kept across versions
 var TILE_CACHE = CACHE_PREFIX + 'vector-tiles';     // kept across versions
@@ -99,7 +99,10 @@ self.addEventListener('install', function(event){
 });
 
 self.addEventListener('message', function(event){
-  if (event.data && event.data.type==='SKIP_WAITING') self.skipWaiting();
+  var type = event.data && event.data.type;
+  if (type==='SKIP_WAITING') self.skipWaiting();
+  // Which version this is (Settings → About asks), answered on the port the page sent.
+  else if (type==='VERSION' && event.ports && event.ports[0]) event.ports[0].postMessage({version:VERSION});
 });
 
 self.addEventListener('activate', function(event){
