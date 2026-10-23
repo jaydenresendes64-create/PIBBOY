@@ -13,22 +13,13 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { usedPhone } = require('./helpers');
+const { usedPhone, seededRandom } = require('./helpers');
 
 const ROUNDS = Number(process.env.FUZZ_ROUNDS) || 400;
 const SEED = Number(process.env.FUZZ_SEED) || 20261023;
 const JUNK = [null, true, false, 0, -1, 2.5, -1e21, 1e21, '', 'x', '-3', '1e999', '2026-13-45',
   '<img src=x onerror=alert(1)>', [], [1, 'a', null], {}, { a: 1 }, 'REMOVE'];
 
-// mulberry32: small, seeded, the same numbers on every machine
-function random(seed) {
-  return function () {
-    seed = (seed + 0x6D2B79F5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 // Every place in the document a value sits: [path, ...].
 function places(doc, path, out) {
   if (doc && typeof doc === 'object') {
@@ -53,7 +44,7 @@ function damage(doc, rand) {
 test('a backup damaged at random places: imported without throwing, stable, and drawn with no NaN or undefined', () => {
   const { app, ST, s } = usedPhone();
   const backup = JSON.stringify(s);
-  const rand = random(SEED);
+  const rand = seededRandom(SEED);
   const screens = ['tab-status', 'tab-quests', 'tab-items', 'tab-log', 'tab-vitals'];
   let kept = 0;
   for (let round = 0; round < ROUNDS; round++) {

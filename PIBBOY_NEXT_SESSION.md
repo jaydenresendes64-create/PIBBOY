@@ -10,7 +10,8 @@
   a return key named for what Enter does, sliders drawn in amber (36px to grab),
   damaged backups show no "[object Object]".
   GitHub "test" check green. Waiting for the owner to merge; never merge it yourself.
-- `node --test`: 378 pass, 0 fail (a fuzz test damages a backup 400 ways: `tests/fuzz.test.js`).
+- `node --test`: 379 pass, 0 fail (`tests/fuzz.test.js` damages a backup 400 ways;
+  `tests/actions.test.js` plays 1,200 random actions and checks the numbers add up).
 - `sw.js` VERSION is a hash of the app files: after any app file change run `node tools/stamp-sw.js`
   (the tests fail otherwise). `DATA_SCHEMA` (js/state.js) is 1: raise it when a version saves fields
   an older one would drop.

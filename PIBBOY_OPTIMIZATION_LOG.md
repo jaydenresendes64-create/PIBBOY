@@ -2,6 +2,19 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — Random actions: the numbers always add up
+- New `tests/actions.test.js`: 1,200 actions picked at random from a fixed seed (check-ins, RADS,
+  dailies, quests and bonuses, urges won/given in/dropped with notes, trials, streaks and lapses,
+  books, journal, sales, perks, SPECIAL points, places), through the app's own functions with time
+  going by. After each: lifetime XP grew by exactly the history's new XP (every reward through
+  `award()`); level, XP and next threshold are what that XP gives (+400 a level); skills 0-100,
+  SPECIAL 1-10, points ≥ 0; no NaN or Infinity anywhere; every 25 actions the import gate takes the
+  state back unchanged. `seededRandom` shared in tests/helpers.js (fuzz uses it too).
+- Found nothing: 18,000 more actions over 6 seeds passed. Checked that it catches real bugs: a
+  planted extra XP point and a reward left out of the history both fail it at once. (Its skill-cap
+  check is a guard: no skill gets near 100 in a run; tests/rewards.test.js tests the cap.)
+- `node --test` → 379 pass, 0 fail. Test files only.
+
 ## 2026-10-23 — Damaged backups: a fuzz test, and no "[object Object]"
 - New `tests/fuzz.test.js`: the phone used every way (`usedPhone`, moved from
   tests/roundtrip.test.js to tests/helpers.js) is exported, damaged at 1 to 5 random places (junk
