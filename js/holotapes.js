@@ -274,7 +274,7 @@
         '<svg class="tape-icon" viewBox="0 0 32 22" aria-hidden="true"><rect x="1.5" y="1.5" width="29" height="19" rx="2"/>'+
           '<circle cx="10" cy="10" r="3.5"/><circle cx="22" cy="10" r="3.5"/><path d="M13.5 10h5M7 20l2-4h14l2 4"/></svg>'+
         '<div class="tape-text">'+
-          '<input autocomplete="off" class="tape-title" data-tape="title" data-id="'+attr(t.id)+'" value="'+escapeHtml(t.title)+'" maxlength="80" aria-label="Holotape name">'+
+          '<input autocomplete="off" enterkeyhint="done" class="tape-title" data-tape="title" data-id="'+attr(t.id)+'" value="'+escapeHtml(t.title)+'" maxlength="80" aria-label="Holotape name">'+
           '<span class="tape-meta">'+escapeHtml([ST.dateText(t.date), durationText(t.seconds)].filter(Boolean).join(' · '))+'</span>'+
           '<span class="tape-progress" aria-hidden="true"><i></i></span>'+
         '</div>'+

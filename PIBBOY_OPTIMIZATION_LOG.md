@@ -2,6 +2,18 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — The return key says what Enter does
+- The iPhone keyboard's return key said "return" in every text field, though Enter adds the quest,
+  item, book, trial or way, saves the note or the name. 20 text fields (js/render.js, map.js,
+  routes.js, trials.js, vitals.js, holotapes.js, bulk.js): `enterkeyhint="done"` ("OK" on a French
+  iPhone); a bulk line's fix `"search"` (Enter looks it up again), like the map search already.
+- Two fields where Enter did nothing: a new streak's name now starts it (what Start/Save does), a
+  route's name closes the keyboard like a place's (the name is kept as typed).
+- Tests: `tests/ownstreaks.test.js` +1 (Enter starts, then renames; fails without the handler);
+  `tests/mobile.test.js` scan: every text field names its return key; `node --test` → 375 pass,
+  0 fail. Chromium phone mode: Enter in the streak name starts "Focus" and closes the form; Enter in
+  a route's name keeps it and leaves the box; the fields on screen carry the hint; no page error.
+
 ## 2026-10-23 — The pressed look on iPhone
 - The tabs' "physical key" press (`.tab-btn:active`) and the trial counter's (`.trial-tap:active`)
   don't show in iOS Safari: it applies `:active` only when the page listens for touches (Apple's

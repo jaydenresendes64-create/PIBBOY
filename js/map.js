@@ -409,7 +409,7 @@
     var type = panel.type, p = P.findPlace(type, panel.id);
     var html = '<div class="place-card">'+
       '<div class="place-card-head"><span class="badge">'+{city:'CITY', region:'REGION', pin:'PIN'}[type]+'</span>'+
-        '<input autocomplete="off" type="text" id="place-name" class="place-name" maxlength="'+ST.PLACE_NAME_MAX+'" value="'+escapeHtml(p.name)+'" aria-label="Name"></div>'+
+        '<input autocomplete="off" enterkeyhint="done" type="text" id="place-name" class="place-name" maxlength="'+ST.PLACE_NAME_MAX+'" value="'+escapeHtml(p.name)+'" aria-label="Name"></div>'+
       '<div class="place-meta">'+escapeHtml([P.countryName(p.cc), p.date ? 'revealed '+dateText(p.date) : ''].filter(Boolean).join(' · '))+'</div>';
     if (type!=='region'){
       var min = type==='city' ? ST.CITY_RADIUS_MIN : ST.PIN_RADIUS_MIN, max = type==='city' ? ST.CITY_RADIUS_MAX : ST.PIN_RADIUS_MAX;
@@ -790,7 +790,7 @@
   function onKeyDown(e){
     if (e.key!=='Enter') return;
     if (e.target.id==='map-search'){ e.preventDefault(); if (results[0]) pickCity(results[0]); }
-    else if (e.target.id==='place-name'){ e.preventDefault(); e.target.blur(); }
+    else if (e.target.id==='place-name' || e.target.id==='route-name'){ e.preventDefault(); e.target.blur(); }
     else if (ST.bulk && ST.bulk.onEnter(e.target)) e.preventDefault();
   }
 

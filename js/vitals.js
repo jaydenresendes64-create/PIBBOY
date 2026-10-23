@@ -179,7 +179,7 @@
     var html = '<div class="vital-card streak-card own-streak"><div class="vital-head">'+(x ? escapeHtml(x.name) : 'New streak')+'</div>'+
       (x ? '' : '<p class="vital-sub">A name only you will see, and the first day of the run.</p>')+
       '<div class="vital-btns">'+
-        '<input type="text" class="date-input name-input" id="own-name" maxlength="'+ST.STREAK_NAME_MAX+'" autocomplete="off" placeholder="Name" aria-label="Streak name" value="'+(x ? escapeHtml(x.name) : '')+'">'+
+        '<input type="text" class="date-input name-input" id="own-name" maxlength="'+ST.STREAK_NAME_MAX+'" autocomplete="off" enterkeyhint="done" placeholder="Name" aria-label="Streak name" value="'+(x ? escapeHtml(x.name) : '')+'">'+
         '<input type="date" class="date-input" id="own-date" max="'+todayBox()+'" value="'+(boxDate(x && x.cleanSince) || todayBox())+'" aria-label="First day of the run">'+
       '</div>';
     if (x && asking(x.id, 'remove')){
@@ -220,7 +220,7 @@
         (copes.length ? '<button class="chip quiet" data-vital="cope-edit">'+(editing ? 'Done' : 'Edit')+'</button>' : '')+
       '</div>'+
       (app.urgeCopeAdd && !editing ? '<div class="vital-btns cope-add"><input type="text" class="date-input name-input" id="cope-name" maxlength="'+ST.COPE_NAME_MAX+'" '+
-          'autocomplete="off" placeholder="A way that works for you" aria-label="A new way to ride out an urge">'+
+          'autocomplete="off" enterkeyhint="done" placeholder="A way that works for you" aria-label="A new way to ride out an urge">'+
         '<button class="vital-btn" data-vital="cope-add">Add</button><button class="vital-btn quiet" data-vital="cope-add-close">Cancel</button></div>' : '')+
     '</div>';
   }
@@ -247,7 +247,7 @@
     return '<div class="urge-reflect">'+
       '<p class="urge-tip">'+(past ? escapeHtml(urgeLine(entry))+'. One line about it? (empty removes it)' :
         (entry.outcome==='won' ? 'Ridden out. ' : 'Logged. It’s information, not a verdict. ')+'One line for next time? (optional)')+'</p>'+
-      '<div class="vital-btns"><input type="text" class="date-input name-input" id="urge-note" maxlength="'+ST.URGE_NOTE_MAX+'" autocomplete="off" '+
+      '<div class="vital-btns"><input type="text" class="date-input name-input" id="urge-note" maxlength="'+ST.URGE_NOTE_MAX+'" autocomplete="off" enterkeyhint="done" '+
         'value="'+attr(entry.note || '')+'" placeholder="'+attr(ask ? ask.text : 'What helped? What set it off?')+'" aria-label="A note about this urge">'+
       '<button class="vital-btn" data-vital="urge-note-save">Save</button><button class="vital-btn quiet" data-vital="urge-note-skip">'+(past ? 'Cancel' : 'Skip')+'</button></div>'+
       (entry.outcome==='lapsed' && app.urgeUndo && app.urgeUndo.t===entry.t ?
@@ -900,6 +900,10 @@
     if (e.key!=='Enter' || !app.state) return;
     if (e.target.id==='cope-name'){ e.preventDefault(); addCope(); }
     else if (e.target.id==='urge-note'){ e.preventDefault(); ACTIONS['urge-note-save'](); }
+    else if (e.target.id==='own-name'){
+      var start = document.querySelector('[data-vital="own-save"]');
+      if (start){ e.preventDefault(); ACTIONS['own-save'](start, start.getAttribute('data-key')); }
+    }
   }
   function onChange(e){
     if (!app.state || e.target.id!=='pulse-input') return;

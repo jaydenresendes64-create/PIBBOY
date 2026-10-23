@@ -120,7 +120,7 @@
     }
     var typed = draft.id===t.id ? draft.text : (counter(t) ? String(counter(t)) : '');
     html += '<div class="trial-input-row"><label for="trial-value">'+(reps ? 'Reps' : km ? 'Distance (km)' : 'Time (m:ss)')+'</label>'+
-      '<input type="text" id="trial-value" data-id="'+id+'" inputmode="'+(reps ? 'numeric' : km ? 'decimal' : 'text')+'" autocomplete="off" '+
+      '<input type="text" id="trial-value" data-id="'+id+'" inputmode="'+(reps ? 'numeric' : km ? 'decimal' : 'text')+'" autocomplete="off" enterkeyhint="done" '+
         'placeholder="'+(reps ? '0' : km ? '0.0' : '0:00')+'" value="'+escapeHtml(typed)+'"></div>';
     var asking = app.trialConfirm && app.trialConfirm.id===t.id ? app.trialConfirm : null;
     if (asking){
@@ -171,7 +171,7 @@
     out += full ? '' :
       '<button class="add-open-btn" data-trial="add-open" aria-expanded="'+open+'"'+(open ? ' hidden' : '')+'>+ New trial</button>'+
       '<div class="add-row" id="add-trial"'+(open ? '' : ' hidden')+'>'+
-        '<input autocomplete="off" type="text" class="field-full" id="new-trial-name" maxlength="'+ST.TRIAL_NAME_MAX+'" placeholder="Trial name (pull-ups, burpees…)" aria-label="Trial name">'+
+        '<input autocomplete="off" enterkeyhint="done" type="text" class="field-full" id="new-trial-name" maxlength="'+ST.TRIAL_NAME_MAX+'" placeholder="Trial name (pull-ups, burpees…)" aria-label="Trial name">'+
         '<select id="new-trial-kind" aria-label="How it is measured">'+Object.keys(ST.TRIAL_KINDS).map(function(k){
           return '<option value="'+k+'">'+escapeHtml(ST.TRIAL_KINDS[k].label)+'</option>';
         }).join('')+'</select>'+

@@ -141,8 +141,8 @@ test('a document with damaged or hostile streaks: brought within limits, unique 
 
 // ---------- the screen ----------
 function screen(setup) {
-  const a = app(), ST = a.ST, clicks = [];
-  a.context.document.body.addEventListener = (type, fn) => { if (type === 'click') clicks.push(fn); };
+  const a = app(), ST = a.ST, clicks = [], keys = [];
+  a.context.document.body.addEventListener = (type, fn) => { if (type === 'click') clicks.push(fn); if (type === 'keydown') keys.push(fn); };
   ST.vitals.init();
   let saves = 0;
   ST.storage.saveNow = () => { saves++; return Promise.resolve('ok'); };
@@ -155,7 +155,19 @@ function screen(setup) {
     return a.elements['tab-vitals'].innerHTML;
   };
   const type = (id, value) => { a.elements[id] = a.elements[id] || a.context.document.getElementById(id); a.elements[id].value = value; };
-  return { a, ST, s: ST.app.state, draw, tap, type, saves: () => saves };
+  // Enter in a box; the page's buttons as drawn (for the one Enter stands for).
+  const enter = id => {
+    const html = a.elements['tab-vitals'].innerHTML;
+    a.context.document.querySelector = sel => {
+      const m = /^\[data-vital="([a-z-]+)"\]$/.exec(sel), b = m && new RegExp('data-vital="' + m[1] + '"(?: data-key="([^"]*)")?').exec(html);
+      return b ? { getAttribute: k => (k === 'data-key' ? b[1] || null : null) } : null;
+    };
+    let stopped = false;
+    keys.forEach(fn => fn({ key: 'Enter', target: { id }, preventDefault: () => { stopped = true; } }));
+    ST.vitals.stop(); ST.trials.stop();
+    return stopped;
+  };
+  return { a, ST, s: ST.app.state, draw, tap, type, enter, saves: () => saves };
 }
 
 test('the card: "+ New streak", its form, then its day and next milestone under the chem-free card', () => {
@@ -262,4 +274,20 @@ test('the urge decoder after a lapse on it: the reset line, different from the c
   const decoder = /id="urge-card"><div class="vital-head">Urge decoder<\/div><p class="vital-sub reading"><span class="field-tag">RESET \/\/<\/span> ([^<]+)<\/p>/.exec(html);
   assert.ok(card && decoder);
   assert.notEqual(card[1], decoder[1]);
+});
+
+test('Enter in the name box does what Start (or Save) does', () => {
+  const v = screen();
+  v.draw(); v.tap('own-new');
+  v.type('own-name', 'Focus'); v.type('own-date', '2026-10-06');
+  assert.equal(v.enter('own-name'), true);
+  assert.equal(v.s.streaks.length, 1);
+  const x = v.s.streaks[0];
+  assert.equal(x.name, 'Focus');
+  v.tap('own-edit', x.id);
+  v.type('own-name', 'Focus 2'); v.type('own-date', '2026-10-06');
+  assert.equal(v.enter('own-name'), true);
+  assert.equal(v.s.streaks.length, 1);
+  assert.equal(x.name, 'Focus 2');
+  assert.doesNotMatch(v.draw(), /id="own-name"/, 'the form closed');
 });
