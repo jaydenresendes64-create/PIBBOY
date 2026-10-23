@@ -21,6 +21,9 @@
 - Known failures: none.
 
 ## Known risks
+- Measured in Chromium, not changed (log, "A year of data"): from level 10 the Vault Boy's walk in
+  parts makes the page recompute styles every frame while he walks (the thighs' keyframes). The
+  iPhone may behave differently; a fix goes through tools/vaultboy-moves.py and HANDOFF §4.
 - Versions deployed before DATA_SCHEMA (before `ae17ebf`) don't check it: one left open in a second
   tab during that deploy could save over new fields once. From then on, older code stops.
 - An update shows after the app has been in the background once (or at an untouched open), not on the

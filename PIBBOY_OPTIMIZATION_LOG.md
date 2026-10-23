@@ -2,6 +2,30 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — A year of data, and the Vault Boy from level 10 (measured, not changed)
+- A year of daily use built through the app's own functions (365 check-ins, 300 urges, 264 trials,
+  200 journal entries, 2,000 history events, 122 places, level 17; 337 KB), opened in Chromium
+  with the processor slowed 4×: busy ~2,000 ms in the first 4 s, style+layout ~1,050 ms, longest
+  task ~200 ms; a full redraw 75–90 ms, VITALS 20 ms, a save 5 ms, the import gate 30 ms. An
+  empty phone: busy ~450 ms, style ~110 ms. Only 1,640 elements on the page.
+- Bisected: the data isn't the cost, the **level** is. An empty phone at level 10 or more costs the
+  same as the year (levels 2–8: busy ~400–540 ms). From level 10 the Vault Boy walks in parts
+  (outfits 10/20/30/50); while he walks (about 4 s of each 11 s loop) Chromium recomputes the style
+  of all ~20 animated elements every frame (~60/s, ~140 ms per 250 ms at 4×; nothing while he
+  stands, so the idle measure missed it). Turning animations off one at a time: the thighs'
+  (`vbLegF`/`vbLegB`, 229/237 keyframes of `rotate(calc(var(--vb-swing, 1) * …deg))`) are the
+  cause; with 3 plain keyframes in their place it stops; without the `var()` it halves. The
+  shins have the same kind of keyframes and don't cause it; `clip-path` on `.vb-knee`,
+  `will-change` and the sprite don't matter. Chromium's trace marks every animation composited, yet
+  ticks them all on the main thread.
+- Not changed: it's the Vault Boy (the owner's checklist and eyes, HANDOFF §4), and the owner's
+  phone is an iPhone, whose WebKit handles animations its own way; not measurable here. Candidate
+  for the next session if the owner reaches level 10 and notices heat or stutter: have
+  tools/vaultboy-moves.py write the thighs' keyframes with fewer, plain-angle keyframes (the
+  swing applied another way), then compare frames at levels 2, 5 and 10.
+- Scripts (not in the repo): a year generator through tests/helpers, a per-level timeline of
+  style recalcs (CDP Performance metrics every 250 ms), and per-animation kill switches.
+
 ## 2026-10-23 — Random actions: the numbers always add up
 - New `tests/actions.test.js`: 1,200 actions picked at random from a fixed seed (check-ins, RADS,
   dailies, quests and bonuses, urges won/given in/dropped with notes, trials, streaks and lapses,
