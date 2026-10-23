@@ -170,10 +170,10 @@
       '<div class="skill-detail-title">Coming</div>'+lines(src.coming, 'No open quest gives this.')+
     '</div>';
   }
-  function skillRowHtml(key){
+  function skillRowHtml(key, src){
     var value = num(app.state.skills[key]);
     var pct = clamp(value,0,100);
-    var src = ST.skillSources(key), open = app.skillOpen===key, sub = skillSub(src);
+    var open = app.skillOpen===key, sub = skillSub(src);
     return '<div class="skill-row'+(open ? ' open' : '')+'">'+
       '<button class="skill-hit" data-action="skill" data-key="'+key+'" aria-expanded="'+open+'">'+
         '<span class="skill-head">'+
@@ -215,7 +215,8 @@
     STAT_KEYS.forEach(function(k){ html += statRowHtml(k); });
     html += perksHtml();
     html += '<div class="panel-title">Skills</div>';
-    SKILL_KEYS.forEach(function(k){ html += skillRowHtml(k); });
+    var sources = ST.skillSourcesAll();
+    SKILL_KEYS.forEach(function(k){ html += skillRowHtml(k, sources[k]); });
     html += '<p class="vital-fine">Tap a skill: where its points came from. They come from quests, books, the journal and urges ridden out.</p>';
     html += bobbleheadsHtml();
     html += weekHtml();

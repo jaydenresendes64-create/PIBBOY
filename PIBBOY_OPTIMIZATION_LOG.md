@@ -2,6 +2,21 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — STATUS redraw with a year of data: one pass, not eight
+- Profile of 30 STATUS redraws with the year of data (full speed): `skillSources` ran once per skill
+  (8), each going through the 2,000 history events and splitting their text (~54 ms); the 7-day
+  summary turned each event's time into "2026-10-22" text and parsed it back (`dayNumber(dayStr())`,
+  ~31 ms).
+- `js/state.js`: `skillSourcesAll()` gives every skill's sources in one pass over the quests, the
+  books and the history (`skillSources(key)` reads from it); `js/render.js` asks once per draw.
+  `weekSummary`: an event's day straight from its date (`Date.UTC` of its local year, month, day).
+- Same results, checked: old and new skill sources identical for all 8 skills on the year and the
+  used phone, with a skill twice in a quest, a negative gain and junk in the history; old and new
+  week summaries identical on the year at 5 days (DST changes among them) in 4 time zones
+  (UTC, Toronto, Casablanca, Auckland). The JS part goes from ~85 ms to ~21–37 ms per 30 redraws:
+  about 2 ms per STATUS redraw at full speed (~8 ms on a phone 4× slower); the rest is the browser.
+- Tests: the existing skills and week tests cover both; `node --test` → 380 pass, 0 fail.
+
 ## 2026-10-23 — VITALS redraw with a year of data: two hot spots
 - CPU profile of 30 VITALS redraws with the year of data (full speed): `shortDay` 23 ms (a new
   date formatter for every date), `dayNumber` + `byDate` 28 ms (`lastVitals` sorted all 365
