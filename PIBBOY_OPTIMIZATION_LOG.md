@@ -2,6 +2,14 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — Backup size against the import limit (checked, no change)
+- Import refuses files over 5 MB (`MAX_IMPORT_BYTES`, js/storage.js), so an export bigger than that
+  couldn't be restored. A year of daily use exports 575 KB (history, capped at 2,000 events, is half
+  of it; urges, check-ins, journal and trials are capped too). Uncapped: places and routes; a route's
+  road is kept simplified (~10 characters a km: Montréal–Vancouver ~45 KB), so 5 MB needs over a
+  hundred cross-country trips. Far-fetched: no code added. README and HANDOFF now mention the
+  random tests and the CI's second pass on Montréal's clock.
+
 ## 2026-10-23 — A long session: no leak (measured, no change)
 - The app stays open for days on the iPhone, so a long session was measured in Chromium with the
   year of data: rounds of 60 tab switches, 10 Settings open/close, 20 urges started and dropped

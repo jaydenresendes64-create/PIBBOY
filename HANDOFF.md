@@ -1,7 +1,10 @@
 # PIBBOY — technical handoff
 
 State as of PR #39 and its follow-ups (2026-10-22). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-`node --test` passes locally and on GitHub (Tests workflow). `sw.js` VERSION: a hash of the app's
+`node --test` passes locally and on GitHub (Tests workflow, run in UTC and again with
+`TZ=America/Toronto`; the suite also passes in 10 time zones). Random but repeatable tests:
+`tests/fuzz.test.js` (damaged backups), `tests/actions.test.js` (XP and levels always add up).
+`sw.js` VERSION: a hash of the app's
 files, written by `node tools/stamp-sw.js`; `DATA_SCHEMA` (js/state.js): 1.
 
 ## 1. What it is

@@ -512,10 +512,15 @@ No install step and no dependencies: the tests use Node's built-in test runner a
 scripts from `js/` with a small fake browser (`tests/helpers.js`). They cover migrating every earlier
 save format, checking backup files (including hostile ones), XP and level-ups, skill and
 S.P.E.C.I.A.L. limits, selling items, streaks across days, the offline journal rules in English and French, safe
-HTML output, and saving (both copies, damaged copies, two tabs).
+HTML output, and saving (both copies, damaged copies, two tabs). Two of them play at random from a fixed
+starting point, so a failure comes back the same: `tests/fuzz.test.js` damages a backup 400 ways and
+checks it still imports and draws cleanly; `tests/actions.test.js` plays 1,200 actions and checks the
+XP, levels and points always add up.
 
-GitHub also runs them after every push (the **Actions** tab, `.github/workflows/test.yml`): a red ✗
-next to a commit means a test failed.
+GitHub also runs them after every push (the **Actions** tab, `.github/workflows/test.yml`), a second
+time on Montréal's clock (`TZ=America/Toronto`) so day changes and clock changes are checked where the
+app is used: a red ✗ next to a commit means a test failed. To try another time zone yourself:
+`TZ=Pacific/Auckland node --test`.
 
 ## Your data
 
