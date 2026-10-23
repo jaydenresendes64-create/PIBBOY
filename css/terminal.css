@@ -51,6 +51,8 @@ button{ cursor:pointer; }
    Pinching to zoom still works everywhere. */
 button, a, input, select, textarea, label, [role="button"]{ touch-action:manipulation; }
 ::selection{ background:var(--phosphor); color:var(--bg); }
+/* A field's example text ("Quest name") was the browser's grey (3.6:1): dimmed amber, readable. */
+::placeholder{ color:var(--text-dim); opacity:1; }
 
 .frame{
   position:relative;

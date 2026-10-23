@@ -2,6 +2,17 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — Example text in fields: amber, readable; landscape checked
+- Every field's example text ("Quest name", "Search city…", "Price $") was the browser's grey
+  (#757575, 3.63:1 on the form panels; under the 4.5:1 floor and off the amber look).
+  `css/terminal.css`: `::placeholder{ color:var(--text-dim); opacity:1; }`. Measured in Chromium on
+  all 19 fields, including the forms that open on a tap (own streak, cope, trial, map search, bulk
+  list): 4.51:1 to 5.42:1.
+- Phone landscape (844x390), every screen with realistic data: no sideways scroll, no clipping, no
+  page error; the small taps found are the known, deliberate ones. No change.
+- Tests: `tests/mobile.test.js` +1 (the rule, and `--text-dim` against `--bg`, `--panel`,
+  `--panel-alt` computed from the CSS; fails without the rule); `node --test` → 373 pass, 0 fail.
+
 ## 2026-10-23 — The right keyboard, no autofill bar
 - 10 number fields had no `inputmode` (an iPhone then shows the full keyboard's number row, not a
   pad), and 17 text fields had no `autocomplete="off"` (Safari offers contacts and addresses above

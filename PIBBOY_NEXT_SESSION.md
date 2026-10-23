@@ -1,19 +1,19 @@
 # PIBBOY — next session
 
 ## State
-- PR #39 was merged by the owner (2026-10-22 16:08, `ae17ebf`) and deployed (Pages run green): the
-  urge decoder record, places quests, instant open and the data-format guard are live.
-- PR #40 (Undo last replace, places form on narrow phones) was merged by the owner too (`d5d7299`,
-  Tests and Pages green). Everything from this campaign is in `main` and live; nothing is pending.
-- `node --test`: 365 pass, 0 fail. GitHub "Tests" workflow green on the pushed commits checked.
+- PRs #39 to #42 were merged by the owner and are live: the urge decoder record, places quests,
+  instant open, the data-format guard, Undo last replace and the design recheck.
+- **PR #43 is open** (iPhone polish, branch `claude/laughing-dijkstra-14x4dd`): 16 px fields (no
+  iPhone zoom), no double-tap zoom on controls, the right keyboard for each field, the error log in
+  Settings → About, a theme-color and manifest id, a lint pass, amber example text in fields.
+  GitHub "test" check green. Waiting for the owner to merge; never merge it yourself.
+- `node --test`: 373 pass, 0 fail.
 - `sw.js` VERSION is a hash of the app files: after any app file change run `node tools/stamp-sw.js`
   (the tests fail otherwise). `DATA_SCHEMA` (js/state.js) is 1: raise it when a version saves fields
   an older one would drop.
-- Done this campaign (details: `PIBBOY_OPTIMIZATION_LOG.md`; status: `PIBBOY_OPTIMIZATION_PLAN.md`):
-  urge decoder record and insights; places quests; Last 7 days; check-in levels defined; backup
-  comparison, round-trip test, Undo last replace; ITEMS 3D context recovery; no stale weather;
-  **instant open** (cache-first whole versions, updates when the app goes to the background) with the
-  storage guard (older code never writes over newer data).
+- Checked with no change needed: phone landscape (844x390) on every screen (no sideways scroll, no
+  clipping, no errors); accessible names; focus rings; performance profile.
+- Details: `PIBBOY_OPTIMIZATION_LOG.md`; status: `PIBBOY_OPTIMIZATION_PLAN.md`.
 - Known failures: none.
 
 ## Known risks
@@ -22,10 +22,11 @@
 - An update shows after the app has been in the background once (or at an untouched open), not on the
   open that downloads it.
 - Not tested on a real iPhone: the update hand-off while a Home Screen app is suspended, the new
-  urge screen, check-in anchors, places quests, Undo last replace.
+  urge screen, check-in anchors, places quests, Undo last replace, the PR #43 field and tap changes.
 
 ## Waiting on the owner
-1. Try the new version on the iPhone (it shows after leaving the app once) and report anything odd.
+1. Merge PR #43 when happy, then try it on the iPhone (it shows after leaving the app once): tap the
+   pulse field, the map search, the journal (no zoom); tap + twice on a RADS counter (no zoom).
 2. French caps goals: "not yet". Opt-in plan in HANDOFF §8 step 3, not built.
 3. MAP clouds (30 fps) and ITEMS model copies (30 fps): GPU cost vs looks (HANDOFF §4).
 

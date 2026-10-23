@@ -55,3 +55,14 @@ test('every field asks for the right keyboard: number fields say which pad, text
   });
   assert.deepEqual(missing, []);
 });
+
+test('a field\'s example text is dimmed amber that reads (4.5:1 on the lightest field), not the browser\'s grey', () => {
+  const css = read('css/terminal.css');
+  assert.match(css, /::placeholder\{ color:var\(--text-dim\); opacity:1; \}/);
+  const token = name => /^#([0-9a-f]{6})$/.exec(new RegExp('--' + name + ':(#[0-9a-f]{6});').exec(css)[1])[1];
+  const lum = hex => [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map(v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4))
+    .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+  const ratio = (a, b) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05);
+  for (const bg of ['bg', 'panel', 'panel-alt']) assert.ok(ratio(token('text-dim'), token(bg)) >= 4.5, bg);
+});
