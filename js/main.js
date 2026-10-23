@@ -110,6 +110,16 @@
 
   document.addEventListener('DOMContentLoaded', boot);
 
+  // An iPhone shows a control's pressed look (:active: a tab's key going
+  // down, the trial counter) only when the page listens for touches. This
+  // listener does nothing, and is passive: it never holds up scrolling.
+  document.addEventListener('touchstart', function(){}, {passive:true});
+  // A slider's filled part follows its knob (ST.rangeFill drew where it was).
+  document.addEventListener('input', function(e){
+    var t = e.target;
+    if (t && t.type==='range') t.style.setProperty('--p', ST.rangeShare(t.value, t.min, t.max));
+  }, true);
+
   // ---------- opening at once, and updates (sw.js) ----------
   // The app opens from its cache. A new version downloads whole in the
   // background and waits; it's put in when the app goes to the background,
@@ -155,6 +165,22 @@
       if (reg.waiting && navigator.serviceWorker.controller) reg.waiting.postMessage({type:'SKIP_WAITING'});
       else location.reload();
     }, function(){ location.reload(); });
+  };
+  // Which version runs, and whether a newer one waits to come in (Settings → About):
+  // {version, waiting}, or null without a service worker (opened from a file, blocked, the very
+  // first visit) or when it doesn't answer within 2 s.
+  ST.appVersion = function(){
+    var sw = navigator.serviceWorker, ctl = sw && sw.controller;
+    if (!ctl || typeof MessageChannel!=='function') return Promise.resolve(null);
+    return new Promise(function(resolve){
+      var channel = new MessageChannel(), timer = setTimeout(function(){ resolve(null); }, 2000);
+      channel.port1.onmessage = function(e){
+        clearTimeout(timer);
+        var v = e.data && e.data.version;
+        resolve(typeof v==='string' && v ? {version:v, waiting:!!(registration && registration.waiting)} : null);
+      };
+      ctl.postMessage({type:'VERSION'}, [channel.port2]);
+    });
   };
   // Resolves once a version being downloaded is installed (or isn't), 20 s at most.
   function installed(reg){

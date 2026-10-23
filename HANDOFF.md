@@ -1,7 +1,10 @@
 # PIBBOY — technical handoff
 
 State as of PR #39 and its follow-ups (2026-10-22). Live: https://jaydenresendes64-create.github.io/PIBBOY/
-`node --test` passes locally and on GitHub (Tests workflow). `sw.js` VERSION: a hash of the app's
+`node --test` passes locally and on GitHub (Tests workflow, run in UTC and again with
+`TZ=America/Toronto`; the suite also passes in 10 time zones). Random but repeatable tests:
+`tests/fuzz.test.js` (damaged backups), `tests/actions.test.js` (XP and levels always add up).
+`sw.js` VERSION: a hash of the app's
 files, written by `node tools/stamp-sw.js`; `DATA_SCHEMA` (js/state.js): 1.
 
 ## 1. What it is
@@ -18,6 +21,7 @@ Plain scripts (not ES modules, so `index.html` still opens from disk) sharing
 
 | File | Role |
 |---|---|
+| `js/errors.js` | Loaded first: `window` errors and unhandled rejections kept in localStorage (`status_terminal_errors_v1`, latest 20, "Script error." left out), one notice a session; `ST.errors.list/record/clear/text`; Settings → About line + Copy/Clear (events.js `renderErrors`) |
 | `js/state.js` | Data model (DATA MODEL comment at top), `DEFAULT_STATE`, `migrate()`, `sanitizeImported()`, rewards (`gainXp`, `grantSkill`, `grantStat`, `completeMain`), wallet/Caps (`capsValue`, `capsProgress`, `syncCapsQuests`), streaks, sales |
 | `js/storage.js` | Two copies of the state (IndexedDB + localStorage, `savedAt`), newest wins; cross-tab sync; flush on hide; backups export/import; `requestPersistence()` |
 | `js/ai.js` | Journal: offline EN/FR keyword rules (whole words, accents ignored) + optional `api/analyze.js` client (unused on Pages) |
@@ -598,6 +602,23 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   drift at 30 frames a second while the map is still, and ITEMS copies a WebGL picture into each
   model's canvas at 30 fps (`drawImage`): both cost GPU time on a phone, not measurable here
   (headless Chromium draws WebGL on the processor).
+
+- **iPhone polish and a year of use (PR #43, 2026-10-23).**
+  - Fields: 16 px text on touch screens (no iOS focus zoom); `touch-action:manipulation` on
+    controls (no double-tap zoom); `inputmode`, `autocomplete="off"` and `enterkeyhint` on every
+    field (`tests/mobile.test.js` scans them); example text in `--text-dim`.
+  - Sliders drawn in CSS: a 26 px knob, the groove filled up to `--p` (`ST.rangeFill` writes it,
+    one input listener in main.js updates it). One passive `touchstart` listener so iOS shows
+    `:active`.
+  - Long lists show their latest part: MAP places 10 then "10 more", the journal 30 then "30 more";
+    a skill's detail groups the same source ("Urge ridden out ×438").
+  - STATUS takes every skill's sources in one pass (`skillSourcesAll`); VITALS reuses one date
+    formatter and `lastVitals` works out each day once.
+  - Settings → About: the error log (`js/errors.js`, kept on the phone) and the version (`sw.js`
+    answers `{type:'VERSION'}`; `ST.appVersion()`), with "a newer one is ready" while one waits.
+  - Tests: `fuzz` (damaged backups), `actions` (random play: XP and levels add up), CI also on
+    Montréal's clock. Measured and left as is: the Vault Boy's walk in parts from level 10 (Chromium
+    recomputes styles each frame while he walks; see the optimization log).
 
 ## 4. Important design decisions
 

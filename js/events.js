@@ -420,6 +420,8 @@
     box.hidden = false;
     box.scrollTop = 0;
     refreshUndo();
+    renderErrors();
+    renderVersion();
     document.body.classList.add('modal-open');
     el('settings-btn').setAttribute('aria-expanded', 'true');
     el('settings-close').focus();
@@ -544,6 +546,41 @@
     replaceState(ST.defaultState(), 'reset');
   }
 
+  // ---------- the version, in Settings → About ----------
+  // The service worker's VERSION (a hash of the app's files, sw.js), and whether a newer one is
+  // ready: an update comes in when the app goes to the background (main.js watchUpdates).
+  var knownVersion = null;       // what the service worker said, for the copied error list
+  function renderVersion(){
+    var line = el('app-version');
+    if (!line) return;
+    if (!ST.appVersion){ line.textContent = 'Version: no offline copy'; return; }
+    ST.appVersion().then(function(v){
+      knownVersion = v ? v.version : null;
+      line.textContent = !v ? 'Version: no offline copy' :
+        'Version '+v.version+(v.waiting ? ' · a newer one is ready: it comes in when you leave the app' : '');
+    });
+  }
+
+  // ---------- the app's errors (js/errors.js), in Settings → About ----------
+  function renderErrors(){
+    var l = ST.errors ? ST.errors.list() : [], last = l[l.length-1];
+    var line = el('error-log'), copy = el('errors-copy-btn'), clear = el('errors-clear-btn');
+    if (!line || !copy || !clear) return;
+    copy.hidden = clear.hidden = !last;
+    if (!last){ line.textContent = 'Errors: none'; return; }
+    var d = new Date(last.t);
+    line.textContent = 'Errors: '+l.length+' · last '+d.toLocaleDateString('en-US', {month:'short', day:'numeric'})+' at '+
+      (d.getHours()<10 ? '0' : '')+d.getHours()+':'+(d.getMinutes()<10 ? '0' : '')+d.getMinutes()+' — '+last.message;
+  }
+  // The list as text, headed by the version and the browser (what a fix needs to know). Written
+  // at once, in the tap: an iPhone refuses a copy made after waiting for something.
+  function copyErrors(){
+    var text = 'PIBBOY '+(knownVersion ? 'version '+knownVersion : '(version unknown)')+'\n'+
+      (navigator.userAgent || '')+'\n'+(ST.errors ? ST.errors.text() : '');
+    var copied = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(text) : Promise.reject(new Error('no clipboard'));
+    copied.then(function(){ R.showNotice('Error list copied'); }, function(){ R.showNotice('Couldn’t copy: long-press the line above to select it'); });
+  }
+
   // ---------- undo the last replace ----------
   // Settings shows "Undo last replace" while a copy from before the last
   // import, reset or merge is kept: it says when and what it holds, asks,
@@ -661,6 +698,22 @@
       app.bobbleOpen = app.bobbleOpen===key ? null : key;
       renderStatus();
       focusStatus('[data-action="bobble"][data-key="'+key+'"]');
+    },
+    // "30 more" under the journal: older entries, the first of them focused.
+    'log-more': function(btn){
+      var before = Number(btn.getAttribute('data-shown')) || 0;
+      app.logShown = before + 30;
+      renderLog();
+      var entries = el('tab-log').querySelectorAll('.log-entry');
+      if (entries[before]){ entries[before].setAttribute('tabindex', '-1'); entries[before].focus(); }
+    },
+    // "10 more" under the books: older ones, the first of them focused.
+    'books-more': function(btn){
+      var before = Number(btn.getAttribute('data-shown')) || 0;
+      app.booksShown = before + 10;
+      renderInventory();
+      var rows = el('tab-items').querySelectorAll('.book-item');
+      if (rows[before]){ rows[before].setAttribute('tabindex', '-1'); rows[before].focus(); }
     },
     // A skill tapped: where its points came from, under it (tap again to close).
     'skill': function(btn, id, key){
@@ -804,6 +857,8 @@
     'reset-btn': showResetConfirm,
     'reset-confirm-btn': doReset,
     'reset-cancel-btn': function(){ el('reset-confirm-area').innerHTML = ''; },
+    'errors-copy-btn': copyErrors,
+    'errors-clear-btn': function(){ if (ST.errors) ST.errors.clear(); renderErrors(); },
     'undo-btn': askUndo,
     'undo-confirm-btn': doUndo,
     'undo-cancel-btn': function(){ el('reset-confirm-area').innerHTML = ''; }
@@ -862,6 +917,7 @@
   // ---------- events ----------
   function setupEvents(){
     ST.storage.onChange(checkBobbleheads);
+    if (ST.errors) ST.errors.onChange = renderErrors;
     document.body.addEventListener('click', onClick);
 
     // A main quest's objective and a holding's rate go into the state as

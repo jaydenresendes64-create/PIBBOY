@@ -266,7 +266,7 @@ function vitals(setup) {
 test('the screen: what to note while the timer runs, "I gave in" at any point, the note after, the patterns and the last urges', () => {
   const running = vitals(ST => { ST.startUrge('TIRED'); ST.setUrgeDetail('intensity', 7); ST.setUrgeDetail('trigger', 'HABIT'); ST.setUrgeDetail('cope', 'walk'); });
   assert.match(running, /data-vital="urge-lapse">I gave in<\/button>/);
-  assert.match(running, /<label for="urge-intensity">How strong<\/label><input type="range" class="urge-range" id="urge-intensity" min="0" max="10" step="1" value="7" aria-describedby="urge-intensity-scale"><span class="vital-val" id="urge-intensity-val">7<\/span><span class="vital-scale" id="urge-intensity-scale"><span>0 unrated<\/span><span>extreme 10<\/span>/);
+  assert.match(running, /<label for="urge-intensity">How strong<\/label><input type="range" class="urge-range" id="urge-intensity" min="0" max="10" step="1" value="7" aria-describedby="urge-intensity-scale" style="--p:0\.7"><span class="vital-val" id="urge-intensity-val">7<\/span><span class="vital-scale" id="urge-intensity-scale"><span>0 unrated<\/span><span>extreme 10<\/span>/);
   assert.match(running, /data-vital="urge-trigger" data-key="HABIT" aria-pressed="true">Usual time or place</);
   assert.match(running, /data-vital="urge-cope" data-key="walk" aria-pressed="true">Walk outside</);
   assert.match(running, /data-vital="cope-add-open" aria-expanded="false">\+ Mine</);
@@ -324,7 +324,7 @@ test('a note on an earlier urge, from Last urges: its line above the box, the no
     ST.app.urgeNote = first;
   });
   assert.match(html, /<p class="urge-tip">Oct 22 21h · TIRED · ridden out\. One line about it\? \(empty removes it\)<\/p>/);
-  assert.match(html, /id="urge-note" maxlength="140" autocomplete="off" value="&quot;&gt;&lt;img src=x onerror=alert\(1\)&gt;"/);
+  assert.match(html, /id="urge-note" maxlength="140" autocomplete="off" enterkeyhint="done" value="&quot;&gt;&lt;img src=x onerror=alert\(1\)&gt;"/);
   assert.match(html, /data-vital="urge-note-skip">Cancel</);
   assert.doesNotMatch(html, /<img/);
   const fresh = vitals((ST, s, a) => { ST.startUrge('TIRED'); a.setNow(a.context.Date.now() + ST.URGE_MS); ST.app.urgeNote = ST.urgeWon().entry.t; });

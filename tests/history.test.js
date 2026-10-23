@@ -11,7 +11,6 @@ const app = loadApp();
 const ST = app.ST;
 const fresh = () => { ST.app.state = ST.defaultState(); return ST.app.state; };
 const types = s => Array.from(s.history, e => e.type);
-const DAY = 864e5;
 
 test('every reward is recorded, with the XP it really gave and what it was', () => {
   const s = fresh();

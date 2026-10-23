@@ -177,7 +177,7 @@ test('TRIALS: the sub-tabs, a card per trial, the record and the next goal, the 
   assert.match(done, /<ul class="trial-history"><li><span>Oct 10 — 1:31 · \+50 XP<\/span>/);
   const counter = screen(ST => { ST.app.trialOpen = 'pushups'; ST.app.trialCount = { id: 'pushups', n: 7 }; });
   assert.match(counter, /data-trial="count" data-id="pushups" aria-label="One more rep"><span class="trial-tap-n">7<\/span>/);
-  assert.match(counter, /id="trial-value" data-id="pushups" inputmode="numeric" autocomplete="off" placeholder="0" value="7"/);
+  assert.match(counter, /id="trial-value" data-id="pushups" inputmode="numeric" autocomplete="off" enterkeyhint="done" placeholder="0" value="7"/);
   const squats = screen((ST, s, a) => { ST.app.trialOpen = 'squats'; ST.startTrial('squats'); a.setNow('2026-10-10T09:00:13'); });
   assert.match(squats, /role="timer">0:50</);                // 10 s into the 60
 });
@@ -269,6 +269,6 @@ test('a distance on the screen: no timer, typed in km, the XP it pays asked firs
   assert.match(card, /A distance: \+5 XP a km \(at most 100\), and \+50 more for a record\./);
   const panel = screen(ST => { ST.app.trialOpen = 'distance'; ST.app.trialConfirm = { id: 'distance', value: 6200 }; });
   assert.doesNotMatch(panel, /trial-clock|data-trial="start"/);
-  assert.match(panel, /<label for="trial-value">Distance \(km\)<\/label><input type="text" id="trial-value" data-id="distance" inputmode="decimal" autocomplete="off" placeholder="0\.0"/);
+  assert.match(panel, /<label for="trial-value">Distance \(km\)<\/label><input type="text" id="trial-value" data-id="distance" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0\.0"/);
   assert.match(panel, /Save <b>6\.2 km<\/b>\? <span class="trial-new">NEW RECORD<\/span> \+81 XP · trains END/);
 });

@@ -95,7 +95,7 @@ function loadSw(net) {
     handlers.activate({ waitUntil: p => { done = p; } });
     return done;
   }
-  const message = data => handlers.message({ data });
+  const message = (data, ports) => handlers.message({ data, ports });
   return { cache, get, install, activate, message, net, calls, caches, context };
 }
 async function keep(sw, file, text) { (await sw.cache()).put(file, new Response(text)); }
@@ -181,6 +181,16 @@ test('the first version takes over at once; a later one waits for the page\'s SK
   assert.equal(later.calls.skipWaiting, 0);
   later.message({ type: 'SKIP_WAITING' });
   assert.equal(later.calls.skipWaiting, 1);
+});
+
+test('asked which version it is (Settings → About), it answers on the port it was given', () => {
+  const sw = loadSw({ active: true });
+  const answers = [];
+  sw.message({ type: 'VERSION' }, [{ postMessage: m => answers.push(m) }]);
+  assert.deepEqual(JSON.parse(JSON.stringify(answers)), [{ version: sw.context.VERSION }]);
+  assert.match(sw.context.VERSION, /^[0-9a-f]{12}$/);
+  sw.message({ type: 'VERSION' });                                      // no port: nothing to answer on
+  assert.equal(sw.calls.skipWaiting, 0, 'asking never puts a version in');
 });
 
 test('the AI function and other sites\' files are left to the browser (never cached here)', async () => {

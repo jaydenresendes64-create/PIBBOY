@@ -4,6 +4,20 @@ Only results actually run are listed. Command: `node --test` (Node's built-in ru
 
 | Date | Scope | Result |
 |------|-------|--------|
+| 2026-10-23 | Full suite after the books list | 393 pass, 0 fail (also `TZ=America/Toronto`) |
+| 2026-10-23 | Chromium, every screen with a year of data at 390/320 px; the bobblehead shelf at 320/375/390/430 px | names break at hyphens; no page errors |
+| 2026-10-23 | Chromium: a year of data, Export → fresh profile → Import (comparison 90 ms) → reload → Undo | identical data; fresh phone back; no page errors |
+| 2026-10-23 | Chromium, real service worker: Settings version line, a newer one waiting, in after leaving the app | as intended, no page errors |
+| 2026-10-23 | Monkey test (scratchpad, not in the repo): 3 × 1,500 random steps, a year of data and an empty phone | 0 problems; 114–124 controls used |
+| 2026-10-23 | Long session (Chromium): 8 rounds of tab switches, Settings, urge redraws; heap snapshots compared | no leak (growth is compiled code) |
+| 2026-10-23 | Full suite in 10 time zones (UTC to Kiritimati) | 384 pass in each, after 2 test fixes |
+| 2026-10-23 | `tests/actions.test.js` with 6 more seeds × 3,000 actions, and 3 seeds on Montréal time | all pass; planted bugs caught |
+| 2026-10-23 | `tests/fuzz.test.js` with 4 seeds × 5,000 rounds and 3 × 4,000 with the trials view | all pass |
+| 2026-10-23 | Chromium, a year of data at CPU ×4: opening, redraws, per-level timeline | measured (see the optimization log) |
+| 2026-10-23 | Full suite with `tests/errors.test.js` | 369 pass, 0 fail |
+| 2026-10-23 | Chromium: error log (normal use, thrown error, rejection, copy, clear); a11y names and Tab focus rings | as intended |
+| 2026-10-23 | Full suite with `tests/mobile.test.js` | 367 pass, 0 fail |
+| 2026-10-23 | Chromium phone mode: every field's text size; layout at 320/390px | all 16px; no clipping, no sideways scroll |
 | 2026-10-22 | Full suite after the design fixes | 365 pass, 0 fail |
 | 2026-10-22 | Chromium design audit, every screen at 320/390/768/1024 px | contrast, sizes, taps, table fixed; no sideways scroll, no page errors |
 | 2026-10-22 | Chromium 320/360/390 px: places quest form with a long country | fits, no errors |

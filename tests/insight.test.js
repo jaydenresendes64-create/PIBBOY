@@ -267,7 +267,7 @@ test('the decoder on screen: the need\'s tip, one message with its style, "Anoth
 test('at zero: a question to look back with; after a second round it asks what changed', () => {
   const zero = urge((ST, s, a) => { ST.startUrge('LONELY'); a.setNow('2026-10-10T08:20:00'); });
   const html = vitals(zero);
-  assert.match(html, /Twenty minutes down\. Did it pass\?<\/p><p class="vital-sub reading"><span class="field-tag">REFLECTION \/\/<\/span> [^<]+\?<\/p>/);
+  assert.match(html, /Twenty minutes down\. Did it pass\?<\/p><p class="vital-sub reading"><span class="field-tag">REFLECTION \/\/<\/span> [^<]*\?[^<]*<\/p>/);   // which question depends on the minute
   const two = urge((ST, s, a) => { ST.startUrge('LONELY'); a.setNow('2026-10-10T08:20:00'); ST.urgeAgain(); a.setNow('2026-10-10T08:40:00'); });
   assert.match(two.ST.insight.urgeReflection().text, /^It took 2 rounds\. What changed between the first and this one\?$/);
 });

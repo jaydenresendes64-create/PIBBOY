@@ -361,6 +361,13 @@
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
     });
   }
+  // Where a slider's knob sits, 0 to 1: css/terminal.css fills its groove up to there (--p, written
+  // in its HTML by rangeFill; main.js keeps it up to date as the knob moves).
+  function rangeShare(value, min, max){
+    var p = (Number(value)-Number(min))/(Number(max)-Number(min));
+    return isFinite(p) ? Math.round(Math.max(0, Math.min(1, p))*1e4)/1e4 : 0;
+  }
+  function rangeFill(value, min, max){ return ' style="--p:'+rangeShare(value, min, max)+'"'; }
   function clone(value){ return JSON.parse(JSON.stringify(value)); }
   // Copies `from`'s own fields onto `to`. A "__proto__" key (JSON.parse
   // makes it an ordinary key) would replace `to`'s prototype: skipped.
@@ -779,7 +786,8 @@
     var week = empty(), before = empty();
     function slot(day){ var d = today - day; return d>=0 && d<7 ? week : d>=7 && d<14 ? before : null; }
     (app.state.history||[]).forEach(function(e){
-      var w = slot(dayNumber(dayStr(new Date(Number(e.t) || 0))));
+      var d = new Date(Number(e.t) || 0);                 // its day, as dayNumber(dayStr(d)) without the text
+      var w = slot(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())/864e5);
       if (!w) return;
       w.xp += Number(e.xp) || 0;
       if (e.type==='VITALS_CHECKIN') w.checkins++;
@@ -819,36 +827,37 @@
   // other rewards that gave some (journal entries, urges ridden out), from
   // the history's data.skills. Amounts before perks; the starting values
   // aren't listed. {earned: [{name, amount}], coming: [...]}.
-  function skillSources(key){
-    var s = app.state, earned = [], coming = [];
-    function gainOf(list){
-      var n = 0;
-      (list || []).forEach(function(g){ if (g && g.skill===key) n += Number(g.amount) || 0; });
-      return n;
+  function skillSources(key){ return skillSourcesAll()[key] || {earned:[], coming:[]}; }
+  // Every skill's at once, {KEY: {earned, coming}}: one pass over the quests, the books and the
+  // history for all of them (STATUS draws every skill; the history can hold 2,000 events).
+  function skillSourcesAll(){
+    var s = app.state, all = {};
+    SKILL_KEYS.forEach(function(k){ all[k] = {earned:[], coming:[]}; });
+    // Each skill's total in a list of {skill, amount} (or in "SKILL:n,SKILL:n"), in the order they first appear.
+    function gains(list){
+      var by = {}, order = [];
+      list.forEach(function(g){
+        if (!g || !has(all, g.skill)) return;
+        if (!has(by, g.skill)){ by[g.skill] = 0; order.push(g.skill); }
+        by[g.skill] += Number(g.amount) || 0;
+      });
+      return order.filter(function(k){ return by[k]>0; }).map(function(k){ return {skill:k, amount:by[k]}; });
     }
-    s.quests.mains.forEach(function(m){
-      var n = gainOf(m.skillGains);
-      if (n>0) (m.completed ? earned : coming).push({name:m.questName || m.title || 'Main quest', amount:n});
-    });
-    s.quests.side.forEach(function(q){
-      var n = gainOf(q.skillGains);
-      if (n>0) (q.done ? earned : coming).push({name:q.questName || q.name || 'Side quest', amount:n});
-    });
-    (s.books || []).forEach(function(b){
-      var n = gainOf(b.skillGains);
-      if (n>0) earned.push({name:b.title || 'Book', amount:n});
-    });
+    function add(list, done, name){
+      gains(list || []).forEach(function(g){ all[g.skill][done ? 'earned' : 'coming'].push({name:name, amount:g.amount}); });
+    }
+    s.quests.mains.forEach(function(m){ add(m.skillGains, m.completed, m.questName || m.title || 'Main quest'); });
+    s.quests.side.forEach(function(q){ add(q.skillGains, q.done, q.questName || q.name || 'Side quest'); });
+    (s.books || []).forEach(function(b){ add(b.skillGains, true, b.title || 'Book'); });
     var NAMES = {JOURNAL_ENTRY:'Journal', URGE_RESISTED:'Urge ridden out'};
     (s.history || []).forEach(function(e){
       if (!e.data || typeof e.data.skills!=='string' || e.type==='QUEST_COMPLETED' || e.type==='BOOK_READ') return;
-      var n = 0;
-      e.data.skills.split(',').forEach(function(part){
+      add(e.data.skills.split(',').map(function(part){
         var bits = part.split(':');
-        if (bits[0]===key) n += Number(bits[1]) || 0;
-      });
-      if (n>0) earned.push({name:NAMES[e.type] || String(e.data.name || e.type), amount:n});
+        return {skill:bits[0], amount:bits[1]};
+      }), true, NAMES[e.type] || String(e.data.name || e.type));
     });
-    return {earned:earned, coming:coming};
+    return all;
   }
   function grantStat(key, amount){
     var state = app.state;
@@ -1081,9 +1090,12 @@
     reward.trained = trainStat('INT', reward.xp);
     return reward;
   }
-  // The latest `n` entries, newest first.
+  // The latest `n` entries, newest first. Each entry's day is worked out once, not at every
+  // comparison (a year of check-ins is some 6,000 of them a sort; VITALS asks several times a draw).
   function lastVitals(n){
-    return app.state.vitals.slice().sort(byDate).reverse().slice(0, n);
+    return app.state.vitals.map(function(v){ return {v:v, day:dayNumber(v.date)}; })
+      .sort(function(a, b){ return a.day-b.day; }).reverse().slice(0, n)
+      .map(function(x){ return x.v; });
   }
   // The latest check-in logged before today's VITALS day, with how many
   // days before it (`ago`: 1 is yesterday); null for none.
@@ -1725,8 +1737,10 @@
   // exported comes back exactly as it was.
   var SAFE_ID = /^[A-Za-z0-9_-]{1,40}$/;
   function num(v, fallback){ var n = Number(v); return isFinite(n) ? n : fallback; }
+  // A list or an object where text belongs (a damaged file; the app only ever writes text there):
+  // no text, rather than "[object Object]" on the screen.
   function text(v, max){
-    var str = v===null || v===undefined ? '' : String(v);
+    var str = v===null || v===undefined || typeof v==='object' ? '' : String(v);
     return max ? str.slice(0, max) : str;
   }
   function safeId(v){ return (typeof v==='string' && SAFE_ID.test(v)) ? v : genId(); }
@@ -2235,6 +2249,8 @@
   ST.PLACES_TARGET_MAX = PLACES_TARGET_MAX;
   ST.DATA_SCHEMA = DATA_SCHEMA;
   ST.escapeHtml = escapeHtml;
+  ST.rangeShare = rangeShare;
+  ST.rangeFill = rangeFill;
   ST.catLabel = catLabel;
 
   ST.migrate = migrate;
@@ -2251,6 +2267,7 @@
   ST.streakCheckIn = streakCheckIn;
   ST.grantSkill = grantSkill;
   ST.skillSources = skillSources;
+  ST.skillSourcesAll = skillSourcesAll;
   ST.grantStat = grantStat;
   ST.gainXp = gainXp;
   ST.mainReady = mainReady;

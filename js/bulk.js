@@ -79,7 +79,7 @@
         '</select></div>';
     }
     return '<div class="bulk-line missing"><span class="bulk-note reset-warning">Not found:</span> <span class="bulk-raw">'+line+'</span>'+
-      '<input type="text" class="bulk-fix" data-i="'+i+'" value="'+escapeHtml(row.fix)+'" aria-label="Fix: '+line+'">'+
+      '<input autocomplete="off" enterkeyhint="search" type="text" class="bulk-fix" data-i="'+i+'" value="'+escapeHtml(row.fix)+'" aria-label="Fix: '+line+'">'+
       '<div class="bulk-actions">'+
         '<button data-map="bulk-retry" data-i="'+i+'">Check again</button>'+
         '<button data-map="bulk-place" data-i="'+i+'">Place on map</button>'+

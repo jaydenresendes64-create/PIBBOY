@@ -159,10 +159,19 @@
     return '';
   }
   function skillDetailHtml(src){
+    // Sources with the same name on one line, counted ("Urge ridden out ×212 +212"): after months,
+    // one line each made a list hundreds long. In the order they first came.
     function lines(list, empty){
       if (!list.length) return '<p class="skill-empty">'+empty+'</p>';
-      return list.map(function(r){
-        return '<div class="skill-src"><span>'+escapeHtml(r.name)+'</span><span>+'+num(r.amount)+'</span></div>';
+      var by = {}, order = [];
+      list.forEach(function(r){
+        var k = ' '+r.name;
+        if (!by[k]){ by[k] = {name:r.name, amount:0, count:0}; order.push(by[k]); }
+        by[k].amount += num(r.amount);
+        by[k].count++;
+      });
+      return order.map(function(r){
+        return '<div class="skill-src"><span>'+escapeHtml(r.name)+(r.count>1 ? ' ×'+r.count : '')+'</span><span>+'+r.amount+'</span></div>';
       }).join('');
     }
     return '<div class="skill-detail">'+
@@ -170,10 +179,10 @@
       '<div class="skill-detail-title">Coming</div>'+lines(src.coming, 'No open quest gives this.')+
     '</div>';
   }
-  function skillRowHtml(key){
+  function skillRowHtml(key, src){
     var value = num(app.state.skills[key]);
     var pct = clamp(value,0,100);
-    var src = ST.skillSources(key), open = app.skillOpen===key, sub = skillSub(src);
+    var open = app.skillOpen===key, sub = skillSub(src);
     return '<div class="skill-row'+(open ? ' open' : '')+'">'+
       '<button class="skill-hit" data-action="skill" data-key="'+key+'" aria-expanded="'+open+'">'+
         '<span class="skill-head">'+
@@ -215,7 +224,8 @@
     STAT_KEYS.forEach(function(k){ html += statRowHtml(k); });
     html += perksHtml();
     html += '<div class="panel-title">Skills</div>';
-    SKILL_KEYS.forEach(function(k){ html += skillRowHtml(k); });
+    var sources = ST.skillSourcesAll();
+    SKILL_KEYS.forEach(function(k){ html += skillRowHtml(k, sources[k]); });
     html += '<p class="vital-fine">Tap a skill: where its points came from. They come from quests, books, the journal and urges ridden out.</p>';
     html += bobbleheadsHtml();
     html += weekHtml();
@@ -437,6 +447,17 @@
     return '<svg class="bobble-svg" viewBox="0 0 48 60" aria-hidden="true">'+
       '<g class="bobble-top">'+(TROPHIES[id] || '')+'</g>'+TROPHY_STAND+'</svg>';
   }
+  // Where a long name may break on the shelf's narrow cards: a soft hyphen (shown only when the
+  // word wraps), or after a dot. Without them "Specialist" broke as "Specialis/t" (375-430 px).
+  // The name itself is unchanged: the button's label, the banners and the data keep it whole.
+  var SHELF_BREAKS = {Wasteland:'Waste\u00ADland', Capitalist:'Capital\u00ADist', Globetrotter:'Globe\u00ADtrotter',
+    Specialist:'Special\u00ADist', 'S.P.E.C.I.A.L.ist':'S.P.E.C.\u200BI.A.L.\u200Bist', Collector:'Col\u00ADlector',
+    Archivist:'Archiv\u00ADist'};
+  function shelfName(name){
+    return String(name).split(' ').map(function(w){
+      return Object.prototype.hasOwnProperty.call(SHELF_BREAKS, w) ? SHELF_BREAKS[w] : w;
+    }).join(' ');
+  }
   function bobbleheadsHtml(){
     var s = app.state, all = ST.BOBBLEHEADS;
     var got = all.filter(function(b){ return s.bobbleheads && s.bobbleheads[b.id]; }).length;
@@ -445,7 +466,7 @@
       var date = s.bobbleheads && s.bobbleheads[b.id];
       html += '<button class="bobble'+(date ? ' found' : '')+(app.bobbleOpen===b.id ? ' open' : '')+'" data-action="bobble" data-key="'+b.id+'" '+
         'aria-label="'+escapeHtml(date ? b.name+': found' : 'Bobblehead not found yet')+'" aria-expanded="'+(app.bobbleOpen===b.id)+'">'+
-        bobbleSvg(b.id)+'<span class="bobble-name">'+escapeHtml(date ? b.name : '?')+'</span></button>';
+        bobbleSvg(b.id)+'<span class="bobble-name">'+escapeHtml(date ? shelfName(b.name) : '?')+'</span></button>';
     });
     html += '</div>';
     var open = app.bobbleOpen && all.filter(function(b){ return b.id===app.bobbleOpen; })[0];
@@ -571,10 +592,10 @@
         (m.completed ? '<span class="badge">Completed</span>' : '')+
         '<button class="remove-btn" data-action="main-remove" data-id="'+attr(m.id)+'" aria-label="Remove main quest: '+about(m.questName, m.title)+'">&times;</button>'+
       '</div>'+
-      '<input type="text" class="main-title-input" data-id="'+attr(m.id)+'" maxlength="60" value="'+escapeHtml(m.title)+'" aria-label="Objective">'+
+      '<input autocomplete="off" enterkeyhint="done" type="text" class="main-title-input" data-id="'+attr(m.id)+'" maxlength="60" value="'+escapeHtml(m.title)+'" aria-label="Objective">'+
       (streak ? streakRowHtml(m) : caps ? capsRowHtml(m) : places ? placesRowHtml(m) :
         '<div class="progress-row">'+
-          '<input type="range" min="0" max="100" value="'+num(m.progress)+'" class="main-progress-input" data-id="'+attr(m.id)+'" aria-label="Progress"'+(m.completed?' disabled':'')+'>'+
+          '<input type="range" min="0" max="100" value="'+num(m.progress)+'" class="main-progress-input" data-id="'+attr(m.id)+'" aria-label="Progress"'+ST.rangeFill(m.progress, 0, 100)+(m.completed?' disabled':'')+'>'+
           '<span class="progress-pct">'+num(m.progress)+'%</span>'+
         '</div>')+
       // At 100% (slider or wallet) the reward waits for this tap (ST.mainReady);
@@ -630,9 +651,9 @@
     }
     state.quests.mains.forEach(function(m){ html += mainQuestHtml(m); });
     html += addFormHtml('main', 'New main quest',
-      '<input type="text" class="field-full" id="new-main-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
-      '<input type="text" id="new-main-objective" placeholder="Objective..." maxlength="60" required aria-label="Objective">'+
-      '<input type="number" id="new-main-xp" value="1000" min="10" max="5000" aria-label="XP reward">'+
+      '<input autocomplete="off" enterkeyhint="done" type="text" class="field-full" id="new-main-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
+      '<input autocomplete="off" enterkeyhint="done" type="text" id="new-main-objective" placeholder="Objective..." maxlength="60" required aria-label="Objective">'+
+      '<input inputmode="numeric" type="number" id="new-main-xp" value="1000" min="10" max="5000" aria-label="XP reward">'+
       '<select id="new-main-type" aria-label="Progress type">'+
         '<option value="percent">Percentage</option>'+
         '<option value="streak">Day streak</option>'+
@@ -640,14 +661,14 @@
         '<option value="places">Places to reveal</option>'+
       '</select>'+
       '<label class="days-field" id="new-main-places-field" hidden>'+
-        '<input type="number" id="new-main-places" value="5" min="1" max="'+ST.PLACES_TARGET_MAX+'" aria-label="Places to reveal"><span>places in</span>'+
+        '<input inputmode="numeric" type="number" id="new-main-places" value="5" min="1" max="'+ST.PLACES_TARGET_MAX+'" aria-label="Places to reveal"><span>places in</span>'+
         '<select id="new-main-cc" aria-label="Where">'+countryOptionsHtml()+'</select>'+
       '</label>'+
       '<label class="days-field" id="new-main-caps-field" hidden>'+
-        '<input type="number" id="new-main-caps" value="5" min="0.01" step="0.01" aria-label="Target caps"><span>caps</span>'+
+        '<input inputmode="decimal" type="number" id="new-main-caps" value="5" min="0.01" step="0.01" aria-label="Target caps"><span>caps</span>'+
       '</label>'+
       '<label class="days-field" id="new-main-days-field" hidden>'+
-        '<input type="number" id="new-main-days" value="7" min="1" max="'+ST.STREAK_MAX_DAYS+'" aria-label="Target days"><span>days</span>'+
+        '<input inputmode="numeric" type="number" id="new-main-days" value="7" min="1" max="'+ST.STREAK_MAX_DAYS+'" aria-label="Target days"><span>days</span>'+
       '</label>'+
       '<button id="add-main-btn">Add</button>');
 
@@ -669,9 +690,9 @@
       html += '</div>';
     }
     html += addFormHtml('side', 'New side quest',
-      '<input type="text" class="field-full" id="new-quest-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
-      '<input type="text" class="field-objective" id="new-quest-objective" placeholder="Objective..." required aria-label="Objective">'+
-      '<input type="number" id="new-quest-xp" value="100" min="5" max="500" aria-label="XP reward">'+
+      '<input autocomplete="off" enterkeyhint="done" type="text" class="field-full" id="new-quest-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
+      '<input autocomplete="off" enterkeyhint="done" type="text" class="field-objective" id="new-quest-objective" placeholder="Objective..." required aria-label="Objective">'+
+      '<input inputmode="numeric" type="number" id="new-quest-xp" value="100" min="5" max="500" aria-label="XP reward">'+
       '<select id="new-quest-skill" aria-label="Skill it raises">'+
         '<option value="">No skill</option>'+
         ST.SKILL_KEYS.map(function(k){ return '<option value="'+k+'">+'+ST.SIDE_SKILL_GAIN+' '+k+'</option>'; }).join('')+
@@ -691,9 +712,9 @@
       removeConfirmHtml('daily', q.id, 'Remove this quest?');
     });
     html += '</div>'+addFormHtml('daily', 'New daily quest',
-      '<input type="text" class="field-full" id="new-daily-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
-      '<input type="text" class="field-objective" id="new-daily-objective" placeholder="Daily habit..." required aria-label="Objective">'+
-      '<input type="number" id="new-daily-xp" value="15" min="5" max="100" aria-label="XP reward">'+
+      '<input autocomplete="off" enterkeyhint="done" type="text" class="field-full" id="new-daily-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
+      '<input autocomplete="off" enterkeyhint="done" type="text" class="field-objective" id="new-daily-objective" placeholder="Daily habit..." required aria-label="Objective">'+
+      '<input inputmode="numeric" type="number" id="new-daily-xp" value="15" min="5" max="100" aria-label="XP reward">'+
       '<select id="new-daily-stat" aria-label="Stat it trains">'+
         '<option value="">No stat</option>'+
         STAT_KEYS.map(function(k){ return '<option value="'+k+'">Trains '+k+'</option>'; }).join('')+
@@ -728,16 +749,16 @@
               '<span class="wallet-cad">$'+money(cad)+'</span>'+
               '<button class="remove-btn" data-action="wallet-remove" data-id="'+attr(h.id)+'" aria-label="Remove: '+about(h.label)+'">&times;</button>'+
             '</div>'+
-            '<div class="wallet-row-sub">'+money(h.amount)+' &times; <input type="number" class="rate-input" data-id="'+attr(h.id)+'" value="'+rate+'" step="0.001" aria-label="Rate to CAD: '+about(h.label)+'"> CAD</div>'+
+            '<div class="wallet-row-sub">'+money(h.amount)+' &times; <input inputmode="decimal" type="number" class="rate-input" data-id="'+attr(h.id)+'" value="'+rate+'" step="0.001" aria-label="Rate to CAD: '+about(h.label)+'"> CAD</div>'+
           '</div>'+
           removeConfirmHtml('wallet', h.id, 'Remove this row?');
         });
         html += '<div class="wallet-total-row"><span>Total</span><span>$'+money(ST.totalHoldingsCAD())+'</span></div>';
       }
       html += '<div class="add-row">'+
-        '<input type="text" id="new-wallet-label" placeholder="Label (e.g. USDT)" aria-label="Label">'+
-        '<input type="number" id="new-wallet-amount" placeholder="Amount" aria-label="Amount">'+
-        '<input type="number" id="new-wallet-rate" placeholder="Rate to CAD" step="0.001" value="1" aria-label="Rate to CAD">'+
+        '<input autocomplete="off" enterkeyhint="done" type="text" id="new-wallet-label" placeholder="Label (e.g. USDT)" aria-label="Label">'+
+        '<input inputmode="decimal" type="number" id="new-wallet-amount" placeholder="Amount" aria-label="Amount">'+
+        '<input inputmode="decimal" type="number" id="new-wallet-rate" placeholder="Rate to CAD" step="0.001" value="1" aria-label="Rate to CAD">'+
         '<button id="add-wallet-btn">Add</button>'+
       '</div>';
       html += '<div class="wallet-rate">'+commas(CAD_PER_CAP)+' CAD = 1 Cap &mdash; rates are set by you, updated manually</div>';
@@ -811,7 +832,7 @@
       }
     });
     html += '<div class="add-row">'+
-      '<input type="text" id="new-item-name" placeholder="Item name..." aria-label="Item name">'+
+      '<input autocomplete="off" enterkeyhint="done" type="text" id="new-item-name" placeholder="Item name..." aria-label="Item name">'+
       '<select id="new-item-cat" aria-label="Category">'+CATS.map(function(c){ return '<option value="'+c+'">'+ST.catLabel(c)+'</option>'; }).join('')+'</select>'+
       '<input type="number" id="new-item-price" placeholder="Price $" min="0" step="0.01" inputmode="decimal" aria-label="Asking price in CAD (optional)">'+
       '<button id="add-item-btn">Add</button>'+
@@ -826,6 +847,9 @@
 
   // ITEMS → BOOKS: the books read, the latest first, each with the skill it
   // gave; "+ New book" unfolds the form, and Add pays the book (ST.readBook).
+  // The latest BOOKS_STEP show, then "10 more (N older)" (app.booksShown, until
+  // the page reloads); a book asked about (Remove?) shows wherever it is.
+  var BOOKS_STEP = 10;
   function booksHtml(){
     var books = app.state.books;
     var html = '<div class="panel-title">Books <span class="panel-count">'+books.length+'</span></div>';
@@ -833,7 +857,10 @@
       html += '<div class="empty-note">No books yet: each one you finish gives +'+ST.BOOK_XP+' XP and up to +'+ST.BOOK_SKILL_MAX+' in a skill.</div>';
     } else {
       html += '<div class="book-list">';
-      books.slice().reverse().forEach(function(b){
+      var list = books.slice().reverse(), asking = app.confirmRemove;
+      var shown = Math.min(list.length, Math.max(BOOKS_STEP, num(app.booksShown)));
+      list.forEach(function(b, i){ if (i>=shown && asking && asking.kind==='book' && asking.id===b.id) shown = i+1; });
+      list.slice(0, shown).forEach(function(b){
         var meta = [b.author, ST.dateText(b.date)].filter(Boolean).join(' · ');
         html += '<div class="book-item">'+
           '<span class="book-text"><span class="book-title">'+escapeHtml(b.title)+'</span>'+
@@ -843,13 +870,16 @@
         '</div>'+
         removeConfirmHtml('book', b.id, 'Remove this book? Its XP and skill points stay.');
       });
+      var left = list.length-shown;
+      if (left>0) html += '<button class="list-more" data-action="books-more" data-shown="'+shown+'">'+
+        Math.min(left, BOOKS_STEP)+' more ('+left+' older)</button>';
       html += '</div>';
     }
     var points = '';
     for (var n=1; n<=ST.BOOK_SKILL_MAX; n++) points += '<option value="'+n+'"'+(n===3 ? ' selected' : '')+'>+'+n+'</option>';
     return html+addFormHtml('book', 'New book',
-      '<input type="text" class="field-full" id="new-book-title" placeholder="Title" maxlength="'+ST.BOOK_TITLE_MAX+'" required aria-label="Book title">'+
-      '<input type="text" class="field-full" id="new-book-author" placeholder="Author (optional)" maxlength="'+ST.BOOK_AUTHOR_MAX+'" aria-label="Author">'+
+      '<input autocomplete="off" enterkeyhint="done" type="text" class="field-full" id="new-book-title" placeholder="Title" maxlength="'+ST.BOOK_TITLE_MAX+'" required aria-label="Book title">'+
+      '<input autocomplete="off" enterkeyhint="done" type="text" class="field-full" id="new-book-author" placeholder="Author (optional)" maxlength="'+ST.BOOK_AUTHOR_MAX+'" aria-label="Author">'+
       '<select id="new-book-skill" aria-label="Skill it raises">'+
         '<option value="">No skill</option>'+
         ST.SKILL_KEYS.map(function(k){ return '<option value="'+k+'">'+k+'</option>'; }).join('')+
@@ -858,6 +888,10 @@
       '<button id="add-book-btn">Add</button>');
   }
 
+  // The journal shows its latest LOG_STEP entries, then "30 more (N older)": all of them are kept
+  // (the latest 200), and the older ones could otherwise only be read in a backup file.
+  // app.logShown: how many show, until the page reloads.
+  var LOG_STEP = 30;
   function renderLog(){
     var state = app.state;
     var html = '<div class="panel-title">Log an entry</div>'+
@@ -869,13 +903,17 @@
     if (state.log.length===0){
       html += '<div class="empty-note">No entries yet.</div>';
     } else {
-      state.log.slice().reverse().slice(0,30).forEach(function(entry){
+      var shown = Math.min(state.log.length, Math.max(LOG_STEP, num(app.logShown)));
+      state.log.slice().reverse().slice(0, shown).forEach(function(entry){
         html += '<div class="log-entry">'+
           '<div class="log-date">'+escapeHtml(entry.date)+'</div>'+
           '<div class="log-text">'+escapeHtml(entry.text)+'</div>'+
           '<div class="log-xp">+'+num(entry.xp)+' XP — '+escapeHtml(entry.reason||'')+'</div>'+
         '</div>';
       });
+      var left = state.log.length-shown;
+      if (left>0) html += '<button class="list-more" data-action="log-more" data-shown="'+shown+'">'+
+        Math.min(left, LOG_STEP)+' more ('+left+' older)</button>';
     }
     html += '</div>';
     var tab = el('tab-log');

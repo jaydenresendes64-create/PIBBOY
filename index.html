@@ -16,12 +16,15 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-title" content="MALIK">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
+<!-- The browser's own bars in the app's dark amber, not white (as manifest.webmanifest's theme_color). -->
+<meta name="theme-color" content="#0d0602">
 <!-- The two fonts, asked for at once rather than after the stylesheet is read: the text shows in
      them sooner and jumps less. -->
 <link rel="preload" href="fonts/vt323.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/ibm-plex-mono.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/terminal.css">
 <!-- Plain scripts sharing window.StatusTerminal, in dependency order (see js/state.js). -->
+<script defer src="js/errors.js"></script>
 <script defer src="js/state.js"></script>
 <script defer src="js/storage.js"></script>
 <script defer src="js/ai.js"></script>
@@ -172,6 +175,10 @@
 
       <div class="set-section">About</div>
       <p class="set-note" id="ai-indicator">AI analysis: checking…</p>
+      <p class="set-note" id="app-version">Version: …</p>
+      <p class="set-note" id="error-log">Errors: none</p>
+      <button class="set-link" id="errors-copy-btn" hidden>Copy the error list</button>
+      <button class="set-link" id="errors-clear-btn" hidden>Clear the error list</button>
       <p class="set-note">Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> ·
         Routes: OSRM · Map: OpenFreeMap, OpenMapTiles, OpenStreetMap (credited on the map).</p>
     </div>

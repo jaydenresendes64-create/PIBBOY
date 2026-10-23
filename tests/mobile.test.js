@@ -1,0 +1,95 @@
+// Phone rules (2026-10-23, the owner: "travaille non stop sur l'appli comme
+// un pro"): an iPhone zooms the whole page into a field whose text is under
+// 16px and stays zoomed, so on touch screens every field's text is 16px;
+// the page keeps the safe areas (notch, home bar) and lets people zoom.
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('fs');
+const path = require('path');
+const { ROOT } = require('./helpers');
+
+const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
+
+test('on touch screens every text field is 16px (no zoom on focus)', () => {
+  const css = read('css/terminal.css');
+  const block = /@media \(pointer:coarse\)\{([^}]*\})\s*\}/.exec(css);
+  assert.ok(block, 'a (pointer:coarse) block');
+  assert.match(block[1], /input:not\(\[type=range\]\)[^{]*, select, textarea\{ font-size:16px !important; \}/);
+});
+
+test('the viewport covers the notch and still lets people zoom', () => {
+  const meta = /<meta name="viewport" content="([^"]*)">/.exec(read('index.html'))[1];
+  assert.match(meta, /viewport-fit=cover/);
+  assert.doesNotMatch(meta, /maximum-scale|user-scalable=no/);
+  assert.match(read('css/terminal.css'), /env\(safe-area-inset-top/);
+});
+
+test('installed on a phone: the manifest (id, standalone, icons) and the page agree on the dark theme colour', () => {
+  const m = JSON.parse(read('manifest.webmanifest'));
+  assert.equal(m.id, './');
+  assert.equal(m.display, 'standalone');
+  assert.deepEqual(m.icons.map(i => i.sizes + (i.purpose ? ' ' + i.purpose : '')), ['192x192', '512x512', '512x512 maskable']);
+  const theme = /<meta name="theme-color" content="([^"]+)">/.exec(read('index.html'));
+  assert.ok(theme, 'a theme-color meta');
+  assert.equal(theme[1], m.theme_color);
+  assert.equal(m.background_color, m.theme_color);
+  assert.match(read('index.html'), /<link rel="apple-touch-icon" href="icons\/apple-touch-icon\.png">/);
+});
+
+test('two quick taps on a control never zoom the page (touch-action: manipulation)', () => {
+  const css = read('css/terminal.css');
+  assert.match(css, /^button, a, input, select, textarea, label, \[role="button"\]\{ touch-action:manipulation; \}$/m);
+});
+
+test('every field asks for the right keyboard: number fields say which pad, text fields no autofill and a return key named for what Enter does', () => {
+  const missing = [];
+  fs.readdirSync(path.join(ROOT, 'js')).filter(f => f.endsWith('.js')).forEach(f => {
+    const src = read('js/' + f);
+    for (const m of src.matchAll(/<input\b[^>]*/g)) {
+      const tag = m[0];
+      if (/type="number"/.test(tag) && !/inputmode="(numeric|decimal)"/.test(tag)) missing.push(f + ': ' + tag.slice(0, 60) + ' (no inputmode)');
+      if ((/type="text"/.test(tag) || /class="tape-title"/.test(tag)) && !/autocomplete="off"/.test(tag)) missing.push(f + ': ' + tag.slice(0, 60) + ' (autofill)');
+      if (/type="(text|search)"|class="tape-title"/.test(tag) && !/enterkeyhint="(done|search)"/.test(tag)) missing.push(f + ': ' + tag.slice(0, 60) + ' (return key)');
+    }
+  });
+  assert.deepEqual(missing, []);
+});
+
+test('a field\'s example text is dimmed amber that reads (4.5:1 on the lightest field), not the browser\'s grey', () => {
+  const css = read('css/terminal.css');
+  assert.match(css, /::placeholder\{ color:var\(--text-dim\); opacity:1; \}/);
+  const token = name => /^#([0-9a-f]{6})$/.exec(new RegExp('--' + name + ':(#[0-9a-f]{6});').exec(css)[1])[1];
+  const lum = hex => [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map(v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4))
+    .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+  const ratio = (a, b) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05);
+  for (const bg of ['bg', 'panel', 'panel-alt']) assert.ok(ratio(token('text-dim'), token(bg)) >= 4.5, bg);
+});
+
+test('an iPhone shows the pressed look (:active) only when the page listens for touches: a passive listener', () => {
+  assert.match(read('js/main.js'), /document\.addEventListener\('touchstart', function\(\)\{\}, \{passive:true\}\);/);
+  assert.match(read('css/terminal.css'), /\.tab-btn:active\{/);
+});
+
+test('sliders are drawn in amber with a 36px grab, filled up to the knob (--p)', () => {
+  const { loadApp } = require('./helpers');
+  const ST = loadApp().ST;
+  assert.equal(ST.rangeShare(7, 0, 10), 0.7);
+  assert.equal(ST.rangeShare(1, 0, 3), 0.3333);
+  assert.equal(ST.rangeShare(-5, 0, 10), 0);
+  assert.equal(ST.rangeShare(150, 0, 100), 1);
+  assert.equal(ST.rangeShare('x', 0, 10), 0);
+  assert.equal(ST.rangeShare(5, 5, 5), 0, 'no range: empty, not NaN');
+  assert.equal(ST.rangeFill(9000, 2000, 30000), ' style="--p:0.25"');
+  const css = read('css/terminal.css');
+  assert.match(css, /input\[type=range\]\{\s*--range:var\(--phosphor\);\s*-webkit-appearance:none; appearance:none;[^}]*min-height:36px;/);
+  assert.match(css, /::-webkit-slider-runnable-track\{[^}]*calc\(13px \+ \(100% - 26px\) \* var\(--p, 0\)\)/);
+  assert.match(css, /::-webkit-slider-thumb\{[^}]*width:26px; height:26px; margin-top:-11px;/);   // a finger's size
+  assert.match(read('js/main.js'), /if \(t && t\.type==='range'\) t\.style\.setProperty\('--p', ST\.rangeShare\(t\.value, t\.min, t\.max\)\);/);
+  // every slider in the app writes where its knob sits
+  const sliders = ['js/render.js', 'js/vitals.js', 'js/map.js'].flatMap(f => [...read(f).matchAll(/<input type="range"[^>]*/g)].map(m => f + ': ' + m[0]));
+  assert.equal(sliders.length, 4);
+  sliders.forEach(tag => assert.match(tag, /ST\.rangeFill\(/, tag));
+});

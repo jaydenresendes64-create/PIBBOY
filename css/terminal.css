@@ -41,8 +41,42 @@ body{
 button, input, select, textarea{
   font-family:inherit; color:inherit; background:none; border:none;
 }
+/* An iPhone zooms the whole page into a field whose text is under 16px, and stays zoomed: on
+   touch screens every field's text is 16px (over each component's own size, hence !important). */
+@media (pointer:coarse){
+  input:not([type=range]):not([type=checkbox]):not([type=file]), select, textarea{ font-size:16px !important; }
+}
 button{ cursor:pointer; }
+/* Two quick taps on a control (+ + on a counter) would zoom the page on an iPhone: not on controls.
+   Pinching to zoom still works everywhere. */
+button, a, input, select, textarea, label, [role="button"]{ touch-action:manipulation; }
 ::selection{ background:var(--phosphor); color:var(--bg); }
+/* A field's example text ("Quest name") was the browser's grey (3.6:1): dimmed amber, readable. */
+::placeholder{ color:var(--text-dim); opacity:1; }
+/* Sliders drawn in the terminal's amber, the same on every phone (an iPhone draws a white knob on a
+   grey line): a groove lit up to the knob (--p, 0 to 1: state.js rangeFill, main.js), the knob a
+   lit disc of 26px (on an iPhone the knob is what a finger grabs; its own is ~28px), 36px of height.
+   --range is the colour. */
+input[type=range]{
+  --range:var(--phosphor);
+  -webkit-appearance:none; appearance:none; background:transparent; margin:0; min-height:36px; cursor:pointer;
+}
+input[type=range]:disabled{ --range:var(--phosphor-dim); cursor:default; }
+input[type=range]::-webkit-slider-runnable-track{
+  box-sizing:border-box; height:6px; border:1px solid var(--phosphor-dim); border-radius:3px;
+  background:linear-gradient(to right, var(--range) calc(13px + (100% - 26px) * var(--p, 0)), var(--bg) 0);
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; appearance:none; box-sizing:border-box; width:26px; height:26px; margin-top:-11px;
+  border-radius:50%; border:2px solid var(--bg); background:var(--range);
+  box-shadow:0 0 0 1px var(--range), 0 0 8px rgba(255,154,46,0.45);
+}
+input[type=range]::-moz-range-track{ box-sizing:border-box; height:6px; border:1px solid var(--phosphor-dim); border-radius:3px; background:var(--bg); }
+input[type=range]::-moz-range-progress{ height:6px; border-radius:3px; background:var(--range); }
+input[type=range]::-moz-range-thumb{
+  box-sizing:border-box; width:26px; height:26px; border-radius:50%; border:2px solid var(--bg); background:var(--range);
+  box-shadow:0 0 0 1px var(--range), 0 0 8px rgba(255,154,46,0.45);
+}
 
 .frame{
   position:relative;
@@ -866,7 +900,10 @@ button{ cursor:pointer; }
 .bobble-svg .g{ stroke:var(--glint); stroke-width:1.1; opacity:0.85; }
 .bobble-svg .hole{ fill:var(--bg); }
 .bobble:not(.found) .bobble-svg .g, .bobble:not(.found) .bobble-svg .f{ display:none; }   /* not found: an outline only */
-.bobble-name{ font-size:0.66rem; line-height:1.2; text-align:center; overflow-wrap:anywhere; color:var(--text-dim); }
+/* A name breaks between words, or where render.js allows it in a long one (a soft hyphen); a
+   word is cut anywhere else only when nothing else fits (break-word, not anywhere: with anywhere
+   "Specialist" broke as "Speciali/st" before its hyphen). */
+.bobble-name{ font-size:0.66rem; line-height:1.2; text-align:center; overflow-wrap:break-word; color:var(--text-dim); }
 .bobble.found{ border-color:var(--amber-dim); color:var(--amber); }
 .bobble.found .bobble-name{ color:inherit; }
 .bobble.found .bobble-svg{ opacity:1; filter:drop-shadow(0 0 4px rgba(255,154,46,0.55)); }
@@ -972,7 +1009,7 @@ button{ cursor:pointer; }
   padding:8px; font-size:0.95rem; color:var(--amber); letter-spacing:0.03em;
 }
 .progress-row{ display:flex; align-items:center; gap:10px; margin-top:10px; }
-.progress-row input[type="range"]{ flex:1; accent-color:var(--phosphor); }
+.progress-row input[type="range"]{ flex:1; }
 .progress-pct{ font-size:0.85rem; color:var(--text-dim); width:3em; text-align:right; }
 .streak-row{ display:flex; align-items:center; gap:10px; margin-top:10px; }
 .streak-days{
@@ -1127,7 +1164,7 @@ button{ cursor:pointer; }
 .add-row input.field-full{ flex:1 1 100%; }
 .add-row input.field-objective{ flex:1 1 120px; min-width:0; }
 .add-row input[type="number"]{ width:64px; }
-.add-row input#new-item-price{ width:84px; }
+.add-row input#new-item-price{ width:96px; }   /* "Price $" whole at 16px */
 .add-row input#new-wallet-amount{ width:96px; }                /* "Amount" shows in full at 375px */
 .add-row input[hidden]{ display:none; }
 .add-row select{ flex:0 0 auto; }
@@ -1303,7 +1340,7 @@ button{ cursor:pointer; }
 }
 .place-meta{ font-size:0.74rem; color:var(--text-dim); margin-top:6px; overflow-wrap:anywhere; }
 .place-radius{ display:flex; align-items:center; gap:10px; margin-top:10px; font-size:0.78rem; color:var(--text-dim); }
-.place-radius input{ flex:1; min-width:0; min-height:36px; accent-color:var(--phosphor); }
+.place-radius input{ flex:1; min-width:0; }
 .place-radius span:last-child{ width:4.5em; text-align:right; color:var(--amber); }
 .place-note{
   display:block; width:100%; margin-top:10px; border:1px solid var(--line); border-radius:3px; background:var(--bg);
@@ -1379,6 +1416,9 @@ button{ cursor:pointer; }
   min-height:44px; padding:6px 0; border-bottom:1px solid var(--line); text-align:left; font-size:0.85rem;
 }
 .place-row:last-child, .map-result:last-child{ border-bottom:none; }
+/* "10 more (N older)" under a long list: the MAP's places, the journal. */
+.place-more, .list-more{ display:block; width:100%; min-height:44px; padding:6px 0; text-align:left; font-size:0.74rem;
+  letter-spacing:0.06em; color:var(--text-dim); text-decoration:underline; }
 .place-row.selected .place-row-name{ color:var(--amber); }
 .place-row-name{ min-width:0; overflow-wrap:anywhere; }
 .place-row-meta{ flex:0 0 auto; max-width:55%; font-size:0.72rem; color:var(--text-dim); text-align:right; }
@@ -1606,7 +1646,7 @@ canvas.item-model{
 .vital-fine{ font-size:0.7rem; line-height:1.5; color:var(--text-dim); margin:10px 0 0; }
 .vital-fine a{ color:var(--amber); }
 .vital-row{ display:grid; grid-template-columns:5.2em 1fr 1.8em; gap:8px; align-items:center; padding:5px 0; font-size:0.8rem; }
-.vital-row input[type="range"]{ width:100%; min-height:30px; accent-color:var(--phosphor); }
+.vital-row input[type="range"]{ width:100%; min-height:30px; }
 .vital-val{ text-align:right; color:var(--amber); }
 .vital-scale{ grid-column:2; display:flex; justify-content:space-between; gap:8px; margin-top:-8px; font-size:0.62rem; color:var(--text-dim); }
 .count-row{
@@ -1667,7 +1707,16 @@ canvas.item-model{
 /* What's noted while the urge timer runs (vitals.js urgeDetailsHtml): how strong, what set it off,
    what's being done (the player's own ways); chips toggle (aria-pressed), 36px high at least. */
 .urge-details{ margin-top:12px; padding-top:8px; border-top:1px solid var(--line); }
-.urge-details .vital-row input[type="range"]{ accent-color:var(--amber); }
+.urge-details .vital-row input[type="range"]{ --range:var(--amber); }
+/* "How strong" is wider than the check-in's names (5.2em): its column fits it, on one line. Under
+   360px that leaves the slider too short for its scale: the name goes above, the slider full width. */
+.urge-details .vital-row{ grid-template-columns:auto 1fr 1.8em; }
+.urge-details .vital-row label{ white-space:nowrap; }
+@media (max-width:360px){
+  .urge-details .vital-row{ grid-template-columns:1fr 1.8em; }
+  .urge-details .vital-row label{ grid-column:1 / -1; }
+  .urge-details .vital-scale{ grid-column:1; }
+}
 .urge-ask{ font-size:0.74rem; color:var(--text-dim); margin:10px 0 6px; letter-spacing:0.03em; }
 .urge-chips{ display:flex; flex-wrap:wrap; gap:6px; }
 .chip{

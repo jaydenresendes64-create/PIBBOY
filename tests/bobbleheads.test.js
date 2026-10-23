@@ -74,3 +74,18 @@ test('sanitize: only known bobbleheads, each with a real date; older saves start
   const old = app.plain(ST.sanitizeImported(JSON.parse(JSON.stringify(s))));
   assert.deepEqual([old.bobbleheads, old.lifetimeDailies], [{}, 0]);
 });
+
+test('the shelf: long names may break at a soft hyphen (or after a dot), never mid-letter; the label keeps the name whole', () => {
+  const { FILES } = require('./helpers');
+  const a = loadApp({ files: FILES.render });
+  a.ST.app.state = a.ST.defaultState();
+  a.ST.BOBBLEHEADS.forEach(b => { a.ST.app.state.bobbleheads[b.id] = '2026-10-1'; });
+  a.ST.render.renderStatus();
+  const html = a.elements['tab-status'].innerHTML;
+  const shown = [...html.matchAll(/<span class="bobble-name">([^<]*)<\/span>/g)].map(m => m[1]);
+  assert.equal(shown.length, 16);
+  assert.ok(shown.includes('Globe­trotter') && shown.includes('Special­ist') && shown.includes('S.P.E.C.​I.A.L.​ist'));
+  assert.deepEqual(shown.map(n => n.replace(/[­​]/g, '')), Array.from(a.ST.BOBBLEHEADS, b => b.name), 'the same names, only break points added');
+  assert.match(html, /aria-label="Globetrotter: found"/);
+  assert.match(require('fs').readFileSync(require('path').join(__dirname, '..', 'css', 'terminal.css'), 'utf8'), /\.bobble-name\{[^}]*overflow-wrap:break-word;/);
+});

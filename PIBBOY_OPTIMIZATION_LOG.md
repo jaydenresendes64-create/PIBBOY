@@ -2,6 +2,341 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — ITEMS: the books list shows the latest 10, then "10 more"
+- With a year of data the books list showed all 19 (1,100px); a few years make it a hundred. Like
+  the MAP's places, the journal and the urge history, it now shows the latest 10, then "10 more (N
+  older)" (`js/render.js` `booksHtml`, action `books-more` in `js/events.js`, which focuses the first
+  new one); a book being asked about (Remove?) shows wherever it is.
+- Tests: new `tests/booklist.test.js` (2); `node --test` → 393 pass. Chromium with the year: 10 and
+  "9 more (9 older)", a tap shows all 19 with the focus on the 11th; page 2,127 → 1,724px; no error.
+
+## 2026-10-23 — Bobblehead names no longer cut mid-word
+- Seen in screenshots with a year of data, then measured with all 16 found at 320–430px: long
+  names were cut anywhere ("Specialis/t", "S.P.E.C.I/.A.L.ist"): 7 of 16 at 375px (a common iPhone
+  width), 4 at 390, "Globetrotter" and "S.P.E.C.I.A.L.ist" at every width.
+- `js/render.js` `shelfName`: on the shelf only, a soft hyphen where a long word may break
+  (Waste-land, Capital-ist, Globe-trotter, Special-ist, Col-lector, Archiv-ist) and a break after a
+  dot in S.P.E.C.I.A.L.ist; the button's label, the banners and the data keep the name whole.
+  `css/terminal.css` `.bobble-name`: `overflow-wrap:break-word` instead of `anywhere` (with
+  anywhere the browser still broke "Speciali/st" before the hyphen).
+- Screenshots at 320, 375, 390 and 430px: every name breaks between words or at its hyphen.
+  Tests: `tests/bobbleheads.test.js` +1 (fails without the change); `node --test` → 391 pass.
+
+## 2026-10-23 — Backup round trip with a year of data; the copied error list says the version
+- Checked, no change: a year of data through the real buttons in Chromium. Export gives a 575 KB
+  file holding exactly the phone's data; on a fresh phone, Import shows the comparison in 90 ms
+  ("This backup: level 18 · 65,075 XP · 365 check-ins · 300 urges…" against "On this phone: level
+  2…"), Yes gives identical data, still identical after a reload; Undo puts the fresh phone back.
+  Messages are already read out (`#toast-layer` role=status, aria-live polite).
+- `js/events.js` `copyErrors`: the copied list starts with "PIBBOY version <hash>" (what Settings
+  learnt when it opened) and the browser's user agent, so a report says what it came from. Written
+  in the tap itself: an iPhone refuses a copy made after waiting.
+- Tests: `tests/version.test.js` +1 (the two header lines, the copy at once); `node --test` → 390
+  pass, 0 fail.
+
+## 2026-10-23 — Monkey test (measured, nothing found)
+- A scratchpad script (not in the repo) taps, types and slides on whatever is visible, at random
+  from a seed: buttons, chips, tabs, selects, sliders, text and number fields (junk, HTML, emoji,
+  300 letters), Enter in fields. After each step: no page error, nothing new in the app's error
+  log, no NaN / undefined / [object Object] on screen; every 25 steps the state passes the import
+  gate unchanged.
+- 3 runs of 1,500 steps (a year of data with seeds 2 and 3, an empty phone with seed 4): 124, 114
+  and 116 different controls used; 0 problems. (A first run flagged "NaN" on screen: the script had
+  typed "NaN" as a place's name, which the app showed as typed; the script stopped typing it.)
+
+## 2026-10-23 — Settings → About shows the version (and a newer one waiting)
+- An update comes in when the app goes to the background, so nothing showed whether the new
+  version was in yet (the thing to check after a merge). `sw.js`: asked `{type:'VERSION'}`, it
+  answers `{version: VERSION}` on the port it was given. `js/main.js`: `ST.appVersion()` asks the
+  controlling worker (2 s at most) and adds whether a version waits. `js/events.js`: opening
+  Settings writes "Version 3b72f452d8b2", with " · a newer one is ready: it comes in when you leave
+  the app" while one waits, or "Version: no offline copy" without a service worker.
+  `index.html`: the line under About.
+- Chromium with the real service worker (a copy of the site, its sw.js really changed mid-test):
+  the installed version shown (= sw.js); after `update()` the newer one waits and the line says so;
+  after the app goes to the background it reloads on the newer one and shows its version; no page
+  error.
+- Tests: `tests/sw.test.js` +1 (the answer, nothing without a port, never puts a version in),
+  new `tests/version.test.js` (2); `node --test` → 389 pass, 0 fail.
+
+## 2026-10-23 — The slider knob a finger's size
+- Re-reading the PR's diff before a merge: on an iPhone a slider moves only when its knob is
+  grabbed, and iOS's own knob is ~28px; the amber one was 22px, so harder to catch on the six
+  check-in sliders every morning. `css/terminal.css`: the knob 26px (the fill's offset and the
+  WebKit `margin-top` adjusted: 13px, -11px). Close-ups of the 4 sliders at 390px: centred, the
+  fill reaching the knob's middle. `tests/mobile.test.js` updated; `node --test` → 386 pass.
+
+## 2026-10-23 — The journal: older entries readable ("30 more")
+- The app keeps the latest 200 journal entries, but LOG showed only 30: the other 170 could only
+  be read in a backup file.
+- `js/render.js` `renderLog`: the latest 30, then "30 more (N older)"; `js/events.js` action
+  `log-more` shows 30 more and focuses the first of them; how many show is kept until the page
+  reloads. `css/terminal.css`: `.list-more` shares the MAP's "more" row style.
+- Tests: new `tests/loglist.test.js` (2: 75 entries shown 30, 60, 75 with the right counts, text
+  escaped; 30 or fewer: no button); `node --test` → 386 pass, 0 fail. Chromium phone mode with
+  the year (200 entries): 30, then 60 with the focus on the 31st, all 200 after six taps, a journal
+  entry being typed kept; button 328x44; no page error.
+- Mistake: commit `de6a1d9` wrote these tests with a shell `cat >` over the existing
+  `tests/journal.test.js` (7 tests of the offline journal rules), which went from 7 tests to 2; the
+  run said 379 pass, 0 fail, and the drop is how it was caught. Next commit: the file restored from
+  `9622054` exactly, the new tests in `tests/loglist.test.js`; every test file compared with main's
+  (none has fewer tests). From then on new files are made with the editor (it refuses to overwrite a
+  file not read first), and the total is compared with the expected count before a push.
+
+## 2026-10-23 — Backup size against the import limit (checked, no change)
+- Import refuses files over 5 MB (`MAX_IMPORT_BYTES`, js/storage.js), so an export bigger than that
+  couldn't be restored. A year of daily use exports 575 KB (history, capped at 2,000 events, is half
+  of it; urges, check-ins, journal and trials are capped too). Uncapped: places and routes; a route's
+  road is kept simplified (~10 characters a km: Montréal–Vancouver ~45 KB), so 5 MB needs over a
+  hundred cross-country trips. Far-fetched: no code added. README and HANDOFF now mention the
+  random tests and the CI's second pass on Montréal's clock.
+
+## 2026-10-23 — A long session: no leak (measured, no change)
+- The app stays open for days on the iPhone, so a long session was measured in Chromium with the
+  year of data: rounds of 60 tab switches, 10 Settings open/close, 20 urges started and dropped
+  with full redraws; after each, heap (after garbage collection), elements and listeners.
+- Elements (4,448) and listeners (window 26, document 23, body 11; 447 in all once MapLibre is
+  in) don't move after the first round. The heap jumps once when the MAP first opens (MapLibre,
+  3 → 10 MB), then grows ~0.13 MB a round (~0.05 MB without the MAP). Heap snapshots of round 2 and
+  round 8 compared by kind: the growth is the engine's compiled code (code objects, instruction
+  streams), none of the app's own objects. Nothing to fix.
+
+## 2026-10-23 — The tests in every time zone; CI also on the owner's clock
+- CI runs the tests in UTC; the owner lives on Montréal time. The whole suite in 10 time zones
+  (UTC, Toronto, Vancouver, Adak, Paris, Casablanca, Kolkata, Auckland, Chatham, Kiritimati) found
+  two tests (not the app) that only held in some: `tests/errors.test.js` expected the error's UTC
+  time on the local date (in Auckland 09:12 on the 23rd is the 22nd in UTC); `tests/insight.test.js`
+  expected every reflection to end with "?" (which one shows depends on the minute; one ends "Good
+  to know for next time."). Both now check what they mean; 384 pass in all 10.
+- The random-actions test (crossing the 1 November clock change) passed on Montréal time with 3
+  more seeds of 3,000 actions.
+- `.github/workflows/test.yml`: a second `node --test` with `TZ: America/Toronto`.
+
+## 2026-10-23 — MAP lists: the latest 10, then "10 more"
+- With the year of data the MAP's Cities list was 60 rows (2,640px) under the map; a bulk list
+  of places makes it longer in one go. The journal (30 shown) and the urge history ("more") were
+  already bounded; the places lists weren't.
+- `js/map.js` `listHtml`: each list (cities, regions, pins) shows its latest 10, newest first, then
+  "10 more (N older)", which shows ten more and moves the focus to the first new one; the place
+  open in the panel shows wherever it is. How many show is kept until the page reloads (not
+  saved). `css/terminal.css` `.place-more`: a 44px row, dimmed amber, underlined.
+- Tests: new `tests/maplist.test.js` (3: the first 10 and the count, no button at 10 or fewer, the
+  open place shown); `node --test` → 384 pass, 0 fail. Chromium phone mode with the year: page
+  4,043 → 1,887px, the button 328x44, a tap shows 20 with the focus on the 11th, all 60 after
+  five more; no page error.
+
+## 2026-10-23 — A skill's detail: the same source on one line, counted
+- Found with the year of data: SURVIVAL's "Earned" showed one line per urge ridden out, 438
+  "Urge ridden out +1" lines (and as many elements on the page once opened).
+- `js/render.js` `skillDetailHtml`: sources with the same name share one line, with how many and
+  their total ("Urge ridden out ×438 +438", "The Road ×2 +3"), in the order they first came. Display
+  only: `skillSources()` still lists each one; the summary line under the skill is unchanged.
+- Tests: `tests/skills.test.js` +1 (a book read twice and three urges: two lines; fails without the
+  change); `node --test` → 381 pass, 0 fail. Chromium with the year: SURVIVAL's detail is 3 lines,
+  screenshot checked; no page error.
+
+## 2026-10-23 — STATUS redraw with a year of data: one pass, not eight
+- Profile of 30 STATUS redraws with the year of data (full speed): `skillSources` ran once per skill
+  (8), each going through the 2,000 history events and splitting their text (~54 ms); the 7-day
+  summary turned each event's time into "2026-10-22" text and parsed it back (`dayNumber(dayStr())`,
+  ~31 ms).
+- `js/state.js`: `skillSourcesAll()` gives every skill's sources in one pass over the quests, the
+  books and the history (`skillSources(key)` reads from it); `js/render.js` asks once per draw.
+  `weekSummary`: an event's day straight from its date (`Date.UTC` of its local year, month, day).
+- Same results, checked: old and new skill sources identical for all 8 skills on the year and the
+  used phone, with a skill twice in a quest, a negative gain and junk in the history; old and new
+  week summaries identical on the year at 5 days (DST changes among them) in 4 time zones
+  (UTC, Toronto, Casablanca, Auckland). The JS part goes from ~85 ms to ~21–37 ms per 30 redraws:
+  about 2 ms per STATUS redraw at full speed (~8 ms on a phone 4× slower); the rest is the browser.
+- Tests: the existing skills and week tests cover both; `node --test` → 380 pass, 0 fail.
+
+## 2026-10-23 — VITALS redraw with a year of data: two hot spots
+- CPU profile of 30 VITALS redraws with the year of data (full speed): `shortDay` 23 ms (a new
+  date formatter for every date), `dayNumber` + `byDate` 28 ms (`lastVitals` sorted all 365
+  check-ins working out both entries' days at each of ~6,000 comparisons, several times a draw).
+- `js/vitals.js` `shortDay`: one `Intl.DateTimeFormat`, made the first time (same text: "Oct 22").
+  `js/state.js` `lastVitals`: each entry's day worked out once, then sorted (same order, the list
+  not touched). After: `shortDay` 1–2 ms, `byDate` gone, `dayNumber` ~10 ms: about 1 ms saved per
+  VITALS redraw at full speed (~4 ms on a phone 4× slower). The rest of a redraw is mostly the
+  browser laying the page out, which a smaller change can't remove.
+- Tests: `tests/vitals.test.js` +1 (400 shuffled check-ins: newest first by day, across a month
+  change, the saved list left as it was); `node --test` → 380 pass, 0 fail.
+
+## 2026-10-23 — A year of data, and the Vault Boy from level 10 (measured, not changed)
+- A year of daily use built through the app's own functions (365 check-ins, 300 urges, 264 trials,
+  200 journal entries, 2,000 history events, 122 places, level 17; 337 KB), opened in Chromium
+  with the processor slowed 4×: busy ~2,000 ms in the first 4 s, style+layout ~1,050 ms, longest
+  task ~200 ms; a full redraw 75–90 ms, VITALS 20 ms, a save 5 ms, the import gate 30 ms. An
+  empty phone: busy ~450 ms, style ~110 ms. Only 1,640 elements on the page.
+- Bisected: the data isn't the cost, the **level** is. An empty phone at level 10 or more costs the
+  same as the year (levels 2–8: busy ~400–540 ms). From level 10 the Vault Boy walks in parts
+  (outfits 10/20/30/50); while he walks (about 4 s of each 11 s loop) Chromium recomputes the style
+  of all ~20 animated elements every frame (~60/s, ~140 ms per 250 ms at 4×; nothing while he
+  stands, so the idle measure missed it). Turning animations off one at a time: the thighs'
+  (`vbLegF`/`vbLegB`, 229/237 keyframes of `rotate(calc(var(--vb-swing, 1) * …deg))`) are the
+  cause; with 3 plain keyframes in their place it stops; without the `var()` it halves. The
+  shins have the same kind of keyframes and don't cause it; `clip-path` on `.vb-knee`,
+  `will-change` and the sprite don't matter. Chromium's trace marks every animation composited, yet
+  ticks them all on the main thread.
+- Not changed: it's the Vault Boy (the owner's checklist and eyes, HANDOFF §4), and the owner's
+  phone is an iPhone, whose WebKit handles animations its own way; not measurable here. Candidate
+  for the next session if the owner reaches level 10 and notices heat or stutter: have
+  tools/vaultboy-moves.py write the thighs' keyframes with fewer, plain-angle keyframes (the
+  swing applied another way), then compare frames at levels 2, 5 and 10.
+- Scripts (not in the repo): a year generator through tests/helpers, a per-level timeline of
+  style recalcs (CDP Performance metrics every 250 ms), and per-animation kill switches.
+
+## 2026-10-23 — Random actions: the numbers always add up
+- New `tests/actions.test.js`: 1,200 actions picked at random from a fixed seed (check-ins, RADS,
+  dailies, quests and bonuses, urges won/given in/dropped with notes, trials, streaks and lapses,
+  books, journal, sales, perks, SPECIAL points, places), through the app's own functions with time
+  going by. After each: lifetime XP grew by exactly the history's new XP (every reward through
+  `award()`); level, XP and next threshold are what that XP gives (+400 a level); skills 0-100,
+  SPECIAL 1-10, points ≥ 0; no NaN or Infinity anywhere; every 25 actions the import gate takes the
+  state back unchanged. `seededRandom` shared in tests/helpers.js (fuzz uses it too).
+- Found nothing: 18,000 more actions over 6 seeds passed. Checked that it catches real bugs: a
+  planted extra XP point and a reward left out of the history both fail it at once. (Its skill-cap
+  check is a guard: no skill gets near 100 in a run; tests/rewards.test.js tests the cap.)
+- `node --test` → 379 pass, 0 fail. Test files only.
+
+## 2026-10-23 — Damaged backups: a fuzz test, and no "[object Object]"
+- New `tests/fuzz.test.js`: the phone used every way (`usedPhone`, moved from
+  tests/roundtrip.test.js to tests/helpers.js) is exported, damaged at 1 to 5 random places (junk
+  of every type, or removed), 400 rounds from a fixed seed (`FUZZ_ROUNDS`/`FUZZ_SEED` for more).
+  Each round: `sanitizeImported` doesn't throw, a second pass changes nothing, and STATUS, QUESTS,
+  ITEMS, LOG and VITALS (check-in and trials) draw with no NaN, "undefined" or "[object Object]".
+- It found one thing: a list or an object where text belongs (a quest name, a journal line) showed
+  as "[object Object]". `js/state.js` `text()`: such a value is no text (''). Every field it
+  cleans is one the app only ever writes as text (checked: no older version stored text as a list),
+  so no saved data changes; the round-trip test still gives the same document.
+- Tests: fuzz +1, `tests/sanitize.test.js` +1 (both fail without the fix); 20,000 rounds over 4
+  seeds and 12,000 more with the trials view passed locally; `node --test` → 378 pass, 0 fail.
+- Measured, no change: date and number formatting at opening (the profile's top item): 1 date and
+  5–7 number formats per open or redraw; the ~17ms is the first one setting up (a cache can't save
+  it), the rest under 0.5ms.
+
+## 2026-10-23 — Sliders in amber on every phone; the quest slider easier to grab
+- The 4 sliders (the 6 check-in levels, the urge's strength, a quest's progress, a place's radius)
+  were the browser's own, tinted with `accent-color`: an iPhone draws them as a white knob on a grey
+  line, only the filled part amber. The quest's progress slider was 16px high (the design audit
+  leaves sliders out; measured now): hard to grab.
+- `css/terminal.css`: one rule for every slider: an amber-edged groove lit up to the knob, a lit
+  amber knob (22px, a dark ring), 36px of height to grab (the check-in rows keep their 30px); the
+  urge's in `--amber`; a done quest's dimmed. WebKit/Blink and Firefox pseudo-elements; the
+  `accent-color` lines removed. `js/state.js`: `rangeShare`/`rangeFill` (where the knob sits,
+  0 to 1, written as `style="--p:…"` in each slider's HTML: render.js, vitals.js ×2, map.js);
+  `js/main.js`: one input listener keeps `--p` up to date while the knob moves.
+- Chromium (390px, phone mode): before/after close-ups of all 4; quest slider 16 → 36px; a finger
+  drag moves the value, the shown number, the saved level and the fill together; arrow keys too,
+  with the focus ring; a done quest's slider dim and locked; the design audit at 320px unchanged; no
+  page error. Not checkable here: the iPhone's own drawing (expected the same: WebKit).
+- Tests: `tests/mobile.test.js` +1 (the share, the CSS, every slider writes `--p`),
+  `tests/urges.test.js` pattern; `node --test` → 376 pass, 0 fail (exit code checked).
+
+## 2026-10-23 — The return key says what Enter does
+- The iPhone keyboard's return key said "return" in every text field, though Enter adds the quest,
+  item, book, trial or way, saves the note or the name. 20 text fields (js/render.js, map.js,
+  routes.js, trials.js, vitals.js, holotapes.js, bulk.js): `enterkeyhint="done"` ("OK" on a French
+  iPhone); a bulk line's fix `"search"` (Enter looks it up again), like the map search already.
+- Two fields where Enter did nothing: a new streak's name now starts it (what Start/Save does), a
+  route's name closes the keyboard like a place's (the name is kept as typed).
+- Tests: `tests/ownstreaks.test.js` +1 (Enter starts, then renames; fails without the handler);
+  `tests/mobile.test.js` scan: every text field names its return key; `node --test` → 375 pass,
+  0 fail. Chromium phone mode: Enter in the streak name starts "Focus" and closes the form; Enter in
+  a route's name keeps it and leaves the box; the fields on screen carry the hint; no page error.
+- Mistake: commit `a90bc69` was pushed with 3 failing tests (tests/trials.test.js ×2,
+  tests/urges.test.js ×1 match a field's exact HTML, which now has `enterkeyhint`): my command
+  checked that the test output printed, not that it passed. Fixed in the next commit (patterns
+  updated; 375 pass). From then on the push waits for `node --test`'s own exit code.
+
+## 2026-10-23 — The pressed look on iPhone
+- The tabs' "physical key" press (`.tab-btn:active`) and the trial counter's (`.trial-tap:active`)
+  don't show in iOS Safari: it applies `:active` only when the page listens for touches (Apple's
+  Safari Web Content Guide; still the standard answer, WebKit bugs 221366 and 310540). `js/main.js`:
+  one `touchstart` listener on the document that does nothing, passive (it never holds up
+  scrolling).
+- Chromium phone mode (CDP): the listener is there and passive; a tap still switches tabs; no page
+  error. Not checkable here: the pressed look itself on the iPhone.
+- Tests: `tests/mobile.test.js` +1; `node --test` → 374 pass, 0 fail.
+
+## 2026-10-23 — Urge "How strong" on one line
+- The urge's "How strong" label sat in the check-in's name column (5.2em, 67px) and broke onto two
+  lines at every width. `css/terminal.css`: in `.urge-details` its column fits the name (`auto`,
+  `nowrap`); under 360px, where the shorter slider would push its scale ("0 unrated / extreme 10")
+  onto two lines, the name goes above and the slider takes the full width.
+- Chromium at 320, 360, 375, 390: name and scale each on one line (screenshots); the design audit at
+  320 and 390 finds nothing new, no page error. `node --test` → 373 pass, 0 fail (CSS only).
+
+## 2026-10-23 — Example text in fields: amber, readable; landscape checked
+- Every field's example text ("Quest name", "Search city…", "Price $") was the browser's grey
+  (#757575, 3.63:1 on the form panels; under the 4.5:1 floor and off the amber look).
+  `css/terminal.css`: `::placeholder{ color:var(--text-dim); opacity:1; }`. Measured in Chromium on
+  all 19 fields, including the forms that open on a tap (own streak, cope, trial, map search, bulk
+  list): 4.51:1 to 5.42:1.
+- Phone landscape (844x390), every screen with realistic data: no sideways scroll, no clipping, no
+  page error; the small taps found are the known, deliberate ones. No change.
+- Tests: `tests/mobile.test.js` +1 (the rule, and `--text-dim` against `--bg`, `--panel`,
+  `--panel-alt` computed from the CSS; fails without the rule); `node --test` → 373 pass, 0 fail.
+
+## 2026-10-23 — The right keyboard, no autofill bar
+- 10 number fields had no `inputmode` (an iPhone then shows the full keyboard's number row, not a
+  pad), and 17 text fields had no `autocomplete="off"` (Safari offers contacts and addresses above
+  the keyboard for fields named like "name"). js/render.js, map.js, routes.js, holotapes.js,
+  bulk.js, trials.js, sfx-custom.js: `inputmode="numeric"` (XP, days, places), `"decimal"`
+  (Caps target, amounts, rates, clip times), `autocomplete="off"` on every text field.
+- Tests: `tests/mobile.test.js` +1 (scans every `<input>` in js/); `node --test` → 372 pass, 0 fail.
+  Chromium phone mode: the fields carry the new attributes; no layout change, no page error.
+
+## 2026-10-23 — No double-tap zoom on controls
+- Two quick taps on a control (the RADS + and −, a quest's ○, "Another angle") zoom the page on an
+  iPhone; only the trial counter had `touch-action:manipulation`. `css/terminal.css`: buttons, links,
+  fields and labels get it (pinch zoom still works; the map's canvas keeps MapLibre's own `none`).
+- Tests: `tests/mobile.test.js` +1; `node --test` → 371 pass, 0 fail. Chromium phone mode: buttons
+  and tabs `manipulation`, the map canvas `none`, the page `auto`.
+
+## 2026-10-23 — Lint pass
+- ESLint 9 (from the scratchpad, not a repo dependency) with the browser, service-worker and Node
+  globals, rules for undefined/unused names, unreachable code, duplicate keys, self-compare, typeof,
+  fall-through and the like, over js/, sw.js, tests/, api/: two findings, both dead code, removed
+  (`motion` in js/items3d.js, `DAY` in tests/history.test.js). tools/perf-check.js's flags are code
+  that runs in the browser (page.evaluate): left. Now clean. `node --test` → 370 pass, 0 fail.
+
+## 2026-10-23 — Installed-app details; performance measured
+- `index.html`: `<meta name="theme-color">` (the browser's bars dark amber, as the manifest);
+  `manifest.webmanifest`: `"id": "./"` (a stable identity for the installed app). Chromium parses the
+  manifest with no error. `tests/mobile.test.js` +1 (manifest and page agree). Icons checked: 180,
+  192, 512 and a 512 maskable.
+- Performance (tools/perf-check.js, CPU ×4): opening busy 612/603 ms (style 69/81, layout 49/46),
+  longest task 165 ms; VITALS, STATUS, QUESTS 3 ms/s and LOG 11 ms/s sitting still (ITEMS and MAP
+  draw WebGL on the processor in headless Chromium, as noted before). A CPU profile of the opening
+  puts the most in renderHeader (the first date formatting) and placeWalker (reading the layout);
+  the country list is 2.5 ms. No change made: no single fix worth its risk.
+- `node --test` → 370 pass, 0 fail.
+
+## 2026-10-23 — Error log (plan task 25); accessibility checks
+- New `js/errors.js` (first script; APP_SHELL; sw VERSION stamped): uncaught errors and unhandled
+  rejections kept on this device (latest 20, "Script error." and failed resources left out), a
+  notice once a session; `index.html` + `js/events.js`: Settings → About "Errors: N · last … — …",
+  Copy the error list (clipboard), Clear. Checked first that normal use makes none (Chromium, every
+  tab, online and offline: 0).
+- Accessibility, no change needed: Chromium's accessibility tree gives every control on every
+  screen a name; 44 controls reached by Tab on VITALS all show the amber focus ring (one false
+  alarm on the date field: it does, read too early).
+- Tests: new `tests/errors.test.js` (2); `node --test` → 369 pass, 0 fail. Chromium: a thrown error
+  and a rejected promise → one notice, About "Errors: 2 · last …", Copy → both lines on the
+  clipboard, Clear → "Errors: none".
+
+## 2026-10-23 — No more iPhone zoom when typing (plan task 24)
+- Measured every field on every screen and form (Chromium, phone mode): 19 of 20 had text under
+  16px (12.8–14.4px: the pulse, the streak date, the quest/item/book/wallet forms, the map search,
+  the journal), and iOS Safari zooms the page into such a field and stays zoomed.
+- `css/terminal.css`: on touch screens (`pointer:coarse`) every text field, select and textarea is
+  16px (!important over each component's size); the new item's price field 84 → 96px so "Price $"
+  stays whole. Pinch zoom stays allowed (no maximum-scale).
+- Tests: new `tests/mobile.test.js` (2); `node --test` → 367 pass, 0 fail. Chromium phone mode:
+  0 fields under 16px; the layout audit at 320/390px finds no clipping or sideways scroll; the forms
+  looked at 320px.
+
 ## 2026-10-22 — Design recheck of every screen (plan task 23)
 - Method: a Chromium script fills the app with realistic data, then on every tab, Settings, the
   trials, the urge timer (running and at zero), the perk chart, a bobblehead and the level-up, at

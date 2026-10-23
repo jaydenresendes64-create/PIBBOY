@@ -38,7 +38,7 @@
 'use strict';
 
 var CACHE_PREFIX = 'status-terminal-';
-var VERSION = '9ea22b708ac0';                       // node tools/stamp-sw.js
+var VERSION = '4cf7114587be';                       // node tools/stamp-sw.js
 var CACHE = CACHE_PREFIX + VERSION;
 var DATA_CACHE = CACHE_PREFIX + 'data';             // kept across versions
 var TILE_CACHE = CACHE_PREFIX + 'vector-tiles';     // kept across versions
@@ -52,7 +52,7 @@ var APP_SHELL = [
   './',
   'index.html',
   'css/terminal.css',
-  'js/state.js', 'js/storage.js', 'js/ai.js', 'js/places.js', 'js/sfx.js', 'js/sfx-custom.js', 'js/weather.js', 'js/boot.js', 'js/render.js', 'js/items3d.js', 'js/mascot.js', 'js/crt.js', 'js/tilt.js', 'js/fog.js', 'js/map.js', 'js/bulk.js', 'js/routes.js', 'js/radar.js', 'js/holotapes.js', 'js/insight.js', 'js/vitals.js', 'js/trials.js', 'js/events.js', 'js/main.js',
+  'js/errors.js', 'js/state.js', 'js/storage.js', 'js/ai.js', 'js/places.js', 'js/sfx.js', 'js/sfx-custom.js', 'js/weather.js', 'js/boot.js', 'js/render.js', 'js/items3d.js', 'js/mascot.js', 'js/crt.js', 'js/tilt.js', 'js/fog.js', 'js/map.js', 'js/bulk.js', 'js/routes.js', 'js/radar.js', 'js/holotapes.js', 'js/insight.js', 'js/vitals.js', 'js/trials.js', 'js/events.js', 'js/main.js',
   'vendor/maplibre/maplibre-gl.mjs', 'vendor/maplibre/maplibre-gl-shared.mjs', 'vendor/maplibre/maplibre-gl-worker.mjs', 'vendor/maplibre/maplibre-gl.css',
   'vendor/three/three.pibboy.min.js',
   'data/map-style.json', 'data/places.txt',
@@ -99,7 +99,10 @@ self.addEventListener('install', function(event){
 });
 
 self.addEventListener('message', function(event){
-  if (event.data && event.data.type==='SKIP_WAITING') self.skipWaiting();
+  var type = event.data && event.data.type;
+  if (type==='SKIP_WAITING') self.skipWaiting();
+  // Which version this is (Settings → About asks), answered on the port the page sent.
+  else if (type==='VERSION' && event.ports && event.ports[0]) event.ports[0].postMessage({version:VERSION});
 });
 
 self.addEventListener('activate', function(event){
