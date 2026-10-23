@@ -1088,9 +1088,12 @@
     reward.trained = trainStat('INT', reward.xp);
     return reward;
   }
-  // The latest `n` entries, newest first.
+  // The latest `n` entries, newest first. Each entry's day is worked out once, not at every
+  // comparison (a year of check-ins is some 6,000 of them a sort; VITALS asks several times a draw).
   function lastVitals(n){
-    return app.state.vitals.slice().sort(byDate).reverse().slice(0, n);
+    return app.state.vitals.map(function(v){ return {v:v, day:dayNumber(v.date)}; })
+      .sort(function(a, b){ return a.day-b.day; }).reverse().slice(0, n)
+      .map(function(x){ return x.v; });
   }
   // The latest check-in logged before today's VITALS day, with how many
   // days before it (`ago`: 1 is yesterday); null for none.

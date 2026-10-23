@@ -2,6 +2,18 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — VITALS redraw with a year of data: two hot spots
+- CPU profile of 30 VITALS redraws with the year of data (full speed): `shortDay` 23 ms (a new
+  date formatter for every date), `dayNumber` + `byDate` 28 ms (`lastVitals` sorted all 365
+  check-ins working out both entries' days at each of ~6,000 comparisons, several times a draw).
+- `js/vitals.js` `shortDay`: one `Intl.DateTimeFormat`, made the first time (same text: "Oct 22").
+  `js/state.js` `lastVitals`: each entry's day worked out once, then sorted (same order, the list
+  not touched). After: `shortDay` 1–2 ms, `byDate` gone, `dayNumber` ~10 ms: about 1 ms saved per
+  VITALS redraw at full speed (~4 ms on a phone 4× slower). The rest of a redraw is mostly the
+  browser laying the page out, which a smaller change can't remove.
+- Tests: `tests/vitals.test.js` +1 (400 shuffled check-ins: newest first by day, across a month
+  change, the saved list left as it was); `node --test` → 380 pass, 0 fail.
+
 ## 2026-10-23 — A year of data, and the Vault Boy from level 10 (measured, not changed)
 - A year of daily use built through the app's own functions (365 check-ins, 300 urges, 264 trials,
   200 journal entries, 2,000 history events, 122 places, level 17; 337 KB), opened in Chromium

@@ -78,9 +78,13 @@
     return m[1]+'-'+pad2(+m[2])+'-'+pad2(+m[3]);
   }
   function todayBox(){ return boxDate(ST.todayStr()); }
+  // "Oct 22". One formatter, made the first time: a new one for each date cost more than the rest.
+  var shortDayFormat = null;
   function shortDay(day){
     var m = DAY.exec(day || '');
-    return m ? new Date(+m[1], +m[2]-1, +m[3]).toLocaleDateString('en-US', {month:'short', day:'numeric'}) : '';
+    if (!m) return '';
+    shortDayFormat = shortDayFormat || new Intl.DateTimeFormat('en-US', {month:'short', day:'numeric'});
+    return shortDayFormat.format(new Date(+m[1], +m[2]-1, +m[3]));
   }
 
   // ---------- the chem-free streak ----------

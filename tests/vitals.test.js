@@ -79,6 +79,20 @@ test('the check-in: paid once a day (15 XP, trains INT); levels, pulse and count
   assert.deepEqual(Array.from(ST.lastVitals(7), v => v.date), ['2026-10-10', '2026-10-9']);
 });
 
+test('lastVitals: newest first by day (not by text), whatever order they were saved in, the list left as it was', () => {
+  const s = fresh();
+  const { seededRandom } = require('./helpers');
+  const rand = seededRandom(3);
+  const days = [];
+  for (let d = 0; d < 400; d++) { const t = new Date(2025, 8, 1 + d); days.push(t.getFullYear() + '-' + (t.getMonth() + 1) + '-' + t.getDate()); }
+  s.vitals = days.map(date => ({ date, logged: rand() < 0.8 })).sort(() => rand() - 0.5);
+  const saved = s.vitals.map(v => v.date);
+  const want = days.slice().reverse();
+  assert.deepEqual(Array.from(ST.lastVitals(400), v => v.date), want);
+  assert.deepEqual(Array.from(ST.lastVitals(7), v => v.date), want.slice(0, 7));   // 2026-10-1 before 2026-9-30, by day
+  assert.deepEqual(s.vitals.map(v => v.date), saved, 'not sorted in place');
+});
+
 // ---------- the chem-free streak ----------
 test('the streak: day 1 on the start date, milestones paid once, never twice by editing the start', () => {
   const s = fresh();
