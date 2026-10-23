@@ -2,6 +2,16 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — A skill's detail: the same source on one line, counted
+- Found with the year of data: SURVIVAL's "Earned" showed one line per urge ridden out, 438
+  "Urge ridden out +1" lines (and as many elements on the page once opened).
+- `js/render.js` `skillDetailHtml`: sources with the same name share one line, with how many and
+  their total ("Urge ridden out ×438 +438", "The Road ×2 +3"), in the order they first came. Display
+  only: `skillSources()` still lists each one; the summary line under the skill is unchanged.
+- Tests: `tests/skills.test.js` +1 (a book read twice and three urges: two lines; fails without the
+  change); `node --test` → 381 pass, 0 fail. Chromium with the year: SURVIVAL's detail is 3 lines,
+  screenshot checked; no page error.
+
 ## 2026-10-23 — STATUS redraw with a year of data: one pass, not eight
 - Profile of 30 STATUS redraws with the year of data (full speed): `skillSources` ran once per skill
   (8), each going through the 2,000 history events and splitting their text (~54 ms); the 7-day

@@ -159,10 +159,19 @@
     return '';
   }
   function skillDetailHtml(src){
+    // Sources with the same name on one line, counted ("Urge ridden out ×212 +212"): after months,
+    // one line each made a list hundreds long. In the order they first came.
     function lines(list, empty){
       if (!list.length) return '<p class="skill-empty">'+empty+'</p>';
-      return list.map(function(r){
-        return '<div class="skill-src"><span>'+escapeHtml(r.name)+'</span><span>+'+num(r.amount)+'</span></div>';
+      var by = {}, order = [];
+      list.forEach(function(r){
+        var k = ' '+r.name;
+        if (!by[k]){ by[k] = {name:r.name, amount:0, count:0}; order.push(by[k]); }
+        by[k].amount += num(r.amount);
+        by[k].count++;
+      });
+      return order.map(function(r){
+        return '<div class="skill-src"><span>'+escapeHtml(r.name)+(r.count>1 ? ' ×'+r.count : '')+'</span><span>+'+r.amount+'</span></div>';
       }).join('');
     }
     return '<div class="skill-detail">'+

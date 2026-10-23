@@ -70,3 +70,20 @@ test('a tap on a skill opens its detail, a second one closes it; nothing changes
   assert.equal(ST.app.skillOpen, null);
   assert.equal(ST.app.state.skills.MUSIC, before);
 });
+
+test('a skill\'s detail: sources with the same name on one line, counted, in the order they first came', () => {
+  const a = app(), ST = a.ST;
+  ST.readBook('The Road', 'McCarthy', 'SURVIVAL', 2);
+  for (let i = 0; i < 3; i++) {
+    ST.startUrge('TIRED');
+    a.setNow(a.context.Date.now() + ST.URGE_MS + 1000);
+    ST.urgeWon();
+  }
+  ST.readBook('The Road', 'McCarthy', 'SURVIVAL', 1);                          // read again
+  assert.equal(ST.skillSources('SURVIVAL').earned.length, 5, 'the sources themselves stay one each');
+  ST.app.skillOpen = 'SURVIVAL';
+  ST.render.renderStatus();
+  const detail = /<div class="skill-detail">([\s\S]*?)<\/div><\/div>/.exec(a.elements['tab-status'].innerHTML)[1];
+  assert.match(detail, /Earned<\/div><div class="skill-src"><span>The Road ×2<\/span><span>\+3<\/span><\/div><div class="skill-src"><span>Urge ridden out ×3<\/span><span>\+3<\/span>/);
+  assert.equal((detail.match(/class="skill-src"/g) || []).length, 3, 'two earned lines and the quest to come');
+});
