@@ -571,7 +571,7 @@
         (m.completed ? '<span class="badge">Completed</span>' : '')+
         '<button class="remove-btn" data-action="main-remove" data-id="'+attr(m.id)+'" aria-label="Remove main quest: '+about(m.questName, m.title)+'">&times;</button>'+
       '</div>'+
-      '<input type="text" class="main-title-input" data-id="'+attr(m.id)+'" maxlength="60" value="'+escapeHtml(m.title)+'" aria-label="Objective">'+
+      '<input autocomplete="off" type="text" class="main-title-input" data-id="'+attr(m.id)+'" maxlength="60" value="'+escapeHtml(m.title)+'" aria-label="Objective">'+
       (streak ? streakRowHtml(m) : caps ? capsRowHtml(m) : places ? placesRowHtml(m) :
         '<div class="progress-row">'+
           '<input type="range" min="0" max="100" value="'+num(m.progress)+'" class="main-progress-input" data-id="'+attr(m.id)+'" aria-label="Progress"'+(m.completed?' disabled':'')+'>'+
@@ -630,9 +630,9 @@
     }
     state.quests.mains.forEach(function(m){ html += mainQuestHtml(m); });
     html += addFormHtml('main', 'New main quest',
-      '<input type="text" class="field-full" id="new-main-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
-      '<input type="text" id="new-main-objective" placeholder="Objective..." maxlength="60" required aria-label="Objective">'+
-      '<input type="number" id="new-main-xp" value="1000" min="10" max="5000" aria-label="XP reward">'+
+      '<input autocomplete="off" type="text" class="field-full" id="new-main-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
+      '<input autocomplete="off" type="text" id="new-main-objective" placeholder="Objective..." maxlength="60" required aria-label="Objective">'+
+      '<input inputmode="numeric" type="number" id="new-main-xp" value="1000" min="10" max="5000" aria-label="XP reward">'+
       '<select id="new-main-type" aria-label="Progress type">'+
         '<option value="percent">Percentage</option>'+
         '<option value="streak">Day streak</option>'+
@@ -640,14 +640,14 @@
         '<option value="places">Places to reveal</option>'+
       '</select>'+
       '<label class="days-field" id="new-main-places-field" hidden>'+
-        '<input type="number" id="new-main-places" value="5" min="1" max="'+ST.PLACES_TARGET_MAX+'" aria-label="Places to reveal"><span>places in</span>'+
+        '<input inputmode="numeric" type="number" id="new-main-places" value="5" min="1" max="'+ST.PLACES_TARGET_MAX+'" aria-label="Places to reveal"><span>places in</span>'+
         '<select id="new-main-cc" aria-label="Where">'+countryOptionsHtml()+'</select>'+
       '</label>'+
       '<label class="days-field" id="new-main-caps-field" hidden>'+
-        '<input type="number" id="new-main-caps" value="5" min="0.01" step="0.01" aria-label="Target caps"><span>caps</span>'+
+        '<input inputmode="decimal" type="number" id="new-main-caps" value="5" min="0.01" step="0.01" aria-label="Target caps"><span>caps</span>'+
       '</label>'+
       '<label class="days-field" id="new-main-days-field" hidden>'+
-        '<input type="number" id="new-main-days" value="7" min="1" max="'+ST.STREAK_MAX_DAYS+'" aria-label="Target days"><span>days</span>'+
+        '<input inputmode="numeric" type="number" id="new-main-days" value="7" min="1" max="'+ST.STREAK_MAX_DAYS+'" aria-label="Target days"><span>days</span>'+
       '</label>'+
       '<button id="add-main-btn">Add</button>');
 
@@ -669,9 +669,9 @@
       html += '</div>';
     }
     html += addFormHtml('side', 'New side quest',
-      '<input type="text" class="field-full" id="new-quest-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
-      '<input type="text" class="field-objective" id="new-quest-objective" placeholder="Objective..." required aria-label="Objective">'+
-      '<input type="number" id="new-quest-xp" value="100" min="5" max="500" aria-label="XP reward">'+
+      '<input autocomplete="off" type="text" class="field-full" id="new-quest-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
+      '<input autocomplete="off" type="text" class="field-objective" id="new-quest-objective" placeholder="Objective..." required aria-label="Objective">'+
+      '<input inputmode="numeric" type="number" id="new-quest-xp" value="100" min="5" max="500" aria-label="XP reward">'+
       '<select id="new-quest-skill" aria-label="Skill it raises">'+
         '<option value="">No skill</option>'+
         ST.SKILL_KEYS.map(function(k){ return '<option value="'+k+'">+'+ST.SIDE_SKILL_GAIN+' '+k+'</option>'; }).join('')+
@@ -691,9 +691,9 @@
       removeConfirmHtml('daily', q.id, 'Remove this quest?');
     });
     html += '</div>'+addFormHtml('daily', 'New daily quest',
-      '<input type="text" class="field-full" id="new-daily-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
-      '<input type="text" class="field-objective" id="new-daily-objective" placeholder="Daily habit..." required aria-label="Objective">'+
-      '<input type="number" id="new-daily-xp" value="15" min="5" max="100" aria-label="XP reward">'+
+      '<input autocomplete="off" type="text" class="field-full" id="new-daily-questname" placeholder="Quest name" maxlength="'+QUEST_NAME_MAX+'" required aria-label="Quest name">'+
+      '<input autocomplete="off" type="text" class="field-objective" id="new-daily-objective" placeholder="Daily habit..." required aria-label="Objective">'+
+      '<input inputmode="numeric" type="number" id="new-daily-xp" value="15" min="5" max="100" aria-label="XP reward">'+
       '<select id="new-daily-stat" aria-label="Stat it trains">'+
         '<option value="">No stat</option>'+
         STAT_KEYS.map(function(k){ return '<option value="'+k+'">Trains '+k+'</option>'; }).join('')+
@@ -728,16 +728,16 @@
               '<span class="wallet-cad">$'+money(cad)+'</span>'+
               '<button class="remove-btn" data-action="wallet-remove" data-id="'+attr(h.id)+'" aria-label="Remove: '+about(h.label)+'">&times;</button>'+
             '</div>'+
-            '<div class="wallet-row-sub">'+money(h.amount)+' &times; <input type="number" class="rate-input" data-id="'+attr(h.id)+'" value="'+rate+'" step="0.001" aria-label="Rate to CAD: '+about(h.label)+'"> CAD</div>'+
+            '<div class="wallet-row-sub">'+money(h.amount)+' &times; <input inputmode="decimal" type="number" class="rate-input" data-id="'+attr(h.id)+'" value="'+rate+'" step="0.001" aria-label="Rate to CAD: '+about(h.label)+'"> CAD</div>'+
           '</div>'+
           removeConfirmHtml('wallet', h.id, 'Remove this row?');
         });
         html += '<div class="wallet-total-row"><span>Total</span><span>$'+money(ST.totalHoldingsCAD())+'</span></div>';
       }
       html += '<div class="add-row">'+
-        '<input type="text" id="new-wallet-label" placeholder="Label (e.g. USDT)" aria-label="Label">'+
-        '<input type="number" id="new-wallet-amount" placeholder="Amount" aria-label="Amount">'+
-        '<input type="number" id="new-wallet-rate" placeholder="Rate to CAD" step="0.001" value="1" aria-label="Rate to CAD">'+
+        '<input autocomplete="off" type="text" id="new-wallet-label" placeholder="Label (e.g. USDT)" aria-label="Label">'+
+        '<input inputmode="decimal" type="number" id="new-wallet-amount" placeholder="Amount" aria-label="Amount">'+
+        '<input inputmode="decimal" type="number" id="new-wallet-rate" placeholder="Rate to CAD" step="0.001" value="1" aria-label="Rate to CAD">'+
         '<button id="add-wallet-btn">Add</button>'+
       '</div>';
       html += '<div class="wallet-rate">'+commas(CAD_PER_CAP)+' CAD = 1 Cap &mdash; rates are set by you, updated manually</div>';
@@ -811,7 +811,7 @@
       }
     });
     html += '<div class="add-row">'+
-      '<input type="text" id="new-item-name" placeholder="Item name..." aria-label="Item name">'+
+      '<input autocomplete="off" type="text" id="new-item-name" placeholder="Item name..." aria-label="Item name">'+
       '<select id="new-item-cat" aria-label="Category">'+CATS.map(function(c){ return '<option value="'+c+'">'+ST.catLabel(c)+'</option>'; }).join('')+'</select>'+
       '<input type="number" id="new-item-price" placeholder="Price $" min="0" step="0.01" inputmode="decimal" aria-label="Asking price in CAD (optional)">'+
       '<button id="add-item-btn">Add</button>'+
@@ -848,8 +848,8 @@
     var points = '';
     for (var n=1; n<=ST.BOOK_SKILL_MAX; n++) points += '<option value="'+n+'"'+(n===3 ? ' selected' : '')+'>+'+n+'</option>';
     return html+addFormHtml('book', 'New book',
-      '<input type="text" class="field-full" id="new-book-title" placeholder="Title" maxlength="'+ST.BOOK_TITLE_MAX+'" required aria-label="Book title">'+
-      '<input type="text" class="field-full" id="new-book-author" placeholder="Author (optional)" maxlength="'+ST.BOOK_AUTHOR_MAX+'" aria-label="Author">'+
+      '<input autocomplete="off" type="text" class="field-full" id="new-book-title" placeholder="Title" maxlength="'+ST.BOOK_TITLE_MAX+'" required aria-label="Book title">'+
+      '<input autocomplete="off" type="text" class="field-full" id="new-book-author" placeholder="Author (optional)" maxlength="'+ST.BOOK_AUTHOR_MAX+'" aria-label="Author">'+
       '<select id="new-book-skill" aria-label="Skill it raises">'+
         '<option value="">No skill</option>'+
         ST.SKILL_KEYS.map(function(k){ return '<option value="'+k+'">'+k+'</option>'; }).join('')+

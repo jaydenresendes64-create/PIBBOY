@@ -42,3 +42,16 @@ test('two quick taps on a control never zoom the page (touch-action: manipulatio
   const css = read('css/terminal.css');
   assert.match(css, /^button, a, input, select, textarea, label, \[role="button"\]\{ touch-action:manipulation; \}$/m);
 });
+
+test('every field asks for the right keyboard: number fields say which pad, text fields no autofill', () => {
+  const missing = [];
+  fs.readdirSync(path.join(ROOT, 'js')).filter(f => f.endsWith('.js')).forEach(f => {
+    const src = read('js/' + f);
+    for (const m of src.matchAll(/<input\b[^>]*/g)) {
+      const tag = m[0];
+      if (/type="number"/.test(tag) && !/inputmode="(numeric|decimal)"/.test(tag)) missing.push(f + ': ' + tag.slice(0, 60) + ' (no inputmode)');
+      if ((/type="text"/.test(tag) || /class="tape-title"/.test(tag)) && !/autocomplete="off"/.test(tag)) missing.push(f + ': ' + tag.slice(0, 60) + ' (autofill)');
+    }
+  });
+  assert.deepEqual(missing, []);
+});

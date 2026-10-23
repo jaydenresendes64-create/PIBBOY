@@ -171,7 +171,7 @@
     out += full ? '' :
       '<button class="add-open-btn" data-trial="add-open" aria-expanded="'+open+'"'+(open ? ' hidden' : '')+'>+ New trial</button>'+
       '<div class="add-row" id="add-trial"'+(open ? '' : ' hidden')+'>'+
-        '<input type="text" class="field-full" id="new-trial-name" maxlength="'+ST.TRIAL_NAME_MAX+'" placeholder="Trial name (pull-ups, burpees…)" aria-label="Trial name">'+
+        '<input autocomplete="off" type="text" class="field-full" id="new-trial-name" maxlength="'+ST.TRIAL_NAME_MAX+'" placeholder="Trial name (pull-ups, burpees…)" aria-label="Trial name">'+
         '<select id="new-trial-kind" aria-label="How it is measured">'+Object.keys(ST.TRIAL_KINDS).map(function(k){
           return '<option value="'+k+'">'+escapeHtml(ST.TRIAL_KINDS[k].label)+'</option>';
         }).join('')+'</select>'+

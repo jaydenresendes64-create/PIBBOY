@@ -252,9 +252,9 @@
       var label = seg.whole ? 'the whole file' : 'sound '+i;
       return '<div class="sl-row sl-seg">'+
         '<span class="sl-num">'+(seg.whole ? 'ALL' : '#'+i)+'</span>'+
-        '<input class="sl-time" type="number" step="0.01" min="0" data-i="'+i+'" data-edge="start" value="'+time(seg.start)+'" aria-label="'+label+' start, seconds">'+
+        '<input inputmode="decimal" class="sl-time" type="number" step="0.01" min="0" data-i="'+i+'" data-edge="start" value="'+time(seg.start)+'" aria-label="'+label+' start, seconds">'+
         '<span class="sl-dash">–</span>'+
-        '<input class="sl-time" type="number" step="0.01" min="0" data-i="'+i+'" data-edge="end" value="'+time(seg.end)+'" aria-label="'+label+' end, seconds">'+
+        '<input inputmode="decimal" class="sl-time" type="number" step="0.01" min="0" data-i="'+i+'" data-edge="end" value="'+time(seg.end)+'" aria-label="'+label+' end, seconds">'+
         '<button class="sl-btn" data-sl="try" data-i="'+i+'" aria-label="Play '+label+'">&#9654;</button>'+
         '<select class="sl-use" data-i="'+i+'" aria-label="Use '+label+' as">'+options+'</select>'+
       '</div>';

@@ -2,6 +2,15 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — The right keyboard, no autofill bar
+- 10 number fields had no `inputmode` (an iPhone then shows the full keyboard's number row, not a
+  pad), and 17 text fields had no `autocomplete="off"` (Safari offers contacts and addresses above
+  the keyboard for fields named like "name"). js/render.js, map.js, routes.js, holotapes.js,
+  bulk.js, trials.js, sfx-custom.js: `inputmode="numeric"` (XP, days, places), `"decimal"`
+  (Caps target, amounts, rates, clip times), `autocomplete="off"` on every text field.
+- Tests: `tests/mobile.test.js` +1 (scans every `<input>` in js/); `node --test` → 372 pass, 0 fail.
+  Chromium phone mode: the fields carry the new attributes; no layout change, no page error.
+
 ## 2026-10-23 — No double-tap zoom on controls
 - Two quick taps on a control (the RADS + and −, a quest's ○, "Another angle") zoom the page on an
   iPhone; only the trial counter had `touch-action:manipulation`. `css/terminal.css`: buttons, links,

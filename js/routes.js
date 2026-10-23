@@ -228,7 +228,7 @@
     if (!r) return '';
     var html = '<div class="place-card route-card">'+
       '<div class="place-card-head"><span class="badge">ROUTE</span>'+
-        '<input type="text" id="route-name" class="place-name" maxlength="'+ST.ROUTE_NAME_MAX+'" value="'+escapeHtml(r.name)+'" aria-label="Name"></div>'+
+        '<input autocomplete="off" type="text" id="route-name" class="place-name" maxlength="'+ST.ROUTE_NAME_MAX+'" value="'+escapeHtml(r.name)+'" aria-label="Name"></div>'+
       '<div class="place-meta">'+escapeHtml([kmText(r.km), r.stops.length+' stops', r.date ? 'added '+dateText(r.date) : ''].filter(Boolean).join(' · '))+'</div>'+
       '<div class="place-meta">'+escapeHtml(r.stops.map(function(s){ return s.name; }).join(' → '))+'</div>'+
       '<textarea id="route-note" class="place-note" rows="2" maxlength="'+ST.PLACE_NOTE_MAX+'" placeholder="Note (optional)" aria-label="Note">'+escapeHtml(r.note||'')+'</textarea>';

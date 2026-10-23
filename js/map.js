@@ -409,7 +409,7 @@
     var type = panel.type, p = P.findPlace(type, panel.id);
     var html = '<div class="place-card">'+
       '<div class="place-card-head"><span class="badge">'+{city:'CITY', region:'REGION', pin:'PIN'}[type]+'</span>'+
-        '<input type="text" id="place-name" class="place-name" maxlength="'+ST.PLACE_NAME_MAX+'" value="'+escapeHtml(p.name)+'" aria-label="Name"></div>'+
+        '<input autocomplete="off" type="text" id="place-name" class="place-name" maxlength="'+ST.PLACE_NAME_MAX+'" value="'+escapeHtml(p.name)+'" aria-label="Name"></div>'+
       '<div class="place-meta">'+escapeHtml([P.countryName(p.cc), p.date ? 'revealed '+dateText(p.date) : ''].filter(Boolean).join(' · '))+'</div>';
     if (type!=='region'){
       var min = type==='city' ? ST.CITY_RADIUS_MIN : ST.PIN_RADIUS_MIN, max = type==='city' ? ST.CITY_RADIUS_MAX : ST.PIN_RADIUS_MAX;
