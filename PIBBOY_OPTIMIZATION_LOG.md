@@ -2,6 +2,14 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — ITEMS: the books list shows the latest 10, then "10 more"
+- With a year of data the books list showed all 19 (1,100px); a few years make it a hundred. Like
+  the MAP's places, the journal and the urge history, it now shows the latest 10, then "10 more (N
+  older)" (`js/render.js` `booksHtml`, action `books-more` in `js/events.js`, which focuses the first
+  new one); a book being asked about (Remove?) shows wherever it is.
+- Tests: new `tests/booklist.test.js` (2); `node --test` → 393 pass. Chromium with the year: 10 and
+  "9 more (9 older)", a tap shows all 19 with the focus on the 11th; page 2,127 → 1,724px; no error.
+
 ## 2026-10-23 — Bobblehead names no longer cut mid-word
 - Seen in screenshots with a year of data, then measured with all 16 found at 320–430px: long
   names were cut anywhere ("Specialis/t", "S.P.E.C.I/.A.L.ist"): 7 of 16 at 375px (a common iPhone

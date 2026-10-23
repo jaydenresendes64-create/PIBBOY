@@ -9,13 +9,13 @@
     field, the pressed look (passive touchstart), amber sliders with a 26 px knob, amber example
     text, "How strong" on one line, a theme-color and manifest id;
   - the error log and the version (and a newer one waiting) in Settings → About; a lint pass;
-  - a year of use: MAP lists and the journal show "10/30 more", a skill's detail groups the same
+  - a year of use: MAP lists, books and the journal show "10/30 more", a skill's detail groups the same
     source, STATUS and VITALS redraw faster;
   - data safety: damaged backups show no "[object Object]"; random tests (fuzz, actions);
   - CI runs the tests a second time on Montréal's clock (`TZ=America/Toronto`).
-- `node --test`: 391 pass, 0 fail, in UTC and in 10 time zones. Random but repeatable tests:
+- `node --test`: 393 pass, 0 fail, in UTC and in 10 time zones. Random but repeatable tests:
   `tests/fuzz.test.js` (a backup damaged 400 ways), `tests/actions.test.js` (1,200 actions, the
-  numbers add up). Expect 391: a lower total means a test file was lost (it happened once).
+  numbers add up). Expect 393: a lower total means a test file was lost (it happened once).
 - Checked, nothing to fix: landscape, accessible names, focus rings, a long session (no leak), a
   year's backup (575 KB, under the 5 MB import limit), date formatting at opening.
 - `sw.js` VERSION is a hash of the app files: after any app file change run `node tools/stamp-sw.js`

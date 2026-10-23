@@ -847,6 +847,9 @@
 
   // ITEMS → BOOKS: the books read, the latest first, each with the skill it
   // gave; "+ New book" unfolds the form, and Add pays the book (ST.readBook).
+  // The latest BOOKS_STEP show, then "10 more (N older)" (app.booksShown, until
+  // the page reloads); a book asked about (Remove?) shows wherever it is.
+  var BOOKS_STEP = 10;
   function booksHtml(){
     var books = app.state.books;
     var html = '<div class="panel-title">Books <span class="panel-count">'+books.length+'</span></div>';
@@ -854,7 +857,10 @@
       html += '<div class="empty-note">No books yet: each one you finish gives +'+ST.BOOK_XP+' XP and up to +'+ST.BOOK_SKILL_MAX+' in a skill.</div>';
     } else {
       html += '<div class="book-list">';
-      books.slice().reverse().forEach(function(b){
+      var list = books.slice().reverse(), asking = app.confirmRemove;
+      var shown = Math.min(list.length, Math.max(BOOKS_STEP, num(app.booksShown)));
+      list.forEach(function(b, i){ if (i>=shown && asking && asking.kind==='book' && asking.id===b.id) shown = i+1; });
+      list.slice(0, shown).forEach(function(b){
         var meta = [b.author, ST.dateText(b.date)].filter(Boolean).join(' · ');
         html += '<div class="book-item">'+
           '<span class="book-text"><span class="book-title">'+escapeHtml(b.title)+'</span>'+
@@ -864,6 +870,9 @@
         '</div>'+
         removeConfirmHtml('book', b.id, 'Remove this book? Its XP and skill points stay.');
       });
+      var left = list.length-shown;
+      if (left>0) html += '<button class="list-more" data-action="books-more" data-shown="'+shown+'">'+
+        Math.min(left, BOOKS_STEP)+' more ('+left+' older)</button>';
       html += '</div>';
     }
     var points = '';

@@ -707,6 +707,14 @@
       var entries = el('tab-log').querySelectorAll('.log-entry');
       if (entries[before]){ entries[before].setAttribute('tabindex', '-1'); entries[before].focus(); }
     },
+    // "10 more" under the books: older ones, the first of them focused.
+    'books-more': function(btn){
+      var before = Number(btn.getAttribute('data-shown')) || 0;
+      app.booksShown = before + 10;
+      renderInventory();
+      var rows = el('tab-items').querySelectorAll('.book-item');
+      if (rows[before]){ rows[before].setAttribute('tabindex', '-1'); rows[before].focus(); }
+    },
     // A skill tapped: where its points came from, under it (tap again to close).
     'skill': function(btn, id, key){
       app.skillOpen = app.skillOpen===key ? null : key;
