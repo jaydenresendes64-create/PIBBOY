@@ -72,3 +72,24 @@ test('an iPhone shows the pressed look (:active) only when the page listens for 
   assert.match(read('js/main.js'), /document\.addEventListener\('touchstart', function\(\)\{\}, \{passive:true\}\);/);
   assert.match(read('css/terminal.css'), /\.tab-btn:active\{/);
 });
+
+test('sliders are drawn in amber with a 36px grab, filled up to the knob (--p)', () => {
+  const { loadApp } = require('./helpers');
+  const ST = loadApp().ST;
+  assert.equal(ST.rangeShare(7, 0, 10), 0.7);
+  assert.equal(ST.rangeShare(1, 0, 3), 0.3333);
+  assert.equal(ST.rangeShare(-5, 0, 10), 0);
+  assert.equal(ST.rangeShare(150, 0, 100), 1);
+  assert.equal(ST.rangeShare('x', 0, 10), 0);
+  assert.equal(ST.rangeShare(5, 5, 5), 0, 'no range: empty, not NaN');
+  assert.equal(ST.rangeFill(9000, 2000, 30000), ' style="--p:0.25"');
+  const css = read('css/terminal.css');
+  assert.match(css, /input\[type=range\]\{\s*--range:var\(--phosphor\);\s*-webkit-appearance:none; appearance:none;[^}]*min-height:36px;/);
+  assert.match(css, /::-webkit-slider-runnable-track\{[^}]*calc\(11px \+ \(100% - 22px\) \* var\(--p, 0\)\)/);
+  assert.match(css, /::-webkit-slider-thumb\{[^}]*width:22px; height:22px;/);
+  assert.match(read('js/main.js'), /if \(t && t\.type==='range'\) t\.style\.setProperty\('--p', ST\.rangeShare\(t\.value, t\.min, t\.max\)\);/);
+  // every slider in the app writes where its knob sits
+  const sliders = ['js/render.js', 'js/vitals.js', 'js/map.js'].flatMap(f => [...read(f).matchAll(/<input type="range"[^>]*/g)].map(m => f + ': ' + m[0]));
+  assert.equal(sliders.length, 4);
+  sliders.forEach(tag => assert.match(tag, /ST\.rangeFill\(/, tag));
+});

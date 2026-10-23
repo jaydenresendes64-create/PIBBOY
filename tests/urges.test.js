@@ -266,7 +266,7 @@ function vitals(setup) {
 test('the screen: what to note while the timer runs, "I gave in" at any point, the note after, the patterns and the last urges', () => {
   const running = vitals(ST => { ST.startUrge('TIRED'); ST.setUrgeDetail('intensity', 7); ST.setUrgeDetail('trigger', 'HABIT'); ST.setUrgeDetail('cope', 'walk'); });
   assert.match(running, /data-vital="urge-lapse">I gave in<\/button>/);
-  assert.match(running, /<label for="urge-intensity">How strong<\/label><input type="range" class="urge-range" id="urge-intensity" min="0" max="10" step="1" value="7" aria-describedby="urge-intensity-scale"><span class="vital-val" id="urge-intensity-val">7<\/span><span class="vital-scale" id="urge-intensity-scale"><span>0 unrated<\/span><span>extreme 10<\/span>/);
+  assert.match(running, /<label for="urge-intensity">How strong<\/label><input type="range" class="urge-range" id="urge-intensity" min="0" max="10" step="1" value="7" aria-describedby="urge-intensity-scale" style="--p:0\.7"><span class="vital-val" id="urge-intensity-val">7<\/span><span class="vital-scale" id="urge-intensity-scale"><span>0 unrated<\/span><span>extreme 10<\/span>/);
   assert.match(running, /data-vital="urge-trigger" data-key="HABIT" aria-pressed="true">Usual time or place</);
   assert.match(running, /data-vital="urge-cope" data-key="walk" aria-pressed="true">Walk outside</);
   assert.match(running, /data-vital="cope-add-open" aria-expanded="false">\+ Mine</);

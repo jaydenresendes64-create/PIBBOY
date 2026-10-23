@@ -53,6 +53,29 @@ button, a, input, select, textarea, label, [role="button"]{ touch-action:manipul
 ::selection{ background:var(--phosphor); color:var(--bg); }
 /* A field's example text ("Quest name") was the browser's grey (3.6:1): dimmed amber, readable. */
 ::placeholder{ color:var(--text-dim); opacity:1; }
+/* Sliders drawn in the terminal's amber, the same on every phone (an iPhone draws a white knob on a
+   grey line): a groove lit up to the knob (--p, 0 to 1: state.js rangeFill, main.js), the knob a
+   lit disc, 36px of height to grab. --range is the colour. */
+input[type=range]{
+  --range:var(--phosphor);
+  -webkit-appearance:none; appearance:none; background:transparent; margin:0; min-height:36px; cursor:pointer;
+}
+input[type=range]:disabled{ --range:var(--phosphor-dim); cursor:default; }
+input[type=range]::-webkit-slider-runnable-track{
+  box-sizing:border-box; height:6px; border:1px solid var(--phosphor-dim); border-radius:3px;
+  background:linear-gradient(to right, var(--range) calc(11px + (100% - 22px) * var(--p, 0)), var(--bg) 0);
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; appearance:none; box-sizing:border-box; width:22px; height:22px; margin-top:-9px;
+  border-radius:50%; border:2px solid var(--bg); background:var(--range);
+  box-shadow:0 0 0 1px var(--range), 0 0 8px rgba(255,154,46,0.45);
+}
+input[type=range]::-moz-range-track{ box-sizing:border-box; height:6px; border:1px solid var(--phosphor-dim); border-radius:3px; background:var(--bg); }
+input[type=range]::-moz-range-progress{ height:6px; border-radius:3px; background:var(--range); }
+input[type=range]::-moz-range-thumb{
+  box-sizing:border-box; width:22px; height:22px; border-radius:50%; border:2px solid var(--bg); background:var(--range);
+  box-shadow:0 0 0 1px var(--range), 0 0 8px rgba(255,154,46,0.45);
+}
 
 .frame{
   position:relative;
@@ -982,7 +1005,7 @@ button, a, input, select, textarea, label, [role="button"]{ touch-action:manipul
   padding:8px; font-size:0.95rem; color:var(--amber); letter-spacing:0.03em;
 }
 .progress-row{ display:flex; align-items:center; gap:10px; margin-top:10px; }
-.progress-row input[type="range"]{ flex:1; accent-color:var(--phosphor); }
+.progress-row input[type="range"]{ flex:1; }
 .progress-pct{ font-size:0.85rem; color:var(--text-dim); width:3em; text-align:right; }
 .streak-row{ display:flex; align-items:center; gap:10px; margin-top:10px; }
 .streak-days{
@@ -1313,7 +1336,7 @@ button, a, input, select, textarea, label, [role="button"]{ touch-action:manipul
 }
 .place-meta{ font-size:0.74rem; color:var(--text-dim); margin-top:6px; overflow-wrap:anywhere; }
 .place-radius{ display:flex; align-items:center; gap:10px; margin-top:10px; font-size:0.78rem; color:var(--text-dim); }
-.place-radius input{ flex:1; min-width:0; min-height:36px; accent-color:var(--phosphor); }
+.place-radius input{ flex:1; min-width:0; }
 .place-radius span:last-child{ width:4.5em; text-align:right; color:var(--amber); }
 .place-note{
   display:block; width:100%; margin-top:10px; border:1px solid var(--line); border-radius:3px; background:var(--bg);
@@ -1616,7 +1639,7 @@ canvas.item-model{
 .vital-fine{ font-size:0.7rem; line-height:1.5; color:var(--text-dim); margin:10px 0 0; }
 .vital-fine a{ color:var(--amber); }
 .vital-row{ display:grid; grid-template-columns:5.2em 1fr 1.8em; gap:8px; align-items:center; padding:5px 0; font-size:0.8rem; }
-.vital-row input[type="range"]{ width:100%; min-height:30px; accent-color:var(--phosphor); }
+.vital-row input[type="range"]{ width:100%; min-height:30px; }
 .vital-val{ text-align:right; color:var(--amber); }
 .vital-scale{ grid-column:2; display:flex; justify-content:space-between; gap:8px; margin-top:-8px; font-size:0.62rem; color:var(--text-dim); }
 .count-row{
@@ -1677,7 +1700,7 @@ canvas.item-model{
 /* What's noted while the urge timer runs (vitals.js urgeDetailsHtml): how strong, what set it off,
    what's being done (the player's own ways); chips toggle (aria-pressed), 36px high at least. */
 .urge-details{ margin-top:12px; padding-top:8px; border-top:1px solid var(--line); }
-.urge-details .vital-row input[type="range"]{ accent-color:var(--amber); }
+.urge-details .vital-row input[type="range"]{ --range:var(--amber); }
 /* "How strong" is wider than the check-in's names (5.2em): its column fits it, on one line. Under
    360px that leaves the slider too short for its scale: the name goes above, the slider full width. */
 .urge-details .vital-row{ grid-template-columns:auto 1fr 1.8em; }

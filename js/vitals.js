@@ -203,7 +203,7 @@
     var copes = app.state.urges.copes || [], on = a.copes || [], editing = app.urgeCopeEdit, v = num(a.intensity);
     return '<div class="urge-details">'+
       '<div class="vital-row"><label for="urge-intensity">How strong</label>'+
-        '<input type="range" class="urge-range" id="urge-intensity" min="0" max="10" step="1" value="'+v+'" aria-describedby="urge-intensity-scale">'+
+        '<input type="range" class="urge-range" id="urge-intensity" min="0" max="10" step="1" value="'+v+'" aria-describedby="urge-intensity-scale"'+ST.rangeFill(v, 0, 10)+'>'+
         '<span class="vital-val" id="urge-intensity-val">'+(v ? v : '–')+'</span>'+
         '<span class="vital-scale" id="urge-intensity-scale"><span>0 unrated</span><span>extreme 10</span></span></div>'+
       '<p class="urge-ask">What set it off?</p><div class="urge-chips">'+
@@ -490,7 +490,7 @@
       var v = e ? num(e[k]) : last ? clamp(Math.round(num(last[k])), 0, 10) : 5;
       html += '<div class="vital-row">'+
         '<label for="vr-'+k+'">'+LABELS[k]+'</label>'+
-        '<input type="range" class="vital-range" id="vr-'+k+'" data-key="'+k+'" min="0" max="10" step="1" value="'+v+'" aria-describedby="vs-'+k+'">'+
+        '<input type="range" class="vital-range" id="vr-'+k+'" data-key="'+k+'" min="0" max="10" step="1" value="'+v+'" aria-describedby="vs-'+k+'"'+ST.rangeFill(v, 0, 10)+'>'+
         '<span class="vital-val" id="vv-'+k+'">'+v+'</span>'+
         '<span class="vital-scale" id="vs-'+k+'"><span>0 '+SCALE[k][0]+'</span><span>'+SCALE[k][1]+' 10</span></span>'+
       '</div>';

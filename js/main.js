@@ -114,6 +114,11 @@
   // down, the trial counter) only when the page listens for touches. This
   // listener does nothing, and is passive: it never holds up scrolling.
   document.addEventListener('touchstart', function(){}, {passive:true});
+  // A slider's filled part follows its knob (ST.rangeFill drew where it was).
+  document.addEventListener('input', function(e){
+    var t = e.target;
+    if (t && t.type==='range') t.style.setProperty('--p', ST.rangeShare(t.value, t.min, t.max));
+  }, true);
 
   // ---------- opening at once, and updates (sw.js) ----------
   // The app opens from its cache. A new version downloads whole in the

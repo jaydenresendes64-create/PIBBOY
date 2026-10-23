@@ -574,7 +574,7 @@
       '<input autocomplete="off" enterkeyhint="done" type="text" class="main-title-input" data-id="'+attr(m.id)+'" maxlength="60" value="'+escapeHtml(m.title)+'" aria-label="Objective">'+
       (streak ? streakRowHtml(m) : caps ? capsRowHtml(m) : places ? placesRowHtml(m) :
         '<div class="progress-row">'+
-          '<input type="range" min="0" max="100" value="'+num(m.progress)+'" class="main-progress-input" data-id="'+attr(m.id)+'" aria-label="Progress"'+(m.completed?' disabled':'')+'>'+
+          '<input type="range" min="0" max="100" value="'+num(m.progress)+'" class="main-progress-input" data-id="'+attr(m.id)+'" aria-label="Progress"'+ST.rangeFill(m.progress, 0, 100)+(m.completed?' disabled':'')+'>'+
           '<span class="progress-pct">'+num(m.progress)+'%</span>'+
         '</div>')+
       // At 100% (slider or wallet) the reward waits for this tap (ST.mainReady);

@@ -2,6 +2,24 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — Sliders in amber on every phone; the quest slider easier to grab
+- The 4 sliders (the 6 check-in levels, the urge's strength, a quest's progress, a place's radius)
+  were the browser's own, tinted with `accent-color`: an iPhone draws them as a white knob on a grey
+  line, only the filled part amber. The quest's progress slider was 16px high (the design audit
+  leaves sliders out; measured now): hard to grab.
+- `css/terminal.css`: one rule for every slider: an amber-edged groove lit up to the knob, a lit
+  amber knob (22px, a dark ring), 36px of height to grab (the check-in rows keep their 30px); the
+  urge's in `--amber`; a done quest's dimmed. WebKit/Blink and Firefox pseudo-elements; the
+  `accent-color` lines removed. `js/state.js`: `rangeShare`/`rangeFill` (where the knob sits,
+  0 to 1, written as `style="--p:…"` in each slider's HTML: render.js, vitals.js ×2, map.js);
+  `js/main.js`: one input listener keeps `--p` up to date while the knob moves.
+- Chromium (390px, phone mode): before/after close-ups of all 4; quest slider 16 → 36px; a finger
+  drag moves the value, the shown number, the saved level and the fill together; arrow keys too,
+  with the focus ring; a done quest's slider dim and locked; the design audit at 320px unchanged; no
+  page error. Not checkable here: the iPhone's own drawing (expected the same: WebKit).
+- Tests: `tests/mobile.test.js` +1 (the share, the CSS, every slider writes `--p`),
+  `tests/urges.test.js` pattern; `node --test` → 376 pass, 0 fail (exit code checked).
+
 ## 2026-10-23 — The return key says what Enter does
 - The iPhone keyboard's return key said "return" in every text field, though Enter adds the quest,
   item, book, trial or way, saves the note or the name. 20 text fields (js/render.js, map.js,

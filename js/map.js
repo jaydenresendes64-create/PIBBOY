@@ -414,7 +414,7 @@
     if (type!=='region'){
       var min = type==='city' ? ST.CITY_RADIUS_MIN : ST.PIN_RADIUS_MIN, max = type==='city' ? ST.CITY_RADIUS_MAX : ST.PIN_RADIUS_MAX;
       html += '<label class="place-radius"><span>Radius</span>'+
-        '<input type="range" id="place-radius" min="'+min+'" max="'+max+'" step="'+(type==='city' ? 500 : 100)+'" value="'+Number(p.radius)+'">'+
+        '<input type="range" id="place-radius" min="'+min+'" max="'+max+'" step="'+(type==='city' ? 500 : 100)+'" value="'+Number(p.radius)+'"'+ST.rangeFill(p.radius, min, max)+'>'+
         '<span id="place-radius-text">'+distanceText(p.radius)+'</span></label>';
     }
     html += '<textarea id="place-note" class="place-note" rows="2" maxlength="'+ST.PLACE_NOTE_MAX+'" placeholder="Note (optional)" aria-label="Note">'+escapeHtml(p.note||'')+'</textarea>';

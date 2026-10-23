@@ -361,6 +361,13 @@
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
     });
   }
+  // Where a slider's knob sits, 0 to 1: css/terminal.css fills its groove up to there (--p, written
+  // in its HTML by rangeFill; main.js keeps it up to date as the knob moves).
+  function rangeShare(value, min, max){
+    var p = (Number(value)-Number(min))/(Number(max)-Number(min));
+    return isFinite(p) ? Math.round(Math.max(0, Math.min(1, p))*1e4)/1e4 : 0;
+  }
+  function rangeFill(value, min, max){ return ' style="--p:'+rangeShare(value, min, max)+'"'; }
   function clone(value){ return JSON.parse(JSON.stringify(value)); }
   // Copies `from`'s own fields onto `to`. A "__proto__" key (JSON.parse
   // makes it an ordinary key) would replace `to`'s prototype: skipped.
@@ -2235,6 +2242,8 @@
   ST.PLACES_TARGET_MAX = PLACES_TARGET_MAX;
   ST.DATA_SCHEMA = DATA_SCHEMA;
   ST.escapeHtml = escapeHtml;
+  ST.rangeShare = rangeShare;
+  ST.rangeFill = rangeFill;
   ST.catLabel = catLabel;
 
   ST.migrate = migrate;
