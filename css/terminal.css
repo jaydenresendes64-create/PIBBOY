@@ -55,7 +55,8 @@ button, a, input, select, textarea, label, [role="button"]{ touch-action:manipul
 ::placeholder{ color:var(--text-dim); opacity:1; }
 /* Sliders drawn in the terminal's amber, the same on every phone (an iPhone draws a white knob on a
    grey line): a groove lit up to the knob (--p, 0 to 1: state.js rangeFill, main.js), the knob a
-   lit disc, 36px of height to grab. --range is the colour. */
+   lit disc of 26px (on an iPhone the knob is what a finger grabs; its own is ~28px), 36px of height.
+   --range is the colour. */
 input[type=range]{
   --range:var(--phosphor);
   -webkit-appearance:none; appearance:none; background:transparent; margin:0; min-height:36px; cursor:pointer;
@@ -63,17 +64,17 @@ input[type=range]{
 input[type=range]:disabled{ --range:var(--phosphor-dim); cursor:default; }
 input[type=range]::-webkit-slider-runnable-track{
   box-sizing:border-box; height:6px; border:1px solid var(--phosphor-dim); border-radius:3px;
-  background:linear-gradient(to right, var(--range) calc(11px + (100% - 22px) * var(--p, 0)), var(--bg) 0);
+  background:linear-gradient(to right, var(--range) calc(13px + (100% - 26px) * var(--p, 0)), var(--bg) 0);
 }
 input[type=range]::-webkit-slider-thumb{
-  -webkit-appearance:none; appearance:none; box-sizing:border-box; width:22px; height:22px; margin-top:-9px;
+  -webkit-appearance:none; appearance:none; box-sizing:border-box; width:26px; height:26px; margin-top:-11px;
   border-radius:50%; border:2px solid var(--bg); background:var(--range);
   box-shadow:0 0 0 1px var(--range), 0 0 8px rgba(255,154,46,0.45);
 }
 input[type=range]::-moz-range-track{ box-sizing:border-box; height:6px; border:1px solid var(--phosphor-dim); border-radius:3px; background:var(--bg); }
 input[type=range]::-moz-range-progress{ height:6px; border-radius:3px; background:var(--range); }
 input[type=range]::-moz-range-thumb{
-  box-sizing:border-box; width:22px; height:22px; border-radius:50%; border:2px solid var(--bg); background:var(--range);
+  box-sizing:border-box; width:26px; height:26px; border-radius:50%; border:2px solid var(--bg); background:var(--range);
   box-shadow:0 0 0 1px var(--range), 0 0 8px rgba(255,154,46,0.45);
 }
 

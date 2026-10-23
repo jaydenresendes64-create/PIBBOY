@@ -85,8 +85,8 @@ test('sliders are drawn in amber with a 36px grab, filled up to the knob (--p)',
   assert.equal(ST.rangeFill(9000, 2000, 30000), ' style="--p:0.25"');
   const css = read('css/terminal.css');
   assert.match(css, /input\[type=range\]\{\s*--range:var\(--phosphor\);\s*-webkit-appearance:none; appearance:none;[^}]*min-height:36px;/);
-  assert.match(css, /::-webkit-slider-runnable-track\{[^}]*calc\(11px \+ \(100% - 22px\) \* var\(--p, 0\)\)/);
-  assert.match(css, /::-webkit-slider-thumb\{[^}]*width:22px; height:22px;/);
+  assert.match(css, /::-webkit-slider-runnable-track\{[^}]*calc\(13px \+ \(100% - 26px\) \* var\(--p, 0\)\)/);
+  assert.match(css, /::-webkit-slider-thumb\{[^}]*width:26px; height:26px; margin-top:-11px;/);   // a finger's size
   assert.match(read('js/main.js'), /if \(t && t\.type==='range'\) t\.style\.setProperty\('--p', ST\.rangeShare\(t\.value, t\.min, t\.max\)\);/);
   // every slider in the app writes where its knob sits
   const sliders = ['js/render.js', 'js/vitals.js', 'js/map.js'].flatMap(f => [...read(f).matchAll(/<input type="range"[^>]*/g)].map(m => f + ': ' + m[0]));

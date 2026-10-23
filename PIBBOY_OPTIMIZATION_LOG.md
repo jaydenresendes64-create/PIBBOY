@@ -2,6 +2,13 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — The slider knob a finger's size
+- Re-reading the PR's diff before a merge: on an iPhone a slider moves only when its knob is
+  grabbed, and iOS's own knob is ~28px; the amber one was 22px, so harder to catch on the six
+  check-in sliders every morning. `css/terminal.css`: the knob 26px (the fill's offset and the
+  WebKit `margin-top` adjusted: 13px, -11px). Close-ups of the 4 sliders at 390px: centred, the
+  fill reaching the knob's middle. `tests/mobile.test.js` updated; `node --test` → 386 pass.
+
 ## 2026-10-23 — The journal: older entries readable ("30 more")
 - The app keeps the latest 200 journal entries, but LOG showed only 30: the other 170 could only
   be read in a backup file.
