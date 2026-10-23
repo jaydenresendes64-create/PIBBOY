@@ -1678,6 +1678,15 @@ canvas.item-model{
    what's being done (the player's own ways); chips toggle (aria-pressed), 36px high at least. */
 .urge-details{ margin-top:12px; padding-top:8px; border-top:1px solid var(--line); }
 .urge-details .vital-row input[type="range"]{ accent-color:var(--amber); }
+/* "How strong" is wider than the check-in's names (5.2em): its column fits it, on one line. Under
+   360px that leaves the slider too short for its scale: the name goes above, the slider full width. */
+.urge-details .vital-row{ grid-template-columns:auto 1fr 1.8em; }
+.urge-details .vital-row label{ white-space:nowrap; }
+@media (max-width:360px){
+  .urge-details .vital-row{ grid-template-columns:1fr 1.8em; }
+  .urge-details .vital-row label{ grid-column:1 / -1; }
+  .urge-details .vital-scale{ grid-column:1; }
+}
 .urge-ask{ font-size:0.74rem; color:var(--text-dim); margin:10px 0 6px; letter-spacing:0.03em; }
 .urge-chips{ display:flex; flex-wrap:wrap; gap:6px; }
 .chip{

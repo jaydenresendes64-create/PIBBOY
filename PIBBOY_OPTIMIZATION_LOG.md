@@ -2,6 +2,14 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — Urge "How strong" on one line
+- The urge's "How strong" label sat in the check-in's name column (5.2em, 67px) and broke onto two
+  lines at every width. `css/terminal.css`: in `.urge-details` its column fits the name (`auto`,
+  `nowrap`); under 360px, where the shorter slider would push its scale ("0 unrated / extreme 10")
+  onto two lines, the name goes above and the slider takes the full width.
+- Chromium at 320, 360, 375, 390: name and scale each on one line (screenshots); the design audit at
+  320 and 390 finds nothing new, no page error. `node --test` → 373 pass, 0 fail (CSS only).
+
 ## 2026-10-23 — Example text in fields: amber, readable; landscape checked
 - Every field's example text ("Quest name", "Search city…", "Price $") was the browser's grey
   (#757575, 3.63:1 on the form panels; under the 4.5:1 floor and off the amber look).
