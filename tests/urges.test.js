@@ -324,7 +324,7 @@ test('a note on an earlier urge, from Last urges: its line above the box, the no
     ST.app.urgeNote = first;
   });
   assert.match(html, /<p class="urge-tip">Oct 22 21h · TIRED · ridden out\. One line about it\? \(empty removes it\)<\/p>/);
-  assert.match(html, /id="urge-note" maxlength="140" autocomplete="off" value="&quot;&gt;&lt;img src=x onerror=alert\(1\)&gt;"/);
+  assert.match(html, /id="urge-note" maxlength="140" autocomplete="off" enterkeyhint="done" value="&quot;&gt;&lt;img src=x onerror=alert\(1\)&gt;"/);
   assert.match(html, /data-vital="urge-note-skip">Cancel</);
   assert.doesNotMatch(html, /<img/);
   const fresh = vitals((ST, s, a) => { ST.startUrge('TIRED'); a.setNow(a.context.Date.now() + ST.URGE_MS); ST.app.urgeNote = ST.urgeWon().entry.t; });

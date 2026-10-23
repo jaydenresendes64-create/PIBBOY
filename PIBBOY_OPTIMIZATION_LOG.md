@@ -13,6 +13,10 @@ Newest first. Each entry: what changed, files, tests actually run.
   `tests/mobile.test.js` scan: every text field names its return key; `node --test` → 375 pass,
   0 fail. Chromium phone mode: Enter in the streak name starts "Focus" and closes the form; Enter in
   a route's name keeps it and leaves the box; the fields on screen carry the hint; no page error.
+- Mistake: commit `a90bc69` was pushed with 3 failing tests (tests/trials.test.js ×2,
+  tests/urges.test.js ×1 match a field's exact HTML, which now has `enterkeyhint`): my command
+  checked that the test output printed, not that it passed. Fixed in the next commit (patterns
+  updated; 375 pass). From then on the push waits for `node --test`'s own exit code.
 
 ## 2026-10-23 — The pressed look on iPhone
 - The tabs' "physical key" press (`.tab-btn:active`) and the trial counter's (`.trial-tap:active`)
