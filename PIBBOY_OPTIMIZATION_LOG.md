@@ -2,6 +2,16 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — A long session: no leak (measured, no change)
+- The app stays open for days on the iPhone, so a long session was measured in Chromium with the
+  year of data: rounds of 60 tab switches, 10 Settings open/close, 20 urges started and dropped
+  with full redraws; after each, heap (after garbage collection), elements and listeners.
+- Elements (4,448) and listeners (window 26, document 23, body 11; 447 in all once MapLibre is
+  in) don't move after the first round. The heap jumps once when the MAP first opens (MapLibre,
+  3 → 10 MB), then grows ~0.13 MB a round (~0.05 MB without the MAP). Heap snapshots of round 2 and
+  round 8 compared by kind: the growth is the engine's compiled code (code objects, instruction
+  streams), none of the app's own objects. Nothing to fix.
+
 ## 2026-10-23 — The tests in every time zone; CI also on the owner's clock
 - CI runs the tests in UTC; the owner lives on Montréal time. The whole suite in 10 time zones
   (UTC, Toronto, Vancouver, Adak, Paris, Casablanca, Kolkata, Auckland, Chatham, Kiritimati) found
