@@ -2,6 +2,22 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — Damaged backups: a fuzz test, and no "[object Object]"
+- New `tests/fuzz.test.js`: the phone used every way (`usedPhone`, moved from
+  tests/roundtrip.test.js to tests/helpers.js) is exported, damaged at 1 to 5 random places (junk
+  of every type, or removed), 400 rounds from a fixed seed (`FUZZ_ROUNDS`/`FUZZ_SEED` for more).
+  Each round: `sanitizeImported` doesn't throw, a second pass changes nothing, and STATUS, QUESTS,
+  ITEMS, LOG and VITALS (check-in and trials) draw with no NaN, "undefined" or "[object Object]".
+- It found one thing: a list or an object where text belongs (a quest name, a journal line) showed
+  as "[object Object]". `js/state.js` `text()`: such a value is no text (''). Every field it
+  cleans is one the app only ever writes as text (checked: no older version stored text as a list),
+  so no saved data changes; the round-trip test still gives the same document.
+- Tests: fuzz +1, `tests/sanitize.test.js` +1 (both fail without the fix); 20,000 rounds over 4
+  seeds and 12,000 more with the trials view passed locally; `node --test` → 378 pass, 0 fail.
+- Measured, no change: date and number formatting at opening (the profile's top item): 1 date and
+  5–7 number formats per open or redraw; the ~17ms is the first one setting up (a cache can't save
+  it), the rest under 0.5ms.
+
 ## 2026-10-23 — Sliders in amber on every phone; the quest slider easier to grab
 - The 4 sliders (the 6 check-in levels, the urge's strength, a quest's progress, a place's radius)
   were the browser's own, tinted with `accent-color`: an iPhone draws them as a white knob on a grey

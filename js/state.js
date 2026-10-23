@@ -1732,8 +1732,10 @@
   // exported comes back exactly as it was.
   var SAFE_ID = /^[A-Za-z0-9_-]{1,40}$/;
   function num(v, fallback){ var n = Number(v); return isFinite(n) ? n : fallback; }
+  // A list or an object where text belongs (a damaged file; the app only ever writes text there):
+  // no text, rather than "[object Object]" on the screen.
   function text(v, max){
-    var str = v===null || v===undefined ? '' : String(v);
+    var str = v===null || v===undefined || typeof v==='object' ? '' : String(v);
     return max ? str.slice(0, max) : str;
   }
   function safeId(v){ return (typeof v==='string' && SAFE_ID.test(v)) ? v : genId(); }

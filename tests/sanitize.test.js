@@ -192,6 +192,18 @@ test('the input document is not trusted to be a plain tree of the right types', 
   assert.deepEqual(out.log, []);
 });
 
+test('a list or an object where text belongs (a damaged file) becomes no text, not "[object Object]"', () => {
+  const s = fullState();
+  s.quests.side[0].questName = { a: 1 };
+  s.inventory[0].name = [1, 'a'];
+  s.log = [{ id: 'l1', date: {}, text: ['x'], xp: 10, reason: 'Learning / studying' }];
+  const out = sanitize(s);
+  assert.equal(out.quests.side[0].questName, '');
+  assert.equal(out.inventory[0].name, '');
+  assert.deepEqual([out.log[0].date, out.log[0].text], ['', '']);
+  assert.equal(out.quests.side[1].questName, s.quests.side[1].questName, 'text stays text');
+});
+
 test('a "__proto__" key can\'t change what an imported object inherits', () => {
   const raw = JSON.parse(JSON.stringify(fullState()));
   const text = JSON.stringify(raw)
