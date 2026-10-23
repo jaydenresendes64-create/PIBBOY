@@ -2,6 +2,19 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — MAP lists: the latest 10, then "10 more"
+- With the year of data the MAP's Cities list was 60 rows (2,640px) under the map; a bulk list
+  of places makes it longer in one go. The journal (30 shown) and the urge history ("more") were
+  already bounded; the places lists weren't.
+- `js/map.js` `listHtml`: each list (cities, regions, pins) shows its latest 10, newest first, then
+  "10 more (N older)", which shows ten more and moves the focus to the first new one; the place
+  open in the panel shows wherever it is. How many show is kept until the page reloads (not
+  saved). `css/terminal.css` `.place-more`: a 44px row, dimmed amber, underlined.
+- Tests: new `tests/maplist.test.js` (3: the first 10 and the count, no button at 10 or fewer, the
+  open place shown); `node --test` → 384 pass, 0 fail. Chromium phone mode with the year: page
+  4,043 → 1,887px, the button 328x44, a tap shows 20 with the focus on the 11th, all 60 after
+  five more; no page error.
+
 ## 2026-10-23 — A skill's detail: the same source on one line, counted
 - Found with the year of data: SURVIVAL's "Earned" showed one line per urge ridden out, 438
   "Urge ridden out +1" lines (and as many elements on the page once opened).

@@ -381,17 +381,35 @@
     if (type!=='region') parts.push(distanceText(p.radius));
     return parts.join(' · ');
   }
+  // Each list shows its latest LIST_STEP places, newest first; "10 more" shows ten older ones each
+  // time (a bulk list or a year of travel makes it hundreds of rows long). The open place shows
+  // wherever it is. listShown: how many each kind shows, until the page reloads.
+  var LIST_STEP = 10;
+  var listShown = {};
   function listHtml(type, title, list, empty){
     var html = '<div class="panel-title">'+title+' <span class="panel-count">'+list.length+'</span></div>';
     if (!list.length) return html+'<div class="empty-note">'+empty+'</div>';
+    var rows = list.slice().reverse(), shown = Math.min(rows.length, listShown[type] || LIST_STEP);
+    rows.forEach(function(p, i){ if (i>=shown && isOpen(type, p.id)) shown = i+1; });
     html += '<div class="place-list">';
-    list.slice().reverse().forEach(function(p){
+    rows.slice(0, shown).forEach(function(p){
       html += '<button class="place-row'+(isOpen(type, p.id) ? ' selected' : '')+'" data-map="open" data-kind="'+type+'" data-id="'+attr(p.id)+'">'+
         '<span class="place-row-name">'+escapeHtml(p.name)+'</span>'+
         '<span class="place-row-meta">'+escapeHtml(placeMeta(type, p))+'</span>'+
       '</button>';
     });
+    var left = rows.length-shown;
+    if (left>0) html += '<button class="place-more" data-map="list-more" data-kind="'+type+'" data-shown="'+shown+'">'+
+      Math.min(left, LIST_STEP)+' more ('+left+' older)</button>';
     return html+'</div>';
+  }
+  // "10 more": the list grows, and the first of the new rows takes the focus.
+  function listMore(btn){
+    var type = btn.getAttribute('data-kind'), before = Number(btn.getAttribute('data-shown')) || LIST_STEP;
+    listShown[type] = before + LIST_STEP;
+    renderLists();
+    var rows = document.querySelectorAll('#map-lists .place-row[data-kind="'+type+'"]');
+    if (rows[before]) rows[before].focus();
   }
   function renderLists(){
     var lists = el('map-lists');
@@ -734,6 +752,7 @@
     if (!btn) return;
     var action = btn.getAttribute('data-map');
     if (action==='open') openPlace(btn.getAttribute('data-kind'), btn.getAttribute('data-id'), true);
+    else if (action==='list-more') listMore(btn);
     else if (action==='close') closePanel();
     else if (action==='remove'){ panel.confirm = true; renderPanel(); focusIn('[data-map="remove-no"]'); }
     else if (action==='remove-no'){ panel.confirm = false; renderPanel(); focusIn('[data-map="remove"]'); }
