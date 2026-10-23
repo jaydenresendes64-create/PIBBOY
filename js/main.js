@@ -110,6 +110,11 @@
 
   document.addEventListener('DOMContentLoaded', boot);
 
+  // An iPhone shows a control's pressed look (:active: a tab's key going
+  // down, the trial counter) only when the page listens for touches. This
+  // listener does nothing, and is passive: it never holds up scrolling.
+  document.addEventListener('touchstart', function(){}, {passive:true});
+
   // ---------- opening at once, and updates (sw.js) ----------
   // The app opens from its cache. A new version downloads whole in the
   // background and waits; it's put in when the app goes to the background,

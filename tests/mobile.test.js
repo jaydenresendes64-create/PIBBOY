@@ -66,3 +66,8 @@ test('a field\'s example text is dimmed amber that reads (4.5:1 on the lightest 
   const ratio = (a, b) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05);
   for (const bg of ['bg', 'panel', 'panel-alt']) assert.ok(ratio(token('text-dim'), token(bg)) >= 4.5, bg);
 });
+
+test('an iPhone shows the pressed look (:active) only when the page listens for touches: a passive listener', () => {
+  assert.match(read('js/main.js'), /document\.addEventListener\('touchstart', function\(\)\{\}, \{passive:true\}\);/);
+  assert.match(read('css/terminal.css'), /\.tab-btn:active\{/);
+});

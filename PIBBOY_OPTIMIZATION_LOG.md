@@ -2,6 +2,16 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — The pressed look on iPhone
+- The tabs' "physical key" press (`.tab-btn:active`) and the trial counter's (`.trial-tap:active`)
+  don't show in iOS Safari: it applies `:active` only when the page listens for touches (Apple's
+  Safari Web Content Guide; still the standard answer, WebKit bugs 221366 and 310540). `js/main.js`:
+  one `touchstart` listener on the document that does nothing, passive (it never holds up
+  scrolling).
+- Chromium phone mode (CDP): the listener is there and passive; a tap still switches tabs; no page
+  error. Not checkable here: the pressed look itself on the iPhone.
+- Tests: `tests/mobile.test.js` +1; `node --test` → 374 pass, 0 fail.
+
 ## 2026-10-23 — Urge "How strong" on one line
 - The urge's "How strong" label sat in the check-in's name column (5.2em, 67px) and broke onto two
   lines at every width. `css/terminal.css`: in `.urge-details` its column fits the name (`auto`,

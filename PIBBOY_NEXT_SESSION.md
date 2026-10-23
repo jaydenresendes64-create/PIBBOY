@@ -5,9 +5,10 @@
   instant open, the data-format guard, Undo last replace and the design recheck.
 - **PR #43 is open** (iPhone polish, branch `claude/laughing-dijkstra-14x4dd`): 16 px fields (no
   iPhone zoom), no double-tap zoom on controls, the right keyboard for each field, the error log in
-  Settings → About, a theme-color and manifest id, a lint pass, amber example text in fields.
+  Settings → About, a theme-color and manifest id, a lint pass, amber example text in fields,
+  "How strong" on one line, the pressed look on iPhone (passive touchstart).
   GitHub "test" check green. Waiting for the owner to merge; never merge it yourself.
-- `node --test`: 373 pass, 0 fail.
+- `node --test`: 374 pass, 0 fail.
 - `sw.js` VERSION is a hash of the app files: after any app file change run `node tools/stamp-sw.js`
   (the tests fail otherwise). `DATA_SCHEMA` (js/state.js) is 1: raise it when a version saves fields
   an older one would drop.
