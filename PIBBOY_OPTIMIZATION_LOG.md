@@ -2,6 +2,16 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — Monkey test (measured, nothing found)
+- A scratchpad script (not in the repo) taps, types and slides on whatever is visible, at random
+  from a seed: buttons, chips, tabs, selects, sliders, text and number fields (junk, HTML, emoji,
+  300 letters), Enter in fields. After each step: no page error, nothing new in the app's error
+  log, no NaN / undefined / [object Object] on screen; every 25 steps the state passes the import
+  gate unchanged.
+- 3 runs of 1,500 steps (a year of data with seeds 2 and 3, an empty phone with seed 4): 124, 114
+  and 116 different controls used; 0 problems. (A first run flagged "NaN" on screen: the script had
+  typed "NaN" as a place's name, which the app showed as typed; the script stopped typing it.)
+
 ## 2026-10-23 — Settings → About shows the version (and a newer one waiting)
 - An update comes in when the app goes to the background, so nothing showed whether the new
   version was in yet (the thing to check after a merge). `sw.js`: asked `{type:'VERSION'}`, it

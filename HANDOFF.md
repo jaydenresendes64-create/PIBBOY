@@ -603,6 +603,23 @@ needs a `migrate()` step + `sanitizeImported()` coverage + a test.
   model's canvas at 30 fps (`drawImage`): both cost GPU time on a phone, not measurable here
   (headless Chromium draws WebGL on the processor).
 
+- **iPhone polish and a year of use (PR #43, 2026-10-23).**
+  - Fields: 16 px text on touch screens (no iOS focus zoom); `touch-action:manipulation` on
+    controls (no double-tap zoom); `inputmode`, `autocomplete="off"` and `enterkeyhint` on every
+    field (`tests/mobile.test.js` scans them); example text in `--text-dim`.
+  - Sliders drawn in CSS: a 26 px knob, the groove filled up to `--p` (`ST.rangeFill` writes it,
+    one input listener in main.js updates it). One passive `touchstart` listener so iOS shows
+    `:active`.
+  - Long lists show their latest part: MAP places 10 then "10 more", the journal 30 then "30 more";
+    a skill's detail groups the same source ("Urge ridden out ×438").
+  - STATUS takes every skill's sources in one pass (`skillSourcesAll`); VITALS reuses one date
+    formatter and `lastVitals` works out each day once.
+  - Settings → About: the error log (`js/errors.js`, kept on the phone) and the version (`sw.js`
+    answers `{type:'VERSION'}`; `ST.appVersion()`), with "a newer one is ready" while one waits.
+  - Tests: `fuzz` (damaged backups), `actions` (random play: XP and levels add up), CI also on
+    Montréal's clock. Measured and left as is: the Vault Boy's walk in parts from level 10 (Chromium
+    recomputes styles each frame while he walks; see the optimization log).
+
 ## 4. Important design decisions
 
 1. **Personal use only**: no multi-user, onboarding or generic features.
