@@ -680,6 +680,14 @@
       renderStatus();
       focusStatus('[data-action="bobble"][data-key="'+key+'"]');
     },
+    // "30 more" under the journal: older entries, the first of them focused.
+    'log-more': function(btn){
+      var before = Number(btn.getAttribute('data-shown')) || 0;
+      app.logShown = before + 30;
+      renderLog();
+      var entries = el('tab-log').querySelectorAll('.log-entry');
+      if (entries[before]){ entries[before].setAttribute('tabindex', '-1'); entries[before].focus(); }
+    },
     // A skill tapped: where its points came from, under it (tap again to close).
     'skill': function(btn, id, key){
       app.skillOpen = app.skillOpen===key ? null : key;

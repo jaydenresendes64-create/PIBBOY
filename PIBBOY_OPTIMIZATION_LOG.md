@@ -2,6 +2,17 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — The journal: older entries readable ("30 more")
+- The app keeps the latest 200 journal entries, but LOG showed only 30: the other 170 could only
+  be read in a backup file.
+- `js/render.js` `renderLog`: the latest 30, then "30 more (N older)"; `js/events.js` action
+  `log-more` shows 30 more and focuses the first of them; how many show is kept until the page
+  reloads. `css/terminal.css`: `.list-more` shares the MAP's "more" row style.
+- Tests: new `tests/journal.test.js` (2: 75 entries shown 30, 60, 75 with the right counts, text
+  escaped; 30 or fewer: no button); `node --test` → 386 pass, 0 fail. Chromium phone mode with
+  the year (200 entries): 30, then 60 with the focus on the 31st, all 200 after six taps, a journal
+  entry being typed kept; button 328x44; no page error.
+
 ## 2026-10-23 — Backup size against the import limit (checked, no change)
 - Import refuses files over 5 MB (`MAX_IMPORT_BYTES`, js/storage.js), so an export bigger than that
   couldn't be restored. A year of daily use exports 575 KB (history, capped at 2,000 events, is half

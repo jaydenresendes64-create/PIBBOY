@@ -868,6 +868,10 @@
       '<button id="add-book-btn">Add</button>');
   }
 
+  // The journal shows its latest LOG_STEP entries, then "30 more (N older)": all of them are kept
+  // (the latest 200), and the older ones could otherwise only be read in a backup file.
+  // app.logShown: how many show, until the page reloads.
+  var LOG_STEP = 30;
   function renderLog(){
     var state = app.state;
     var html = '<div class="panel-title">Log an entry</div>'+
@@ -879,13 +883,17 @@
     if (state.log.length===0){
       html += '<div class="empty-note">No entries yet.</div>';
     } else {
-      state.log.slice().reverse().slice(0,30).forEach(function(entry){
+      var shown = Math.min(state.log.length, Math.max(LOG_STEP, num(app.logShown)));
+      state.log.slice().reverse().slice(0, shown).forEach(function(entry){
         html += '<div class="log-entry">'+
           '<div class="log-date">'+escapeHtml(entry.date)+'</div>'+
           '<div class="log-text">'+escapeHtml(entry.text)+'</div>'+
           '<div class="log-xp">+'+num(entry.xp)+' XP — '+escapeHtml(entry.reason||'')+'</div>'+
         '</div>';
       });
+      var left = state.log.length-shown;
+      if (left>0) html += '<button class="list-more" data-action="log-more" data-shown="'+shown+'">'+
+        Math.min(left, LOG_STEP)+' more ('+left+' older)</button>';
     }
     html += '</div>';
     var tab = el('tab-log');

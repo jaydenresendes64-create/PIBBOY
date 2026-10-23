@@ -1412,7 +1412,8 @@ input[type=range]::-moz-range-thumb{
   min-height:44px; padding:6px 0; border-bottom:1px solid var(--line); text-align:left; font-size:0.85rem;
 }
 .place-row:last-child, .map-result:last-child{ border-bottom:none; }
-.place-more{ display:block; width:100%; min-height:44px; padding:6px 0; text-align:left; font-size:0.74rem;
+/* "10 more (N older)" under a long list: the MAP's places, the journal. */
+.place-more, .list-more{ display:block; width:100%; min-height:44px; padding:6px 0; text-align:left; font-size:0.74rem;
   letter-spacing:0.06em; color:var(--text-dim); text-decoration:underline; }
 .place-row.selected .place-row-name{ color:var(--amber); }
 .place-row-name{ min-width:0; overflow-wrap:anywhere; }
