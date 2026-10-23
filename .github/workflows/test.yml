@@ -16,3 +16,7 @@ jobs:
         with:
           node-version: 22
       - run: node --test
+      # Again on the owner's clock (Montréal): days, the 4:00 VITALS day and the clock changes.
+      - run: node --test
+        env:
+          TZ: America/Toronto

@@ -2,6 +2,17 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — The tests in every time zone; CI also on the owner's clock
+- CI runs the tests in UTC; the owner lives on Montréal time. The whole suite in 10 time zones
+  (UTC, Toronto, Vancouver, Adak, Paris, Casablanca, Kolkata, Auckland, Chatham, Kiritimati) found
+  two tests (not the app) that only held in some: `tests/errors.test.js` expected the error's UTC
+  time on the local date (in Auckland 09:12 on the 23rd is the 22nd in UTC); `tests/insight.test.js`
+  expected every reflection to end with "?" (which one shows depends on the minute; one ends "Good
+  to know for next time."). Both now check what they mean; 384 pass in all 10.
+- The random-actions test (crossing the 1 November clock change) passed on Montréal time with 3
+  more seeds of 3,000 actions.
+- `.github/workflows/test.yml`: a second `node --test` with `TZ: America/Toronto`.
+
 ## 2026-10-23 — MAP lists: the latest 10, then "10 more"
 - With the year of data the MAP's Cities list was 60 rows (2,640px) under the map; a bulk list
   of places makes it longer in one go. The journal (30 shown) and the urge history ("more") were

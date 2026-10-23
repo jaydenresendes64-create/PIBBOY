@@ -33,7 +33,8 @@ test('an error or a failed promise is kept with where it came from; one notice a
   assert.equal(a.ST.errors.list().length, 20);
   assert.equal(a.ST.errors.list()[19].message, 'E24');
   assert.equal(a.notices.length, 1);
-  assert.match(a.ST.errors.text(), /^2026-10-23T\d\d:\d\d:00\.000Z  E5  \(test\)$/m);
+  // the time in UTC, as written: in Auckland 09:12 on the 23rd is still the 22nd in UTC
+  assert.equal(a.ST.errors.text().split('\n')[0], new Date('2026-10-23T09:12:00').toISOString() + '  E5  (test)');
 });
 
 test('Settings → About: "none", then the count and the latest, with Copy and Clear', async () => {
