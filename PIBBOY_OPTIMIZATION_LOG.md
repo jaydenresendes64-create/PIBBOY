@@ -2,6 +2,18 @@
 
 Newest first. Each entry: what changed, files, tests actually run.
 
+## 2026-10-23 — Backup round trip with a year of data; the copied error list says the version
+- Checked, no change: a year of data through the real buttons in Chromium. Export gives a 575 KB
+  file holding exactly the phone's data; on a fresh phone, Import shows the comparison in 90 ms
+  ("This backup: level 18 · 65,075 XP · 365 check-ins · 300 urges…" against "On this phone: level
+  2…"), Yes gives identical data, still identical after a reload; Undo puts the fresh phone back.
+  Messages are already read out (`#toast-layer` role=status, aria-live polite).
+- `js/events.js` `copyErrors`: the copied list starts with "PIBBOY version <hash>" (what Settings
+  learnt when it opened) and the browser's user agent, so a report says what it came from. Written
+  in the tap itself: an iPhone refuses a copy made after waiting.
+- Tests: `tests/version.test.js` +1 (the two header lines, the copy at once); `node --test` → 390
+  pass, 0 fail.
+
 ## 2026-10-23 — Monkey test (measured, nothing found)
 - A scratchpad script (not in the repo) taps, types and slides on whatever is visible, at random
   from a seed: buttons, chips, tabs, selects, sliders, text and number fields (junk, HTML, emoji,

@@ -549,11 +549,13 @@
   // ---------- the version, in Settings → About ----------
   // The service worker's VERSION (a hash of the app's files, sw.js), and whether a newer one is
   // ready: an update comes in when the app goes to the background (main.js watchUpdates).
+  var knownVersion = null;       // what the service worker said, for the copied error list
   function renderVersion(){
     var line = el('app-version');
     if (!line) return;
     if (!ST.appVersion){ line.textContent = 'Version: no offline copy'; return; }
     ST.appVersion().then(function(v){
+      knownVersion = v ? v.version : null;
       line.textContent = !v ? 'Version: no offline copy' :
         'Version '+v.version+(v.waiting ? ' · a newer one is ready: it comes in when you leave the app' : '');
     });
@@ -570,8 +572,11 @@
     line.textContent = 'Errors: '+l.length+' · last '+d.toLocaleDateString('en-US', {month:'short', day:'numeric'})+' at '+
       (d.getHours()<10 ? '0' : '')+d.getHours()+':'+(d.getMinutes()<10 ? '0' : '')+d.getMinutes()+' — '+last.message;
   }
+  // The list as text, headed by the version and the browser (what a fix needs to know). Written
+  // at once, in the tap: an iPhone refuses a copy made after waiting for something.
   function copyErrors(){
-    var text = ST.errors ? ST.errors.text() : '';
+    var text = 'PIBBOY '+(knownVersion ? 'version '+knownVersion : '(version unknown)')+'\n'+
+      (navigator.userAgent || '')+'\n'+(ST.errors ? ST.errors.text() : '');
     var copied = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(text) : Promise.reject(new Error('no clipboard'));
     copied.then(function(){ R.showNotice('Error list copied'); }, function(){ R.showNotice('Couldn’t copy: long-press the line above to select it'); });
   }

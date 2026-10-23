@@ -32,3 +32,24 @@ test('no service worker (opened from a file, blocked, first visit): said so', as
   assert.equal(await app(() => Promise.resolve(null)).open(), 'Version: no offline copy');
   assert.equal(await app().open(), 'Version: no offline copy');             // main.js not loaded
 });
+
+test('the copied error list starts with the version and the browser', async () => {
+  const a = loadApp({ files: ['js/errors.js'].concat(FILES.events) });
+  a.ST.app.state = a.ST.defaultState();
+  a.ST.appVersion = () => Promise.resolve({ version: 'e61ca5c6b2ac', waiting: false });
+  a.context.navigator.userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)';
+  const on = {};
+  a.context.document.body.addEventListener = (type, fn) => { on[type] = fn; };
+  a.ST.events.setup();
+  a.ST.render.showNotice = () => {};
+  a.context.document.getElementById('settings').hidden = true;
+  const tap = id => on.click({ target: { id, closest: () => null } });
+  tap('settings-btn'); await a.settle();
+  a.ST.errors.record('TypeError: x is undefined', 'render.js:120');
+  let copied = null;
+  a.context.navigator.clipboard = { writeText: t => { copied = t; return Promise.resolve(); } };
+  tap('errors-copy-btn');
+  assert.equal(copied.split('\n')[0], 'PIBBOY version e61ca5c6b2ac');
+  assert.equal(copied.split('\n')[1], 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)');
+  assert.match(copied.split('\n')[2], /TypeError: x is undefined  \(render\.js:120\)$/);
+});
